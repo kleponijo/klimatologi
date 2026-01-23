@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "219079385989",
+    "project_id": "klimatologiot",
+    "storage_bucket": "klimatologiot.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:219079385989:android:1304b7433feb658ba0daec",
+        "android_client_info": {
+          "package_name": "com.example.klimatologiot"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAN_9rnFxG99yficqRzTKJ7751D0GC0iXA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
