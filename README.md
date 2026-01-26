@@ -1,2 +1,2 @@
-# klimatologiot
-klimatologiot aplikasi stasiun klimatologi untuk TA framework Flutter kelompok BMKG
+# klimatologi
+klimatologi aplikasi stasiun klimatologi untuk TA framework Flutter kelompok BMKG
