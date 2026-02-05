@@ -1,6 +1,7 @@
 {
   "project_info": {
     "project_number": "219079385989",
+    "firebase_url": "https://klimatologiot-default-rtdb.asia-southeast1.firebasedatabase.app",
     "project_id": "klimatologiot",
     "storage_bucket": "klimatologiot.firebasestorage.app"
   },
@@ -12,7 +13,12 @@
           "package_name": "com.example.klimatologiot"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "219079385989-8hkp1kg2pprs5k269s4c08r6rpdj1gjd.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyAN_9rnFxG99yficqRzTKJ7751D0GC0iXA"
@@ -20,7 +26,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "219079385989-8hkp1kg2pprs5k269s4c08r6rpdj1gjd.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
