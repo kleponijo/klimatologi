@@ -30,6 +30,13 @@
             {
               "client_id": "219079385989-8hkp1kg2pprs5k269s4c08r6rpdj1gjd.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "219079385989-rrbf7b34t5rdvigs2l327qiheg357ogl.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.klimatologiot"
+              }
             }
           ]
         }
