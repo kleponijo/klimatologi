@@ -35,7 +35,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 					setState(() {
 					  signUpRequired = false;
 					});
-				} else if(state is SignUpProccess) {
+				} else if(state is SignUpProcess) {
 					setState(() {
 					  signUpRequired = true;
 					});

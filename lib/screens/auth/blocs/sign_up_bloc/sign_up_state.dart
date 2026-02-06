@@ -11,4 +11,4 @@ final class SignUpInitial extends SignUpState {}
 
 final class SignUpSuccess extends SignUpState {}
 final class SignUpFailure extends SignUpState {}
-final class SignUpProccess extends SignUpState {}
+final class SignUpProcess extends SignUpState {}
