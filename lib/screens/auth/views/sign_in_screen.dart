@@ -57,8 +57,6 @@ class _SignInScreenState extends State<SignInScreen> {
                 validator: (val) {
                   if (val!.isEmpty) {
                     return 'Please fill in this field';
-                  } else if (!RegExp(r'^[\w-\.]+@([\w-]+.)+[\w-]{2,4}$').hasMatch(val)) {
-                    return 'Please enter a valid email';
                   }
                   return null;
                 }
@@ -77,8 +75,6 @@ class _SignInScreenState extends State<SignInScreen> {
                 validator: (val) {
                   if (val!.isEmpty) {
                     return 'Please fill in this field';
-                  } else if (!RegExp(r'^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[!@#\$&*~`)\%\-(_+=;:,.<>/?"[{\]}\|^]).{8,}$').hasMatch(val)) {
-                    return 'Please enter a valid password';
                   }
                   return null;
                 },

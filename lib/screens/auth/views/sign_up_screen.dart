@@ -22,6 +22,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
   bool obscurePassword = true;
   bool signUpRequired = false;
 
+  bool containsUpperCase = false;
+	bool containsLowerCase = false;
+	bool containsNumber = false;
+	bool containsSpecialChar = false;
+	bool contains8Length = false;
+
   @override
   Widget build(BuildContext context) {
     return BlocListener<SignUpBloc, SignUpState>(
@@ -113,8 +119,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               validator: (val) {
                                 if (val == null || val.isEmpty) {
                                   return 'Please fill in this field';
-                                } else if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(val)) {
-                                  return 'Please enter a valid email';
                                 }
                                 return null;
                               },
@@ -145,8 +149,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               validator: (val) {
                                 if (val == null || val.isEmpty) {
                                   return 'Please fill in this field';
-                                } else if (val.length < 6) {
-                                  return 'Password minimal 6 karakter';
                                 }
                                 return null;
                               },
