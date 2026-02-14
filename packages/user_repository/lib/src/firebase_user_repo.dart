@@ -18,8 +18,24 @@ class FirebaseUserRepo implements UserRepository {
       if (firebaseUser == null) {
         yield MyUser.empty;
       } else {
-        yield await userCollection.doc(firebaseUser.uid).get()
-        .then((value) => MyUser.fromEntity(MyUserEntity.fromDocument(value.data()!)));
+        try {
+          final userData = await userCollection.doc(firebaseUser.uid).get();
+          if (userData.exists && userData.data() != null) {
+            yield MyUser.fromEntity(MyUserEntity.fromDocument(userData.data()!));
+          } else {
+            // User baru yang belum ada data di Firestore, tunggu sebentar
+            await Future.delayed(const Duration(milliseconds: 500));
+            final retryData = await userCollection.doc(firebaseUser.uid).get();
+            if (retryData.exists && retryData.data() != null) {
+              yield MyUser.fromEntity(MyUserEntity.fromDocument(retryData.data()!));
+            } else {
+              yield MyUser.empty;
+            }
+          }
+        } catch (e) {
+          log('Error fetching user data: $e');
+          yield MyUser.empty;
+        }
       }
     });
   }
@@ -63,6 +79,8 @@ class FirebaseUserRepo implements UserRepository {
       await userCollection
       .doc(myUser.userId)
       .set(myUser.toEntity().toDocument());
+      // Tunggu sebentar agar data tersimpan dengan baik sebelum stream update
+      await Future.delayed(const Duration(milliseconds: 500));
     } catch (e) {
       log(e.toString());
       rethrow;
