@@ -20,15 +20,16 @@ class MyAppView extends StatelessWidget {
           onPrimary: Colors.white
         ),
       ),
-      home: BlocBuilder<AuthenticationBloc, AuthenticationState>(
-        builder: ((context, state){
-          if(state.status == AuthenticationStatus.authenticated){
-            return HomeScreen();
-            } else {
-            return WelcomeScreen();
-            }
-          }),
-      )
+      home: HomeScreen()
+      // home: BlocBuilder<AuthenticationBloc, AuthenticationState>(
+      //   builder: ((context, state){
+      //     if(state.status == AuthenticationStatus.authenticated){
+      //       return HomeScreen();
+      //       } else {
+      //       return WelcomeScreen();
+      //       }
+      //     }),
+      // )
     );
   }
 }
