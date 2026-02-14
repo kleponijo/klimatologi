@@ -49,8 +49,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
             setState(() {
               signUpRequired = false;
             });
+            final message = (state as SignUpFailure).message ?? 'Registrasi gagal, silakan coba lagi';
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Registrasi gagal, silakan coba lagi')),
+              SnackBar(content: Text(message)),
             );
           }
         },
