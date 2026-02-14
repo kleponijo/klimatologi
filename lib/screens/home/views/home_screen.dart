@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import '../monitoring/evaporasi_monitoring_screen.dart';
-import '../monitoring/wind_speed_monitoring_screen.dart';
-import '../monitoring/air_quality_monitoring_screen.dart';
+import '../../monitoring/evaporasi_monitoring_screen.dart';
+import '../../monitoring/wind_speed_monitoring_screen.dart';
+import '../../monitoring/air_quality_monitoring_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-// import 'package:flutter_bloc/flutter_bloc.dart';
-// import 'package:klimatologiot/blocs/authentication_bloc/authentication_bloc.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:klimatologiot/blocs/authentication_bloc/authentication_bloc.dart';
 
-import 'package:klimatologiot/screens/home/home_screen.dart';
+import 'package:klimatologiot/screens/auth/views/welcome_screen.dart';
+import 'package:klimatologiot/screens/home/views/home_screen.dart';
 
 class MyAppView extends StatelessWidget {
   const MyAppView({super.key});
@@ -20,16 +21,15 @@ class MyAppView extends StatelessWidget {
           onPrimary: Colors.white
         ),
       ),
-      home: HomeScreen()
-      // home: BlocBuilder<AuthenticationBloc, AuthenticationState>(
-      //   builder: ((context, state){
-      //     if(state.status == AuthenticationStatus.authenticated){
-      //       return HomeScreen();
-      //       } else {
-      //       return WelcomeScreen();
-      //       }
-      //     }),
-      // )
+      home: BlocBuilder<AuthenticationBloc, AuthenticationState>(
+        builder: ((context, state){
+          if(state.status == AuthenticationStatus.authenticated){
+            return HomeScreen();
+            } else {
+            return WelcomeScreen();
+            }
+          }),
+      )
     );
   }
 }

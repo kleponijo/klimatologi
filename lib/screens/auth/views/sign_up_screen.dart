@@ -36,23 +36,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
             setState(() {
               signUpRequired = false;
             });
-            // User sudah terdaftar dan auth state akan otomatis update via AuthenticationBloc
-            // Tungur sebentar agar Firestore selesai menyimpan data
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Registrasi berhasil! Mengarahkan...')),
-            );
           } else if (state is SignUpProcess) {
             setState(() {
               signUpRequired = true;
             });
           } else if (state is SignUpFailure) {
-            setState(() {
-              signUpRequired = false;
-            });
-            final message = (state as SignUpFailure).message ?? 'Registrasi gagal, silakan coba lagi';
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(message)),
-            );
+            return;
           }
         },
         child: Form(
