@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../blocs/authentication_bloc/authentication_bloc.dart';
 import '../../monitoring/evaporasi_monitoring_screen.dart';
 import '../../monitoring/wind_speed_monitoring_screen.dart';
 import '../../monitoring/air_quality_monitoring_screen.dart';
@@ -21,24 +23,39 @@ class HomeScreen extends StatelessWidget {
           child: ListView(
             padding: EdgeInsets.zero,
             children: [
-              // 🔹 HEADER DENGAN AKUN INFO
-              UserAccountsDrawerHeader(
-                accountName: const Text(
-                  "Admin Klimatologi",
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                accountEmail: const Text("admin@klimatologi.com"),
-                currentAccountPicture: CircleAvatar(
-                  backgroundColor: Colors.blue,
-                  child: const Text(
-                    "A",
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+              // 🔹 HEADER DENGAN AKUN INFO (dynamic dari AuthenticationBloc)
+              BlocBuilder<AuthenticationBloc, AuthenticationState>(
+                builder: (context, state) {
+                  final user = state.user;
+                  final displayName = (user != null && user.name.isNotEmpty)
+                      ? user.name
+                      : 'Pengguna';
+                  final email = (user != null && user.email.isNotEmpty)
+                      ? user.email
+                      : 'Tidak ada email';
+                  final initials = (displayName.isNotEmpty)
+                      ? displayName.trim().split(' ').map((e) => e.isNotEmpty ? e[0] : '').take(2).join()
+                      : 'U';
+
+                  return UserAccountsDrawerHeader(
+                    accountName: Text(
+                      displayName,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
-                  ),
-                ),
+                    accountEmail: Text(email),
+                    currentAccountPicture: CircleAvatar(
+                      backgroundColor: Colors.blue,
+                      child: Text(
+                        initials.toUpperCase(),
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
 
               // 🔹 DASHBOARD MENU
@@ -80,6 +97,17 @@ class HomeScreen extends StatelessWidget {
                 "Kualitas Udara",
                 Icons.cloud,
               ),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.logout),
+                title: const Text('Logout'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  // trigger logout via bloc
+                  final bloc = context.read<AuthenticationBloc>();
+                  bloc.add(const AuthenticationLogoutRequested());
+                },
+              ),
             ],
           ),
         ),
@@ -92,12 +120,19 @@ class HomeScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                "Selamat Datang Admin Klimatologi",
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
+              BlocBuilder<AuthenticationBloc, AuthenticationState>(
+                builder: (context, state) {
+                  final name = state.user?.name.isNotEmpty == true
+                      ? state.user!.name
+                      : 'Pengguna';
+                  return Text(
+                    'Selamat Datang $name',
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  );
+                },
               ),
               const SizedBox(height: 20),
 
