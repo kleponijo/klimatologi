@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:firebase_database/firebase_database.dart';
+import 'dart:async';
 import 'widgets/monitoring_shared.dart';
 
 /// WIND SPEED MONITORING SCREEN
@@ -13,9 +15,41 @@ class WindSpeedMonitoringScreen extends StatefulWidget {
 class _WindSpeedMonitoringScreenState extends State<WindSpeedMonitoringScreen> {
   String _selectedPeriod = "Hari Ini";
 
+  // realtime database state
+  final DatabaseReference _realtimeRef = FirebaseDatabase.instance.ref('anemometer/realtime');
+  StreamSubscription<DatabaseEvent>? _realtimeSub;
+  double _currentSpeed = 0.0;
+  List<double> _dailySpeeds = List<double>.filled(24, 0.0);
+
+
+  @override
+  void initState() {
+    super.initState();
+    _realtimeSub = _realtimeRef.onValue.listen(_onRealtimeData);
+  }
+
+  void _onRealtimeData(DatabaseEvent event) {
+    final data = event.snapshot.value;
+    if (data is Map) {
+      final speed = (data['kecepatan'] ?? 0).toDouble();
+      setState(() {
+        _currentSpeed = speed;
+        // shift hourly data, keep latest at end
+        _dailySpeeds.removeAt(0);
+        _dailySpeeds.add(speed);
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _realtimeSub?.cancel();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return Scaffold,
       appBar: AppBar(
         title: const Text("Monitoring Kecepatan Angin"),
         centerTitle: true,
@@ -155,12 +189,10 @@ class _WindSpeedMonitoringScreenState extends State<WindSpeedMonitoringScreen> {
   List<FlSpot> _getWindSpeedPeriodData() {
     switch (_selectedPeriod) {
       case "Hari Ini":
+        // use live-updated hourly speeds if available
         return List.generate(24, (i) {
-          final values = [
-            5.0, 5.2, 4.8, 4.5, 4.3, 4.6, 5.1, 6.0, 7.2, 8.5,
-            9.0, 10.2, 11.0, 10.5, 10.0, 9.2, 8.0, 6.5, 5.5, 5.0, 4.8, 4.5, 5.0, 5.2
-          ];
-          return FlSpot(i.toDouble(), values[i]);
+          final value = _dailySpeeds[i];
+          return FlSpot(i.toDouble(), value);
         });
       case "Minggu Ini":
         return [
@@ -366,7 +398,7 @@ class _WindSpeedMonitoringScreenState extends State<WindSpeedMonitoringScreen> {
                   ),
                   lineBarsData: [
                     LineChartBarData(
-                      spots: _getWindSpeedPeriodData(),
+                      spots: _getWindSpeedPeriodData(), // uses _dailySpeeds now
                       isCurved: true,
                       barWidth: 2.5,
                       dotData: FlDotData(
