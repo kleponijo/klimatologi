@@ -3,6 +3,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'dart:async';
 import 'widgets/monitoring_shared.dart';
+import 'package:intl/intl.dart';
 
 /// WIND SPEED MONITORING SCREEN
 class WindSpeedMonitoringScreen extends StatefulWidget {
@@ -18,9 +19,17 @@ class _WindSpeedMonitoringScreenState extends State<WindSpeedMonitoringScreen> {
   // realtime database state
   final DatabaseReference _realtimeRef = FirebaseDatabase.instance.ref('anemometer/realtime');
   StreamSubscription<DatabaseEvent>? _realtimeSub;
-  // current speed kept for future display if needed
-  // double _currentSpeed = 0.0;
+
+  // realtime values
+  DateTime? _lastUpdateTime;
+  double _currentSpeed = 0.0;
   final List<double> _dailySpeeds = List<double>.filled(24, 0.0);
+
+  bool get _isOnline {
+    if (_lastUpdateTime == null) return false;
+    final diff = DateTime.now().difference(_lastUpdateTime!);
+    return diff.inSeconds <= 5;
+  }
 
 
   @override
@@ -31,10 +40,19 @@ class _WindSpeedMonitoringScreenState extends State<WindSpeedMonitoringScreen> {
 
   void _onRealtimeData(DatabaseEvent event) {
     final data = event.snapshot.value;
+
     if (data is Map) {
       final speed = (data['kecepatan'] ?? 0).toDouble();
+      final timestamp = data['timestamp'] ?? 0;
+
+      final waktu = DateTime.fromMillisecondsSinceEpoch(
+        timestamp * 1000,
+      );
+
       setState(() {
-        // shift hourly data, keep latest at end
+        _currentSpeed = speed;
+        _lastUpdateTime = waktu;
+
         _dailySpeeds.removeAt(0);
         _dailySpeeds.add(speed);
       });
@@ -68,7 +86,63 @@ class _WindSpeedMonitoringScreenState extends State<WindSpeedMonitoringScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-
+              if (_lastUpdateTime != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            "${_currentSpeed.toStringAsFixed(2)} km/h",
+                            style: const TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _isOnline
+                                  ? Colors.green.shade100
+                                  : Colors.red.shade100,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              _isOnline ? "ONLINE" : "OFFLINE",
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: _isOnline ? Colors.green : Colors.red,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Builder(
+                        builder: (_) {
+                          final formattedTime = DateFormat(
+                            "dd MMM yyyy • HH:mm:ss",
+                          ).format(_lastUpdateTime!);
+                          return Text(
+                            "Update: $formattedTime",
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
               /// GRAFIK MONITORING
               _buildMonitoringGraphBlock(),
               const SizedBox(height: 25),
