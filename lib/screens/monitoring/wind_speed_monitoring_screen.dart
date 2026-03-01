@@ -326,15 +326,15 @@ class _WindSpeedMonitoringScreenState extends State<WindSpeedMonitoringScreen> {
                     vertical: 5,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.amber.shade100,
+                    color: _isOnline ? Colors.green.shade100 : Colors.red.shade100,
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Text(
-                    "Normal",
+                  child: Text(
+                    _isOnline ? "ONLINE" : "OFFLINE",
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
-                      color: Colors.amber,
+                      color: _isOnline ? Colors.green : Colors.red,
                     ),
                   ),
                 ),
