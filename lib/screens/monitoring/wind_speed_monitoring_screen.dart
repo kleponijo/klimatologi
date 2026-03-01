@@ -18,8 +18,9 @@ class _WindSpeedMonitoringScreenState extends State<WindSpeedMonitoringScreen> {
   // realtime database state
   final DatabaseReference _realtimeRef = FirebaseDatabase.instance.ref('anemometer/realtime');
   StreamSubscription<DatabaseEvent>? _realtimeSub;
-  double _currentSpeed = 0.0;
-  List<double> _dailySpeeds = List<double>.filled(24, 0.0);
+  // current speed kept for future display if needed
+  // double _currentSpeed = 0.0;
+  final List<double> _dailySpeeds = List<double>.filled(24, 0.0);
 
 
   @override
@@ -33,7 +34,6 @@ class _WindSpeedMonitoringScreenState extends State<WindSpeedMonitoringScreen> {
     if (data is Map) {
       final speed = (data['kecepatan'] ?? 0).toDouble();
       setState(() {
-        _currentSpeed = speed;
         // shift hourly data, keep latest at end
         _dailySpeeds.removeAt(0);
         _dailySpeeds.add(speed);
@@ -49,7 +49,7 @@ class _WindSpeedMonitoringScreenState extends State<WindSpeedMonitoringScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold,
+    return Scaffold(
       appBar: AppBar(
         title: const Text("Monitoring Kecepatan Angin"),
         centerTitle: true,
