@@ -25,6 +25,11 @@ class _WindSpeedMonitoringScreenState extends State<WindSpeedMonitoringScreen> {
   double _currentSpeed = 0.0;
   final List<double> _dailySpeeds = List<double>.filled(24, 0.0);
 
+  // hourly aggregation helpers (PRO version)
+  double _hourlyTotalSpeed = 0.0;
+  int _hourlyCount = 0;
+  int _currentHour = DateTime.now().hour;
+
   bool get _isOnline {
     if (_lastUpdateTime == null) return false;
     final diff = DateTime.now().difference(_lastUpdateTime!);
@@ -39,25 +44,52 @@ class _WindSpeedMonitoringScreenState extends State<WindSpeedMonitoringScreen> {
   }
 
   void _onRealtimeData(DatabaseEvent event) {
-    final data = event.snapshot.value;
+  final data = event.snapshot.value;
 
-    if (data is Map) {
-      final speed = (data['kecepatan'] ?? 0).toDouble();
-      final timestamp = data['timestamp'] ?? 0;
+  if (data is Map) {
+    final speed = (data['kecepatan'] ?? 0).toDouble();
+    final timestamp = data['timestamp'] ?? 0;
 
-      final waktu = DateTime.fromMillisecondsSinceEpoch(
-        timestamp * 1000,
-      );
+    final waktu = DateTime.fromMillisecondsSinceEpoch(
+      timestamp * 1000,
+    );
 
-      setState(() {
-        _currentSpeed = speed;
-        _lastUpdateTime = waktu;
+    setState(() {
+      _currentSpeed = speed;
+      _lastUpdateTime = waktu;
 
-        _dailySpeeds.removeAt(0);
-        _dailySpeeds.add(speed);
-      });
-    }
+      final incomingHour = waktu.hour;
+
+      // Jika jam berubah → simpan rata-rata jam sebelumnya
+      if (incomingHour != _currentHour) {
+
+        if (_hourlyCount > 0) {
+          final avg = _hourlyTotalSpeed / _hourlyCount;
+
+          // Simpan ke index sesuai jam sebelumnya
+          _dailySpeeds[_currentHour] = avg;
+        }
+
+        // Reset agregasi
+        _hourlyTotalSpeed = 0.0;
+        _hourlyCount = 0;
+
+        _currentHour = incomingHour;
+
+        // Reset data saat masuk hari baru (00:00)
+        if (incomingHour == 0) {
+          for (int i = 0; i < 24; i++) {
+            _dailySpeeds[i] = 0.0;
+          }
+        }
+      }
+
+      // Tambah akumulasi
+      _hourlyTotalSpeed += speed;
+      _hourlyCount++;
+    });
   }
+}
 
   @override
   void dispose() {
