@@ -1,13 +1,183 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:firebase_database/firebase_database.dart';
+import 'dart:async';
 import '../../../blocs/authentication_bloc/authentication_bloc.dart';
 import '../../monitoring/evaporasi_monitoring_screen.dart';
 import '../../monitoring/wind_speed_monitoring_screen.dart';
 import '../../monitoring/air_quality_monitoring_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  // Firebase realtime database references
+  final DatabaseReference _evaporasiRef = FirebaseDatabase.instance.ref('evaporasi/realtime');
+  final DatabaseReference _windSpeedRef = FirebaseDatabase.instance.ref('anemometer/realtime');
+  final DatabaseReference _airQualityRef = FirebaseDatabase.instance.ref('air_quality/realtime');
+
+  // Stream subscriptions
+  StreamSubscription<DatabaseEvent>? _evaporasiSub;
+  StreamSubscription<DatabaseEvent>? _windSpeedSub;
+  StreamSubscription<DatabaseEvent>? _airQualitySub;
+
+  // Realtime values
+  double _currentEvaporasi = 0.0;
+  double _currentWindSpeed = 0.0;
+  double _currentAirQuality = 0.0;
+  
+  DateTime? _evaporasiUpdateTime;
+  DateTime? _windSpeedUpdateTime;
+  DateTime? _airQualityUpdateTime;
+
+  // Hourly data for charts (24 hours)
+  final List<double> _evaporasiData = List<double>.filled(24, 0.0);
+  final List<double> _windSpeedData = List<double>.filled(24, 0.0);
+  final List<double> _airQualityData = List<double>.filled(24, 0.0);
+
+  // Hourly aggregation helpers
+  double _evaporasiHourlyTotal = 0.0;
+  int _evaporasiHourlyCount = 0;
+  
+  double _windSpeedHourlyTotal = 0.0;
+  int _windSpeedHourlyCount = 0;
+  
+  double _airQualityHourlyTotal = 0.0;
+  int _airQualityHourlyCount = 0;
+  
+  int _currentHour = DateTime.now().hour;
+
+  @override
+  void initState() {
+    super.initState();
+    _evaporasiSub = _evaporasiRef.onValue.listen(_onEvaporasiData);
+    _windSpeedSub = _windSpeedRef.onValue.listen(_onWindSpeedData);
+    _airQualitySub = _airQualityRef.onValue.listen(_onAirQualityData);
+  }
+
+  void _onEvaporasiData(DatabaseEvent event) {
+    final data = event.snapshot.value;
+    if (data is Map) {
+      final value = (data['nilai'] ?? 0).toDouble();
+      final timestamp = data['timestamp'] ?? 0;
+      final waktu = DateTime.fromMillisecondsSinceEpoch(timestamp * 1000);
+
+      setState(() {
+        _currentEvaporasi = value;
+        _evaporasiUpdateTime = waktu;
+
+        final incomingHour = waktu.hour;
+
+        if (incomingHour != _currentHour) {
+          if (_evaporasiHourlyCount > 0) {
+            final avg = _evaporasiHourlyTotal / _evaporasiHourlyCount;
+            _evaporasiData[_currentHour] = avg;
+          }
+
+          _evaporasiHourlyTotal = 0.0;
+          _evaporasiHourlyCount = 0;
+
+          _currentHour = incomingHour;
+
+          if (incomingHour == 0) {
+            for (int i = 0; i < 24; i++) {
+              _evaporasiData[i] = 0.0;
+            }
+          }
+        }
+
+        _evaporasiHourlyTotal += value;
+        _evaporasiHourlyCount++;
+      });
+    }
+  }
+
+  void _onWindSpeedData(DatabaseEvent event) {
+    final data = event.snapshot.value;
+    if (data is Map) {
+      final value = (data['kecepatan'] ?? 0).toDouble();
+      final timestamp = data['timestamp'] ?? 0;
+      final waktu = DateTime.fromMillisecondsSinceEpoch(timestamp * 1000);
+
+      setState(() {
+        _currentWindSpeed = value;
+        _windSpeedUpdateTime = waktu;
+
+        final incomingHour = waktu.hour;
+
+        if (incomingHour != _currentHour) {
+          if (_windSpeedHourlyCount > 0) {
+            final avg = _windSpeedHourlyTotal / _windSpeedHourlyCount;
+            _windSpeedData[_currentHour] = avg;
+          }
+
+          _windSpeedHourlyTotal = 0.0;
+          _windSpeedHourlyCount = 0;
+
+          _currentHour = incomingHour;
+
+          if (incomingHour == 0) {
+            for (int i = 0; i < 24; i++) {
+              _windSpeedData[i] = 0.0;
+            }
+          }
+        }
+
+        _windSpeedHourlyTotal += value;
+        _windSpeedHourlyCount++;
+      });
+    }
+  }
+
+  void _onAirQualityData(DatabaseEvent event) {
+    final data = event.snapshot.value;
+    if (data is Map) {
+      final value = (data['aqi'] ?? 0).toDouble();
+      final timestamp = data['timestamp'] ?? 0;
+      final waktu = DateTime.fromMillisecondsSinceEpoch(timestamp * 1000);
+
+      setState(() {
+        _currentAirQuality = value;
+        _airQualityUpdateTime = waktu;
+
+        final incomingHour = waktu.hour;
+
+        if (incomingHour != _currentHour) {
+          if (_airQualityHourlyCount > 0) {
+            final avg = _airQualityHourlyTotal / _airQualityHourlyCount;
+            _airQualityData[_currentHour] = avg;
+          }
+
+          _airQualityHourlyTotal = 0.0;
+          _airQualityHourlyCount = 0;
+
+          _currentHour = incomingHour;
+
+          if (incomingHour == 0) {
+            for (int i = 0; i < 24; i++) {
+              _airQualityData[i] = 0.0;
+            }
+          }
+        }
+
+        _airQualityHourlyTotal += value;
+        _airQualityHourlyCount++;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _evaporasiSub?.cancel();
+    _windSpeedSub?.cancel();
+    _airQualitySub?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -142,21 +312,21 @@ class HomeScreen extends StatelessWidget {
                 children: [
                   _buildDataBlock(
                     "Evaporasi",
-                    "45.2",
+                    _currentEvaporasi.toStringAsFixed(1),
                     "mm",
                     Colors.blue,
                     Icons.opacity,
                   ),
                   _buildDataBlock(
                     "Kec. Angin",
-                    "12.5",
+                    _currentWindSpeed.toStringAsFixed(1),
                     "km/h",
                     Colors.green,
                     Icons.air,
                   ),
                   _buildDataBlock(
                     "Kualitas Udara",
-                    "78",
+                    _currentAirQuality.toStringAsFixed(0),
                     "AQI",
                     Colors.orange,
                     Icons.cloud,
@@ -461,22 +631,22 @@ class HomeScreen extends StatelessWidget {
 
   /// GET MONITORING DATA FOR 24 HOURS
   List<FlSpot> _getMonitoringData(String title) {
-    final dataMap = {
-      "Evaporasi": [
-        2.1, 2.3, 2.0, 1.9, 2.2, 2.5, 3.0, 3.5, 4.0, 4.2,
-        4.5, 4.8, 5.0, 5.2, 5.1, 4.9, 4.5, 4.0, 3.5, 3.0, 2.8, 2.5, 2.3, 2.2
-      ],
-      "Kecepatan Angin": [
-        5.0, 5.2, 4.8, 4.5, 4.3, 4.6, 5.1, 6.0, 7.2, 8.5,
-        9.0, 10.2, 11.0, 10.5, 10.0, 9.2, 8.0, 6.5, 5.5, 5.0, 4.8, 4.5, 5.0, 5.2
-      ],
-      "Kualitas Udara": [
-        68.0, 70.0, 72.0, 75.0, 78.0, 80.0, 78.0, 75.0, 72.0, 70.0,
-        68.0, 65.0, 60.0, 58.0, 60.0, 62.0, 65.0, 68.0, 70.0, 72.0, 75.0, 78.0, 76.0, 74.0
-      ],
-    };
+    late final List<double> data;
+    
+    switch (title) {
+      case "Evaporasi":
+        data = _evaporasiData;
+        break;
+      case "Kecepatan Angin":
+        data = _windSpeedData;
+        break;
+      case "Kualitas Udara":
+        data = _airQualityData;
+        break;
+      default:
+        data = [];
+    }
 
-    final data = dataMap[title] ?? [];
     return List.generate(
       data.length,
       (index) => FlSpot(index.toDouble(), data[index]),
@@ -485,12 +655,33 @@ class HomeScreen extends StatelessWidget {
 
   /// GET AVERAGE VALUE
   String _getAverageData(String title) {
-    final dataMap = {
-      "Evaporasi": "3.5 mm",
-      "Kecepatan Angin": "6.8 km/h",
-      "Kualitas Udara": "70 AQI",
-    };
-    return dataMap[title] ?? "N/A";
+    late final double average;
+    late final String unit;
+    
+    switch (title) {
+      case "Evaporasi":
+        average = _evaporasiData.isNotEmpty 
+            ? _evaporasiData.reduce((a, b) => a + b) / _evaporasiData.length 
+            : 0.0;
+        unit = "mm";
+        break;
+      case "Kecepatan Angin":
+        average = _windSpeedData.isNotEmpty 
+            ? _windSpeedData.reduce((a, b) => a + b) / _windSpeedData.length 
+            : 0.0;
+        unit = "km/h";
+        break;
+      case "Kualitas Udara":
+        average = _airQualityData.isNotEmpty 
+            ? _airQualityData.reduce((a, b) => a + b) / _airQualityData.length 
+            : 0.0;
+        unit = "AQI";
+        break;
+      default:
+        return "N/A";
+    }
+    
+    return "${average.toStringAsFixed(1)} $unit";
   }
 
   /// GET COLOR BY TITLE
