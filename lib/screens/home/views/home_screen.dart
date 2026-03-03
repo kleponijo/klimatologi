@@ -15,6 +15,20 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
+
+// simple model to represent one activity log item
+class ActivityItem {
+  final String type; // evaporasi, angin, udara, etc
+  final String message;
+  final DateTime time;
+
+  ActivityItem({
+    required this.type,
+    required this.message,
+    required this.time,
+  });
+}
+
 class _HomeScreenState extends State<HomeScreen> {
   // Firebase realtime database references
   final DatabaseReference _evaporasiRef = FirebaseDatabase.instance.ref('evaporasi/realtime');
@@ -39,6 +53,9 @@ class _HomeScreenState extends State<HomeScreen> {
   final List<double> _evaporasiData = List<double>.filled(24, 0.0);
   final List<double> _windSpeedData = List<double>.filled(24, 0.0);
   final List<double> _airQualityData = List<double>.filled(24, 0.0);
+
+  // activity log
+  final List<ActivityItem> _activities = [];
 
   // Hourly aggregation helpers
   double _evaporasiHourlyTotal = 0.0;
@@ -70,6 +87,17 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _currentEvaporasi = value;
         _evaporasiUpdateTime = waktu;
+
+        // add to activity log
+        _activities.insert(
+          0,
+          ActivityItem(
+            type: "evaporasi",
+            message: "Evaporasi tercatat ${value.toStringAsFixed(1)} mm",
+            time: waktu,
+          ),
+        );
+        if (_activities.length > 50) _activities.removeLast();
 
         final incomingHour = waktu.hour;
 
@@ -108,6 +136,17 @@ class _HomeScreenState extends State<HomeScreen> {
         _currentWindSpeed = value;
         _windSpeedUpdateTime = waktu;
 
+        // add to activity log
+        _activities.insert(
+          0,
+          ActivityItem(
+            type: "angin",
+            message: "Kecepatan angin update menjadi ${value.toStringAsFixed(1)} km/h",
+            time: waktu,
+          ),
+        );
+        if (_activities.length > 50) _activities.removeLast();
+
         final incomingHour = waktu.hour;
 
         if (incomingHour != _currentHour) {
@@ -144,6 +183,17 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _currentAirQuality = value;
         _airQualityUpdateTime = waktu;
+
+        // add to activity log
+        _activities.insert(
+          0,
+          ActivityItem(
+            type: "udara",
+            message: "AQI berubah menjadi ${value.toStringAsFixed(0)}",
+            time: waktu,
+          ),
+        );
+        if (_activities.length > 50) _activities.removeLast();
 
         final incomingHour = waktu.hour;
 
@@ -286,72 +336,44 @@ class _HomeScreenState extends State<HomeScreen> {
       /// 🔹 DASHBOARD UTAMA - 3 MONITORING
       body: Padding(
         padding: const EdgeInsets.all(16),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              BlocBuilder<AuthenticationBloc, AuthenticationState>(
-                builder: (context, state) {
-                  final name = state.user?.name.isNotEmpty == true
-                      ? state.user!.name
-                      : 'Pengguna';
-                  return Text(
-                    'Selamat Datang $name',
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            BlocBuilder<AuthenticationBloc, AuthenticationState>(
+              builder: (context, state) {
+                final name = state.user?.name.isNotEmpty == true
+                    ? state.user!.name
+                    : 'Pengguna';
+                return Text(
+                  'Selamat Datang $name',
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              "Recent Activity",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: _activities.isEmpty
+                  ? const Center(child: Text("Belum ada aktivitas"))
+                  : ListView.builder(
+                      itemCount: _activities.length,
+                      itemBuilder: (context, index) {
+                        final item = _activities[index];
+                        return _buildActivityTile(item);
+                      },
                     ),
-                  );
-                },
-              ),
-              const SizedBox(height: 20),
-
-              // 🔹 3 BLOCK DATA HARI INI
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _buildDataBlock(
-                    "Evaporasi",
-                    _currentEvaporasi.toStringAsFixed(1),
-                    "mm",
-                    Colors.blue,
-                    Icons.opacity,
-                  ),
-                  _buildDataBlock(
-                    "Kec. Angin",
-                    _currentWindSpeed.toStringAsFixed(1),
-                    "km/h",
-                    Colors.green,
-                    Icons.air,
-                  ),
-                  _buildDataBlock(
-                    "Kualitas Udara",
-                    _currentAirQuality.toStringAsFixed(0),
-                    "AQI",
-                    Colors.orange,
-                    Icons.cloud,
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 30),
-
-              const Text(
-                "Grafik Monitoring",
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 15),
-
-              _buildDashboardCard(context, "Evaporasi"),
-              const SizedBox(height: 20),
-              _buildDashboardCard(context, "Kecepatan Angin"),
-              const SizedBox(height: 20),
-              _buildDashboardCard(context, "Kualitas Udara"),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -696,5 +718,43 @@ class _HomeScreenState extends State<HomeScreen> {
       default:
         return Colors.grey;
     }
+  }
+
+  /// ACTIVITY TILE
+  Widget _buildActivityTile(ActivityItem item) {
+    IconData icon;
+    Color color;
+
+    switch (item.type) {
+      case "evaporasi":
+        icon = Icons.opacity;
+        color = Colors.blue;
+        break;
+      case "angin":
+        icon = Icons.air;
+        color = Colors.green;
+        break;
+      case "udara":
+        icon = Icons.cloud;
+        color = Colors.orange;
+        break;
+      default:
+        icon = Icons.info;
+        color = Colors.grey;
+    }
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: color.withOpacity(0.2),
+          child: Icon(icon, color: color),
+        ),
+        title: Text(item.message),
+        subtitle: Text(
+          "${item.time.hour}:${item.time.minute.toString().padLeft(2, '0')}",
+        ),
+      ),
+    );
   }
 }
