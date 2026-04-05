@@ -16,3 +16,5 @@ class SignUpRequired extends SignUpEvent {
   @override
   List<Object> get props => [user, password];
 }
+
+class GoogleSignInRequired extends SignUpEvent {}

@@ -21,13 +21,15 @@ class FirebaseUserRepo implements UserRepository {
         try {
           final userData = await userCollection.doc(firebaseUser.uid).get();
           if (userData.exists && userData.data() != null) {
-            yield MyUser.fromEntity(MyUserEntity.fromDocument(userData.data()!));
+            yield MyUser.fromEntity(
+                MyUserEntity.fromDocument(userData.data()!));
           } else {
             // User baru yang belum ada data di Firestore, tunggu sebentar
             await Future.delayed(const Duration(milliseconds: 500));
             final retryData = await userCollection.doc(firebaseUser.uid).get();
             if (retryData.exists && retryData.data() != null) {
-              yield MyUser.fromEntity(MyUserEntity.fromDocument(retryData.data()!));
+              yield MyUser.fromEntity(
+                  MyUserEntity.fromDocument(retryData.data()!));
             } else {
               yield MyUser.empty;
             }
@@ -40,32 +42,28 @@ class FirebaseUserRepo implements UserRepository {
     });
   }
 
-    @override
+  @override
   Future<void> signIn(String email, String password) async {
     try {
-     await _firebaseAuth.signInWithEmailAndPassword(
-        email: email,
-        password: password
-      );
+      await _firebaseAuth.signInWithEmailAndPassword(
+          email: email, password: password);
     } catch (e) {
-     log(e.toString());
+      log(e.toString());
       rethrow;
     }
   }
 
   @override
   Future<MyUser> signUp(MyUser myUser, String password) async {
-   try {
+    try {
       UserCredential user = await _firebaseAuth.createUserWithEmailAndPassword(
-          email: myUser.email,
-          password: password
-        );
-       myUser.userId = user.user!.uid;
-       return myUser;
+          email: myUser.email, password: password);
+      myUser.userId = user.user!.uid;
+      return myUser;
     } catch (e) {
       log(e.toString());
       rethrow;
-   }
+    }
   }
 
   @override
@@ -77,8 +75,8 @@ class FirebaseUserRepo implements UserRepository {
   Future<void> setUserData(MyUser myUser) async {
     try {
       await userCollection
-      .doc(myUser.userId)
-      .set(myUser.toEntity().toDocument());
+          .doc(myUser.userId)
+          .set(myUser.toEntity().toDocument());
       // Tunggu sebentar agar data tersimpan dengan baik sebelum stream update
       await Future.delayed(const Duration(milliseconds: 500));
     } catch (e) {
@@ -87,6 +85,14 @@ class FirebaseUserRepo implements UserRepository {
     }
   }
 
-
-
+  @override
+  Future<void> signInWithGoogle() async {
+    try {
+      final GoogleAuthProvider googleProvider = GoogleAuthProvider();
+      await _firebaseAuth.signInWithPopup(googleProvider);
+    } catch (e) {
+      log('Google sign-in error: $e');
+      rethrow;
+    }
+  }
 }
