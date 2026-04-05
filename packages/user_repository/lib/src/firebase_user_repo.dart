@@ -89,7 +89,26 @@ class FirebaseUserRepo implements UserRepository {
   Future<void> signInWithGoogle() async {
     try {
       final GoogleAuthProvider googleProvider = GoogleAuthProvider();
-      await _firebaseAuth.signInWithPopup(googleProvider);
+      final UserCredential userCredential =
+          await _firebaseAuth.signInWithPopup(googleProvider);
+
+      final User? firebaseUser = userCredential.user;
+      if (firebaseUser != null) {
+        // Check if user data already exists in Firestore
+        final existingUser = await userCollection.doc(firebaseUser.uid).get();
+
+        if (!existingUser.exists) {
+          // Create new user data from Google account info
+          final newUser = MyUser(
+            userId: firebaseUser.uid,
+            email: firebaseUser.email ?? '',
+            name: firebaseUser.displayName ?? 'User',
+            hasActiveCart: false,
+          );
+
+          await setUserData(newUser);
+        }
+      }
     } catch (e) {
       log('Google sign-in error: $e');
       rethrow;
