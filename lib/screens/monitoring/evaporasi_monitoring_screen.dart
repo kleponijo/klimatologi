@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:firebase_database/firebase_database.dart';
+import 'dart:async';
+import 'package:intl/intl.dart';
 import 'widgets/monitoring_shared.dart';
 
 /// EVAPORASI MONITORING SCREEN
@@ -7,11 +10,147 @@ class EvaporasiMonitoringScreen extends StatefulWidget {
   const EvaporasiMonitoringScreen({super.key});
 
   @override
-  State<EvaporasiMonitoringScreen> createState() => _EvaporasiMonitoringScreenState();
+  State<EvaporasiMonitoringScreen> createState() =>
+      _EvaporasiMonitoringScreenState();
 }
 
 class _EvaporasiMonitoringScreenState extends State<EvaporasiMonitoringScreen> {
   String _selectedPeriod = "Hari Ini";
+
+  final DatabaseReference _evaporationRef =
+      FirebaseDatabase.instance.ref('kelompok1/evaporasi');
+  StreamSubscription<DatabaseEvent>? _evaporationSub;
+
+  DateTime? _lastUpdateTime;
+  double _currentEvaporation = 0.0;
+  double _currentTemperature = 0.0;
+  double _currentWaterHeight = 0.0;
+  final List<double> _dailyEvaporation = List<double>.filled(24, 0.0);
+  double _hourlyTotal = 0.0;
+  int _hourlyCount = 0;
+  int _currentHour = DateTime.now().hour;
+
+  bool get _isOnline {
+    if (_lastUpdateTime == null) return false;
+    final diff = DateTime.now().difference(_lastUpdateTime!);
+    return diff.inMinutes <= 5;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _evaporationSub = _evaporationRef.onValue.listen(_onRealtimeData);
+  }
+
+  @override
+  void dispose() {
+    _evaporationSub?.cancel();
+    super.dispose();
+  }
+
+  void _onRealtimeData(DatabaseEvent event) {
+    final data = event.snapshot.value;
+    if (data is Map) {
+      final value = double.tryParse(
+              (data['evaporasi'] ?? data['nilai'] ?? 0).toString()) ??
+          0.0;
+      final temp = double.tryParse(data['suhu']?.toString() ?? '0') ?? 0.0;
+      final waterHeight =
+          double.tryParse(data['tinggi_air']?.toString() ?? '0') ?? 0.0;
+      final DateTime waktu;
+
+      if (data.containsKey('timestamp')) {
+        final timestamp =
+            int.tryParse(data['timestamp']?.toString() ?? '0') ?? 0;
+        waktu = DateTime.fromMillisecondsSinceEpoch(timestamp * 1000);
+      } else {
+        final hour = int.tryParse(data['jam']?.toString() ?? '0') ?? 0;
+        final minute = int.tryParse(data['menit']?.toString() ?? '0') ?? 0;
+        final now = DateTime.now();
+        waktu = DateTime(now.year, now.month, now.day, hour, minute);
+      }
+
+      setState(() {
+        _currentEvaporation = value;
+        _currentTemperature = temp;
+        _currentWaterHeight = waterHeight;
+        _lastUpdateTime = waktu;
+
+        final incomingHour = waktu.hour;
+        if (incomingHour != _currentHour) {
+          if (_hourlyCount > 0) {
+            _dailyEvaporation[_currentHour] = _hourlyTotal / _hourlyCount;
+          }
+          _hourlyTotal = 0.0;
+          _hourlyCount = 0;
+          _currentHour = incomingHour;
+          if (incomingHour == 0) {
+            for (int i = 0; i < 24; i++) {
+              _dailyEvaporation[i] = 0.0;
+            }
+          }
+        }
+
+        _hourlyTotal += value;
+        _hourlyCount++;
+        _dailyEvaporation[incomingHour] =
+            _hourlyCount > 0 ? _hourlyTotal / _hourlyCount : value;
+      });
+    }
+  }
+
+  String _formatUpdateTime() {
+    if (_lastUpdateTime == null) return '-';
+    return DateFormat('dd MMM yyyy • HH:mm').format(_lastUpdateTime!);
+  }
+
+  bool get _hasRealtimeEvaporation =>
+      _dailyEvaporation.any((value) => value > 0.0);
+
+  Widget _buildDetailTile({
+    required String label,
+    required String value,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withOpacity(0.2)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: color, size: 16),
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,6 +170,139 @@ class _EvaporasiMonitoringScreenState extends State<EvaporasiMonitoringScreen> {
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              if (_lastUpdateTime != null)
+                Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "${_currentEvaporation.toStringAsFixed(1)} mm",
+                          style: const TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  "Terakhir diperbarui",
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  _formatUpdateTime(),
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.black54,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _isOnline
+                                    ? Colors.green.shade100
+                                    : Colors.red.shade100,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                _isOnline ? 'ONLINE' : 'OFFLINE',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: _isOnline ? Colors.green : Colors.red,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 12),
+              Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 16,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Detail Sensor Evaporasi',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _buildDetailTile(
+                            label: 'Jam',
+                            value: DateFormat('HH:mm').format(_lastUpdateTime!),
+                            icon: Icons.access_time,
+                            color: Colors.blue,
+                          ),
+                          _buildDetailTile(
+                            label: 'Suhu',
+                            value:
+                                '${_currentTemperature.toStringAsFixed(2)} °C',
+                            icon: Icons.thermostat,
+                            color: Colors.red,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _buildDetailTile(
+                            label: 'Tinggi Air',
+                            value: '${_currentWaterHeight.toStringAsFixed(2)}',
+                            icon: Icons.water_drop,
+                            color: Colors.blueAccent,
+                          ),
+                          _buildDetailTile(
+                            label: 'Evaporasi',
+                            value:
+                                '${_currentEvaporation.toStringAsFixed(1)} mm',
+                            icon: Icons.opacity,
+                            color: Colors.blue,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 20),
@@ -65,8 +337,30 @@ class _EvaporasiMonitoringScreenState extends State<EvaporasiMonitoringScreen> {
     csvContent.writeln("Jam,Nilai (mm)");
 
     final dailyData = [
-      2.1, 2.3, 2.0, 1.9, 2.2, 2.5, 3.0, 3.5, 4.0, 4.2,
-      4.5, 4.8, 5.0, 5.2, 5.1, 4.9, 4.5, 4.0, 3.5, 3.0, 2.8, 2.5, 2.3, 2.2
+      2.1,
+      2.3,
+      2.0,
+      1.9,
+      2.2,
+      2.5,
+      3.0,
+      3.5,
+      4.0,
+      4.2,
+      4.5,
+      4.8,
+      5.0,
+      5.2,
+      5.1,
+      4.9,
+      4.5,
+      4.0,
+      3.5,
+      3.0,
+      2.8,
+      2.5,
+      2.3,
+      2.2
     ];
     for (int i = 0; i < dailyData.length; i++) {
       csvContent.writeln("$i:00,${dailyData[i]}");
@@ -89,7 +383,15 @@ class _EvaporasiMonitoringScreenState extends State<EvaporasiMonitoringScreen> {
     csvContent.writeln("");
     csvContent.writeln("Hari,Nilai (mm)");
 
-    final days = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+    final days = [
+      'Senin',
+      'Selasa',
+      'Rabu',
+      'Kamis',
+      'Jumat',
+      'Sabtu',
+      'Minggu'
+    ];
     final weeklyData = [3.5, 3.8, 4.2, 4.5, 4.0, 3.8, 3.2];
 
     for (int i = 0; i < days.length; i++) {
@@ -109,7 +411,8 @@ class _EvaporasiMonitoringScreenState extends State<EvaporasiMonitoringScreen> {
   void _exportMonthlyData() {
     final StringBuffer csvContent = StringBuffer();
     csvContent.writeln("DATA MONITORING EVAPORASI - BULANAN");
-    csvContent.writeln("Bulan: ${DateTime.now().toString().split(' ')[0].substring(0, 7)}");
+    csvContent.writeln(
+        "Bulan: ${DateTime.now().toString().split(' ')[0].substring(0, 7)}");
     csvContent.writeln("");
     csvContent.writeln("Tanggal,Nilai (mm)");
 
@@ -136,11 +439,34 @@ class _EvaporasiMonitoringScreenState extends State<EvaporasiMonitoringScreen> {
     csvContent.writeln("Bulan,Pengisian (x),Rata-rata (mm)");
 
     final months = [
-      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember'
     ];
     final fillings = [12, 13, 15, 14, 13, 12, 14, 16, 13, 14, 15, 13];
-    final averages = [3.5, 3.8, 4.2, 4.5, 5.0, 5.2, 5.5, 5.8, 5.0, 4.5, 4.0, 3.7];
+    final averages = [
+      3.5,
+      3.8,
+      4.2,
+      4.5,
+      5.0,
+      5.2,
+      5.5,
+      5.8,
+      5.0,
+      4.5,
+      4.0,
+      3.7
+    ];
 
     for (int i = 0; i < months.length; i++) {
       csvContent.writeln("${months[i]},${fillings[i]},${averages[i]}");
@@ -159,38 +485,17 @@ class _EvaporasiMonitoringScreenState extends State<EvaporasiMonitoringScreen> {
   List<FlSpot> _getEvaporationPeriodData() {
     switch (_selectedPeriod) {
       case "Hari Ini":
-        return List.generate(24, (i) {
-          final values = [
-            2.1, 2.3, 2.0, 1.9, 2.2, 2.5, 3.0, 3.5, 4.0, 4.2,
-            4.5, 4.8, 5.0, 5.2, 5.1, 4.9, 4.5, 4.0, 3.5, 3.0, 2.8, 2.5, 2.3, 2.2
-          ];
-          return FlSpot(i.toDouble(), values[i]);
-        });
+        if (_hasRealtimeEvaporation) {
+          return List.generate(
+            _dailyEvaporation.length,
+            (index) => FlSpot(index.toDouble(), _dailyEvaporation[index]),
+          );
+        }
+        return List.generate(24, (index) => FlSpot(index.toDouble(), 0.0));
       case "Minggu Ini":
-        return [
-          const FlSpot(0, 3.5),
-          const FlSpot(1, 3.8),
-          const FlSpot(2, 4.2),
-          const FlSpot(3, 4.5),
-          const FlSpot(4, 4.0),
-          const FlSpot(5, 3.8),
-          const FlSpot(6, 3.2),
-        ];
+        return List.generate(7, (index) => FlSpot(index.toDouble(), 0.0));
       case "Bulan Ini":
-        return [
-          const FlSpot(0, 3.5),
-          const FlSpot(1, 3.8),
-          const FlSpot(2, 4.2),
-          const FlSpot(3, 4.5),
-          const FlSpot(4, 5.0),
-          const FlSpot(5, 5.2),
-          const FlSpot(6, 5.5),
-          const FlSpot(7, 5.8),
-          const FlSpot(8, 5.0),
-          const FlSpot(9, 4.5),
-          const FlSpot(10, 4.0),
-          const FlSpot(11, 3.7),
-        ];
+        return List.generate(12, (index) => FlSpot(index.toDouble(), 0.0));
       default:
         return [];
     }
@@ -333,7 +638,8 @@ class _EvaporasiMonitoringScreenState extends State<EvaporasiMonitoringScreen> {
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(
-                      children: ["Hari Ini", "Minggu Ini", "Bulan Ini"].map((period) {
+                      children:
+                          ["Hari Ini", "Minggu Ini", "Bulan Ini"].map((period) {
                         return Padding(
                           padding: const EdgeInsets.only(right: 8),
                           child: ChoiceChip(
@@ -595,8 +901,18 @@ class _EvaporasiMonitoringScreenState extends State<EvaporasiMonitoringScreen> {
                             showTitles: true,
                             getTitlesWidget: (value, meta) {
                               final months = [
-                                'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-                                'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
+                                'Jan',
+                                'Feb',
+                                'Mar',
+                                'Apr',
+                                'Mei',
+                                'Jun',
+                                'Jul',
+                                'Agu',
+                                'Sep',
+                                'Okt',
+                                'Nov',
+                                'Des'
                               ];
                               return Text(
                                 months[value.toInt()],
@@ -660,20 +976,10 @@ class _EvaporasiMonitoringScreenState extends State<EvaporasiMonitoringScreen> {
                           ),
                         ),
                       ),
-                      barGroups: [
-                        buildBarGroup(0, 12),
-                        buildBarGroup(1, 13),
-                        buildBarGroup(2, 15),
-                        buildBarGroup(3, 14),
-                        buildBarGroup(4, 13),
-                        buildBarGroup(5, 12),
-                        buildBarGroup(6, 14),
-                        buildBarGroup(7, 16),
-                        buildBarGroup(8, 13),
-                        buildBarGroup(9, 14),
-                        buildBarGroup(10, 15),
-                        buildBarGroup(11, 13),
-                      ],
+                      barGroups: List.generate(
+                        12,
+                        (index) => buildBarGroup(index, 0),
+                      ),
                       rangeAnnotations: RangeAnnotations(
                         horizontalRangeAnnotations: [
                           HorizontalRangeAnnotation(

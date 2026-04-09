@@ -15,7 +15,6 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-
 // simple model to represent one activity log item
 class ActivityItem {
   final String type; // evaporasi, angin, udara, etc
@@ -31,9 +30,12 @@ class ActivityItem {
 
 class _HomeScreenState extends State<HomeScreen> {
   // Firebase realtime database references
-  final DatabaseReference _evaporasiRef = FirebaseDatabase.instance.ref('evaporasi/realtime');
-  final DatabaseReference _windSpeedRef = FirebaseDatabase.instance.ref('anemometer/realtime');
-  final DatabaseReference _airQualityRef = FirebaseDatabase.instance.ref('air_quality/realtime');
+  final DatabaseReference _evaporasiRef =
+      FirebaseDatabase.instance.ref('kelompok1/evaporasi');
+  final DatabaseReference _windSpeedRef =
+      FirebaseDatabase.instance.ref('anemometer/realtime');
+  final DatabaseReference _airQualityRef =
+      FirebaseDatabase.instance.ref('air_quality/realtime');
 
   // Stream subscriptions
   StreamSubscription<DatabaseEvent>? _evaporasiSub;
@@ -44,7 +46,7 @@ class _HomeScreenState extends State<HomeScreen> {
   double _currentEvaporasi = 0.0;
   double _currentWindSpeed = 0.0;
   double _currentAirQuality = 0.0;
-  
+
   DateTime? _evaporasiUpdateTime;
   DateTime? _windSpeedUpdateTime;
   DateTime? _airQualityUpdateTime;
@@ -60,13 +62,13 @@ class _HomeScreenState extends State<HomeScreen> {
   // Hourly aggregation helpers
   double _evaporasiHourlyTotal = 0.0;
   int _evaporasiHourlyCount = 0;
-  
+
   double _windSpeedHourlyTotal = 0.0;
   int _windSpeedHourlyCount = 0;
-  
+
   double _airQualityHourlyTotal = 0.0;
   int _airQualityHourlyCount = 0;
-  
+
   int _currentHour = DateTime.now().hour;
 
   @override
@@ -80,9 +82,21 @@ class _HomeScreenState extends State<HomeScreen> {
   void _onEvaporasiData(DatabaseEvent event) {
     final data = event.snapshot.value;
     if (data is Map) {
-      final value = (data['nilai'] ?? 0).toDouble();
-      final timestamp = data['timestamp'] ?? 0;
-      final waktu = DateTime.fromMillisecondsSinceEpoch(timestamp * 1000);
+      final value = double.tryParse(
+              (data['evaporasi'] ?? data['nilai'] ?? 0).toString()) ??
+          0.0;
+      DateTime waktu;
+
+      if (data.containsKey('timestamp')) {
+        final timestamp =
+            int.tryParse(data['timestamp']?.toString() ?? '0') ?? 0;
+        waktu = DateTime.fromMillisecondsSinceEpoch(timestamp * 1000);
+      } else {
+        final hour = int.tryParse(data['jam']?.toString() ?? '0') ?? 0;
+        final minute = int.tryParse(data['menit']?.toString() ?? '0') ?? 0;
+        final now = DateTime.now();
+        waktu = DateTime(now.year, now.month, now.day, hour, minute);
+      }
 
       setState(() {
         _currentEvaporasi = value;
@@ -141,7 +155,8 @@ class _HomeScreenState extends State<HomeScreen> {
           0,
           ActivityItem(
             type: "angin",
-            message: "Kecepatan angin update menjadi ${value.toStringAsFixed(1)} km/h",
+            message:
+                "Kecepatan angin update menjadi ${value.toStringAsFixed(1)} km/h",
             time: waktu,
           ),
         );
@@ -254,7 +269,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       ? user.email
                       : 'Tidak ada email';
                   final initials = (displayName.isNotEmpty)
-                      ? displayName.trim().split(' ').map((e) => e.isNotEmpty ? e[0] : '').take(2).join()
+                      ? displayName
+                          .trim()
+                          .split(' ')
+                          .map((e) => e.isNotEmpty ? e[0] : '')
+                          .take(2)
+                          .join()
                       : 'U';
 
                   return UserAccountsDrawerHeader(
@@ -654,7 +674,7 @@ class _HomeScreenState extends State<HomeScreen> {
   /// GET MONITORING DATA FOR 24 HOURS
   List<FlSpot> _getMonitoringData(String title) {
     late final List<double> data;
-    
+
     switch (title) {
       case "Evaporasi":
         data = _evaporasiData;
@@ -679,30 +699,30 @@ class _HomeScreenState extends State<HomeScreen> {
   String _getAverageData(String title) {
     late final double average;
     late final String unit;
-    
+
     switch (title) {
       case "Evaporasi":
-        average = _evaporasiData.isNotEmpty 
-            ? _evaporasiData.reduce((a, b) => a + b) / _evaporasiData.length 
+        average = _evaporasiData.isNotEmpty
+            ? _evaporasiData.reduce((a, b) => a + b) / _evaporasiData.length
             : 0.0;
         unit = "mm";
         break;
       case "Kecepatan Angin":
-        average = _windSpeedData.isNotEmpty 
-            ? _windSpeedData.reduce((a, b) => a + b) / _windSpeedData.length 
+        average = _windSpeedData.isNotEmpty
+            ? _windSpeedData.reduce((a, b) => a + b) / _windSpeedData.length
             : 0.0;
         unit = "km/h";
         break;
       case "Kualitas Udara":
-        average = _airQualityData.isNotEmpty 
-            ? _airQualityData.reduce((a, b) => a + b) / _airQualityData.length 
+        average = _airQualityData.isNotEmpty
+            ? _airQualityData.reduce((a, b) => a + b) / _airQualityData.length
             : 0.0;
         unit = "AQI";
         break;
       default:
         return "N/A";
     }
-    
+
     return "${average.toStringAsFixed(1)} $unit";
   }
 
