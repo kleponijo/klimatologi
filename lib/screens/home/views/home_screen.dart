@@ -5,7 +5,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'dart:async';
 import '../../../blocs/authentication_bloc/authentication_bloc.dart';
 import '../../monitoring/evaporasi_monitoring_screen.dart';
-import '../../monitoring/wind_speed_monitoring_screen.dart';
+import '../../monitoring/wind_speed/wind_speed_monitoring_screen.dart';
 import '../../monitoring/air_quality_monitoring_screen.dart';
 
 class HomeScreen extends StatefulWidget {
