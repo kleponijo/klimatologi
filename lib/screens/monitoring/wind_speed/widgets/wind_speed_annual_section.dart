@@ -142,7 +142,7 @@ class WindSpeedAnnualSection extends StatelessWidget {
                     ),
                     LineChartBarData(
                       spots: const [
-                        FlSpot(0, 12.0),
+                        FlSpot(0, 12.0), //sadds
                         FlSpot(1, 13.5),
                         FlSpot(2, 14.0),
                         FlSpot(3, 15.5),
