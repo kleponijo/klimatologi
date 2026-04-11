@@ -8,6 +8,7 @@ import 'widgets/wind_speed_annual_section.dart';
 import 'widgets/wind_speed_explanation.dart';
 import 'widgets/wind_speed_graph_block.dart';
 import 'widgets/wind_speed_status_block.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class WindSpeedMonitoringScreen extends StatefulWidget {
   const WindSpeedMonitoringScreen({super.key});
@@ -279,8 +280,13 @@ class _WindSpeedMonitoringScreenState extends State<WindSpeedMonitoringScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Monitoring Kecepatan Angin"),
+        title: Text(
+          "Wind Speed",
+          style: GoogleFonts.rubik(
+              color: Colors.black, fontWeight: FontWeight.bold),
+        ),
         centerTitle: true,
+        backgroundColor: const Color.fromARGB(37, 158, 158, 158),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),

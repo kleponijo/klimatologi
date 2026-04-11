@@ -10,7 +10,8 @@ class WindSpeedAnnualSection extends StatelessWidget {
     super.key,
     required this.onExportAnnual,
   });
-
+  final double _rataRata = 0.0;
+  final double _kecepatanMax = 0.0;
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -25,11 +26,11 @@ class WindSpeedAnnualSection extends StatelessWidget {
         ),
         const SizedBox(height: 15),
         Row(
-          children: const [
+          children: [
             Expanded(
               child: StatCard(
                 title: "Rata-rata Tahunan",
-                value: "7.1 km/h",
+                value: this._rataRata.toStringAsFixed(2),
                 color: Colors.green,
                 icon: Icons.air,
               ),
@@ -38,7 +39,7 @@ class WindSpeedAnnualSection extends StatelessWidget {
             Expanded(
               child: StatCard(
                 title: "Kecepatan Max",
-                value: "16.5 km/h",
+                value: this._kecepatanMax.toStringAsFixed(2),
                 color: Colors.red,
                 icon: Icons.trending_up,
               ),
