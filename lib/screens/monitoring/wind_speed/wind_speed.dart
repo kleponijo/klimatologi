@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:firebase_database/firebase_database.dart';
+import '../';
 import 'package:flutter/material.dart';
 
 import '../shared/widgets/monitoring_shared.dart';
@@ -20,6 +20,16 @@ class WindSpeedMonitoringScreen extends StatefulWidget {
 
 class _WindSpeedMonitoringScreenState extends State<WindSpeedMonitoringScreen> {
   String _selectedPeriod = "Hari Ini";
+
+  // realtime values
+  DateTime? _lastUpdateTime;
+  double _currentSpeed = 0.0;
+  final List<double> _dailySpeeds = List<double>.filled(24, 0.0);
+
+  // hourly aggregation helpers (PRO version)
+  double _hourlyTotalSpeed = 0.0;
+  int _hourlyCount = 0;
+  int _currentHour = DateTime.now().hour;
 
   bool get _isOnline {
     if (_lastUpdateTime == null) return false;

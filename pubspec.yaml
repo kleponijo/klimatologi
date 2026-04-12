@@ -1,5 +1,5 @@
 name: klimatologiot
-description: "A new Flutter project."
+description: 'A new Flutter project.'
 publish_to: 'none'
 version: 1.0.0+1
 environment:
@@ -22,6 +22,8 @@ dependencies:
   rxdart: ^0.27.7
   user_repository:
     path: packages/user_repository
+  monitoring_repository:
+    path: packages/monitoring_repository
 
 dev_dependencies:
   flutter_lints: ^3.0.0

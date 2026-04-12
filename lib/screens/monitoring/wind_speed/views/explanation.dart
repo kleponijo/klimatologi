@@ -8,10 +8,16 @@ class WindSpeedExplanation extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.green.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.green.shade200),
-      ),
+          color: const Color.fromARGB(255, 232, 240, 245),
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 3,
+              spreadRadius: 0,
+              offset: const Offset(0, 5),
+            )
+          ]),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: const [
@@ -20,7 +26,7 @@ class WindSpeedExplanation extends StatelessWidget {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.bold,
-              color: Colors.green,
+              color: Color.fromARGB(255, 0, 0, 0),
             ),
           ),
           SizedBox(height: 10),
@@ -29,7 +35,7 @@ class WindSpeedExplanation extends StatelessWidget {
             style: TextStyle(
               fontSize: 12,
               height: 1.6,
-              color: Colors.green,
+              color: Color.fromARGB(255, 0, 0, 0),
             ),
           ),
         ],

@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'widgets/monitoring_shared.dart';
+import 'shared/widgets/monitoring_shared.dart';
 
 /// AIR QUALITY MONITORING SCREEN
 class AirQualityMonitoringScreen extends StatefulWidget {
   const AirQualityMonitoringScreen({super.key});
 
   @override
-  State<AirQualityMonitoringScreen> createState() => _AirQualityMonitoringScreenState();
+  State<AirQualityMonitoringScreen> createState() =>
+      _AirQualityMonitoringScreenState();
 }
 
-class _AirQualityMonitoringScreenState extends State<AirQualityMonitoringScreen> {
+class _AirQualityMonitoringScreenState
+    extends State<AirQualityMonitoringScreen> {
   String _selectedPeriod = "Hari Ini";
 
   @override
@@ -61,8 +63,30 @@ class _AirQualityMonitoringScreenState extends State<AirQualityMonitoringScreen>
     csvContent.writeln("Jam,AQI (Air Quality Index)");
 
     final dailyData = [
-      68.0, 70.0, 72.0, 75.0, 78.0, 80.0, 78.0, 75.0, 72.0, 70.0,
-      68.0, 65.0, 60.0, 58.0, 60.0, 62.0, 65.0, 68.0, 70.0, 72.0, 75.0, 78.0, 76.0, 74.0
+      68.0,
+      70.0,
+      72.0,
+      75.0,
+      78.0,
+      80.0,
+      78.0,
+      75.0,
+      72.0,
+      70.0,
+      68.0,
+      65.0,
+      60.0,
+      58.0,
+      60.0,
+      62.0,
+      65.0,
+      68.0,
+      70.0,
+      72.0,
+      75.0,
+      78.0,
+      76.0,
+      74.0
     ];
     for (int i = 0; i < dailyData.length; i++) {
       csvContent.writeln("$i:00,${dailyData[i]}");
@@ -75,7 +99,8 @@ class _AirQualityMonitoringScreenState extends State<AirQualityMonitoringScreen>
     csvContent.writeln("Maksimal: 80 AQI");
     csvContent.writeln("Minimal: 58 AQI");
 
-    showExportPreview(context, csvContent.toString(), "Data Harian Kualitas Udara");
+    showExportPreview(
+        context, csvContent.toString(), "Data Harian Kualitas Udara");
   }
 
   void _exportWeeklyAirQualityData() {
@@ -85,7 +110,15 @@ class _AirQualityMonitoringScreenState extends State<AirQualityMonitoringScreen>
     csvContent.writeln("");
     csvContent.writeln("Hari,Rata-rata AQI");
 
-    final days = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+    final days = [
+      'Senin',
+      'Selasa',
+      'Rabu',
+      'Kamis',
+      'Jumat',
+      'Sabtu',
+      'Minggu'
+    ];
     final weeklyData = [68.0, 72.0, 75.0, 78.0, 72.0, 68.0, 62.0];
 
     for (int i = 0; i < days.length; i++) {
@@ -99,13 +132,15 @@ class _AirQualityMonitoringScreenState extends State<AirQualityMonitoringScreen>
     csvContent.writeln("Maksimal: 78 AQI");
     csvContent.writeln("Minimal: 62 AQI");
 
-    showExportPreview(context, csvContent.toString(), "Data Mingguan Kualitas Udara");
+    showExportPreview(
+        context, csvContent.toString(), "Data Mingguan Kualitas Udara");
   }
 
   void _exportMonthlyAirQualityData() {
     final StringBuffer csvContent = StringBuffer();
     csvContent.writeln("DATA MONITORING KUALITAS UDARA - BULANAN");
-    csvContent.writeln("Bulan: ${DateTime.now().toString().split(' ')[0].substring(0, 7)}");
+    csvContent.writeln(
+        "Bulan: ${DateTime.now().toString().split(' ')[0].substring(0, 7)}");
     csvContent.writeln("");
     csvContent.writeln("Tanggal,Rata-rata AQI");
 
@@ -121,7 +156,8 @@ class _AirQualityMonitoringScreenState extends State<AirQualityMonitoringScreen>
     csvContent.writeln("Maksimal: 82 AQI");
     csvContent.writeln("Minimal: 55 AQI");
 
-    showExportPreview(context, csvContent.toString(), "Data Bulanan Kualitas Udara");
+    showExportPreview(
+        context, csvContent.toString(), "Data Bulanan Kualitas Udara");
   }
 
   void _exportAnnualAirQualityData() {
@@ -132,11 +168,47 @@ class _AirQualityMonitoringScreenState extends State<AirQualityMonitoringScreen>
     csvContent.writeln("Bulan,Rata-rata AQI,AQI Max");
 
     final months = [
-      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember'
     ];
-    final averages = [68.0, 70.0, 72.5, 75.0, 78.0, 80.0, 82.0, 80.0, 75.0, 70.0, 68.0, 65.0];
-    final maxAqi = [85.0, 88.0, 90.0, 95.0, 98.0, 100.0, 102.0, 100.0, 95.0, 90.0, 85.0, 80.0];
+    final averages = [
+      68.0,
+      70.0,
+      72.5,
+      75.0,
+      78.0,
+      80.0,
+      82.0,
+      80.0,
+      75.0,
+      70.0,
+      68.0,
+      65.0
+    ];
+    final maxAqi = [
+      85.0,
+      88.0,
+      90.0,
+      95.0,
+      98.0,
+      100.0,
+      102.0,
+      100.0,
+      95.0,
+      90.0,
+      85.0,
+      80.0
+    ];
 
     for (int i = 0; i < months.length; i++) {
       csvContent.writeln("${months[i]},${averages[i]},${maxAqi[i]}");
@@ -148,7 +220,8 @@ class _AirQualityMonitoringScreenState extends State<AirQualityMonitoringScreen>
     csvContent.writeln("AQI Max Teringgi: 102.0");
     csvContent.writeln("AQI Min Terendah: 65.0");
 
-    showExportPreview(context, csvContent.toString(), "Data Tahunan Kualitas Udara");
+    showExportPreview(
+        context, csvContent.toString(), "Data Tahunan Kualitas Udara");
   }
 
   /// DATA GENERATORS
@@ -157,8 +230,30 @@ class _AirQualityMonitoringScreenState extends State<AirQualityMonitoringScreen>
       case "Hari Ini":
         return List.generate(24, (i) {
           final values = [
-            68.0, 70.0, 72.0, 75.0, 78.0, 80.0, 78.0, 75.0, 72.0, 70.0,
-            68.0, 65.0, 60.0, 58.0, 60.0, 62.0, 65.0, 68.0, 70.0, 72.0, 75.0, 78.0, 76.0, 74.0
+            68.0,
+            70.0,
+            72.0,
+            75.0,
+            78.0,
+            80.0,
+            78.0,
+            75.0,
+            72.0,
+            70.0,
+            68.0,
+            65.0,
+            60.0,
+            58.0,
+            60.0,
+            62.0,
+            65.0,
+            68.0,
+            70.0,
+            72.0,
+            75.0,
+            78.0,
+            76.0,
+            74.0
           ];
           return FlSpot(i.toDouble(), values[i]);
         });
@@ -244,7 +339,8 @@ class _AirQualityMonitoringScreenState extends State<AirQualityMonitoringScreen>
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(
-                      children: ["Hari Ini", "Minggu Ini", "Bulan Ini"].map((period) {
+                      children:
+                          ["Hari Ini", "Minggu Ini", "Bulan Ini"].map((period) {
                         return Padding(
                           padding: const EdgeInsets.only(right: 8),
                           child: ChoiceChip(
@@ -504,8 +600,18 @@ class _AirQualityMonitoringScreenState extends State<AirQualityMonitoringScreen>
                         showTitles: true,
                         getTitlesWidget: (value, meta) {
                           final months = [
-                            'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-                            'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
+                            'Jan',
+                            'Feb',
+                            'Mar',
+                            'Apr',
+                            'Mei',
+                            'Jun',
+                            'Jul',
+                            'Agu',
+                            'Sep',
+                            'Okt',
+                            'Nov',
+                            'Des'
                           ];
                           return Text(
                             months[value.toInt()],
@@ -588,6 +694,7 @@ class _AirQualityMonitoringScreenState extends State<AirQualityMonitoringScreen>
                         color: Colors.orange.withOpacity(0.1),
                       ),
                     ),
+
                     /// AQI Max
                     LineChartBarData(
                       spots: const [

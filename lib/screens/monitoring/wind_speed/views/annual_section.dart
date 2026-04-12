@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 
-import '../../widgets/monitoring_shared.dart';
+import '../../shared/widgets/monitoring_shared.dart';
 
 class WindSpeedAnnualSection extends StatelessWidget {
   final VoidCallback onExportAnnual;
@@ -31,7 +31,7 @@ class WindSpeedAnnualSection extends StatelessWidget {
               child: StatCard(
                 title: "Rata-rata Tahunan",
                 value: this._rataRata.toStringAsFixed(2),
-                color: Colors.green,
+                color: const Color.fromARGB(255, 76, 120, 175),
                 icon: Icons.air,
               ),
             ),
@@ -40,7 +40,7 @@ class WindSpeedAnnualSection extends StatelessWidget {
               child: StatCard(
                 title: "Kecepatan Max",
                 value: this._kecepatanMax.toStringAsFixed(2),
-                color: Colors.red,
+                color: const Color.fromARGB(255, 109, 109, 109),
                 icon: Icons.trending_up,
               ),
             ),
@@ -73,7 +73,7 @@ class WindSpeedAnnualSection extends StatelessWidget {
                     horizontalInterval: 2,
                     getDrawingHorizontalLine: (value) {
                       return FlLine(
-                        color: Colors.grey.shade300,
+                        color: const Color.fromARGB(255, 224, 224, 224),
                         strokeWidth: 1,
                       );
                     },
@@ -142,7 +142,7 @@ class WindSpeedAnnualSection extends StatelessWidget {
                     ),
                     LineChartBarData(
                       spots: const [
-                        FlSpot(0, 12.0), //sadds
+                        FlSpot(0, 12.0),
                         FlSpot(1, 13.5),
                         FlSpot(2, 14.0),
                         FlSpot(3, 15.5),

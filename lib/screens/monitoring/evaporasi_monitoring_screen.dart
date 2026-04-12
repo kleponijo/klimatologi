@@ -3,7 +3,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'dart:async';
 import 'package:intl/intl.dart';
-import 'widgets/monitoring_shared.dart';
+import 'shared/widgets/monitoring_shared.dart';
 
 /// EVAPORASI MONITORING SCREEN
 class EvaporasiMonitoringScreen extends StatefulWidget {

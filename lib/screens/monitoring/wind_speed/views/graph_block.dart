@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 
-import '../../widgets/monitoring_shared.dart';
+import '../../shared/widgets/monitoring_shared.dart';
 
 class WindSpeedGraphBlock extends StatelessWidget {
   final String selectedPeriod;
@@ -119,7 +119,10 @@ class WindSpeedGraphBlock extends StatelessWidget {
                                 onPeriodChanged(period);
                               }
                             },
-                            selectedColor: Colors.green,
+                            side: BorderSide.none,
+                            backgroundColor: Colors.grey.withOpacity(0.1),
+                            selectedColor:
+                                const Color.fromARGB(255, 0, 136, 255),
                             labelStyle: TextStyle(
                               color: selectedPeriod == period
                                   ? Colors.white
@@ -137,7 +140,7 @@ class WindSpeedGraphBlock extends StatelessWidget {
                   icon: const Icon(Icons.download, size: 16),
                   label: const Text("Export"),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
+                    backgroundColor: const Color.fromARGB(255, 0, 145, 255),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10,
@@ -226,15 +229,16 @@ class WindSpeedGraphBlock extends StatelessWidget {
                         getDotPainter: (spot, percent, barData, index) {
                           return FlDotCirclePainter(
                             radius: 4,
-                            color: Colors.green,
+                            color: const Color.fromARGB(255, 0, 191, 255),
                             strokeWidth: 0,
                           );
                         },
                       ),
-                      color: Colors.green,
+                      color: const Color.fromARGB(255, 0, 191, 255),
                       belowBarData: BarAreaData(
                         show: true,
-                        color: Colors.green.withOpacity(0.1),
+                        color: const Color.fromARGB(255, 0, 115, 255)
+                            .withOpacity(0.1),
                       ),
                     ),
                   ],
