@@ -11,13 +11,28 @@ class FirebaseMonitoringRepo implements MonitoringRepository {
   // Satu fungsi untuk semua jenis sensor
   // Kamu cukup masukkan "path" database-nya saja
   @override
-  Stream<DatabaseEvent> getSensorStream(String path) {
-    return _db.ref(path).onValue;
+  Stream<T> getSensorStream<T>(
+    String path,
+    T Function(Map<dynamic, dynamic> json) mapper,
+  ) {
+    /// === ambil data mentah dari firebase === ///
+    return _db.ref(path).onValue.map((event) {
+      /// == ambil value-nya dan pastikan tipenya map == ///
+      final data = event.snapshot.value as Map<dynamic, dynamic>? ?? {};
+
+      /// == masukan ke dalam "pabrik" (mapper) agar jadi objek == ///
+      return mapper(data);
+    });
   }
 
   @override
   // Jika ingin mengambil data sekali saja (bukan stream)
-  Future<DataSnapshot> getSensorSnapshot(String path) async {
-    return await _db.ref(path).get();
+  Future<T> getSensorSnapshot<T>(
+    String path,
+    T Function(Map<dynamic, dynamic> json) mapper,
+  ) async {
+    final snapshot = await _db.ref(path).get();
+    final data = snapshot.value as Map<dynamic, dynamic>? ?? {};
+    return mapper(data);
   }
 }
