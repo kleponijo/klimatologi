@@ -15,7 +15,7 @@ class MyWindSpeed {
       pulse: (json['pulse'] ?? 0) as int,
       timestamp: DateTime.fromMillisecondsSinceEpoch(
         (json['timestamp'] ?? 0) * 1000, // kalau dari Unix detik
-      ),
+      ).toLocal(),
     );
   }
 }
