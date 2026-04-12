@@ -234,16 +234,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                   .read<SignUpBloc>()
                                   .add(GoogleSignInRequired());
                             },
-                            icon: const Text(
-                              'G',
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.blue,
+                            icon: SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: Image.asset(
+                                'images/google-icon-logo.png',
+                                fit: BoxFit.contain,
                               ),
                             ),
                             label: const Text(
-                              'Daftar dengan Google',
+                              'Sign In With Google',
                               style: TextStyle(
                                   color: Colors.black,
                                   fontSize: 16,

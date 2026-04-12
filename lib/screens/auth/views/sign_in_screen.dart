@@ -124,19 +124,22 @@ class _SignInScreenState extends State<SignInScreen> {
                           )),
                     )
                   : const CircularProgressIndicator(),
+
+              /// ======= Tombol Login Google ======= ///
               const SizedBox(height: 20),
               SizedBox(
                 width: MediaQuery.of(context).size.width * 0.5,
                 child: TextButton.icon(
                   onPressed: () {
+                    // == Mengirim event login Google ke Bloc == //
                     context.read<SignInBloc>().add(GoogleSignInRequired());
                   },
-                  icon: const Text(
-                    'G',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blue,
+                  icon: SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: Image.asset(
+                      'images/google-icon-logo.png',
+                      fit: BoxFit.contain,
                     ),
                   ),
                   label: const Text(
