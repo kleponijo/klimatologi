@@ -17,6 +17,6 @@ class SignInRequired extends SignInEvent {
   List<Object> get props => [email, password];
 }
 
-class SignOutRequired extends SignInEvent {
-  
-}
+class GoogleSignInRequired extends SignInEvent {}
+
+class SignOutRequired extends SignInEvent {}

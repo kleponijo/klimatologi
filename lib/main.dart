@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:klimatologiot/simple_bloc_observer.dart';
 import 'package:klimatologiot/app.dart';
 import 'package:user_repository/user_repository.dart';
+import 'package:monitoring_repository/monitoring_repository.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -12,5 +13,8 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   Bloc.observer = SimpleBlocObserver();
-  runApp(MyApp(FirebaseUserRepo()));
+  runApp(MyApp(
+    FirebaseUserRepo(),
+    FirebaseMonitoringRepo(),
+  ));
 }

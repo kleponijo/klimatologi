@@ -26,6 +26,13 @@ class AuthenticationBloc extends Bloc<AuthenticationEvent, AuthenticationState> 
         emit(AuthenticationState.unauthenticated());
       }
     });
+    on<AuthenticationLogoutRequested>((event, emit) async {
+      try {
+        await userRepository.logOut();
+      } catch (_) {
+        // ignore errors here; stream will update state accordingly
+      }
+    });
   }
   @override
   Future<void> close() {
