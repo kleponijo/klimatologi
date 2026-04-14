@@ -12,6 +12,7 @@ class FirebaseUserRepo implements UserRepository {
     FirebaseAuth? firebaseAuth,
   }) : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance;
 
+  /// == Melakukan Implement User == ///
   @override
   Stream<MyUser?> get user {
     return _firebaseAuth.authStateChanges().flatMap((firebaseUser) async* {
@@ -42,6 +43,7 @@ class FirebaseUserRepo implements UserRepository {
     });
   }
 
+  /// == Melakukan Implement Sign in == ///
   @override
   Future<void> signIn(String email, String password) async {
     try {
@@ -53,6 +55,7 @@ class FirebaseUserRepo implements UserRepository {
     }
   }
 
+  /// == Melakukan Implement Sign Up == ///
   @override
   Future<MyUser> signUp(MyUser myUser, String password) async {
     try {
@@ -66,6 +69,7 @@ class FirebaseUserRepo implements UserRepository {
     }
   }
 
+  /// == Melakukan Implement Log Out == ///
   @override
   Future<void> logOut() async {
     await _firebaseAuth.signOut();
@@ -85,6 +89,7 @@ class FirebaseUserRepo implements UserRepository {
     }
   }
 
+  /// == Sign in with Google == ///
   @override
   Future<void> signInWithGoogle() async {
     try {

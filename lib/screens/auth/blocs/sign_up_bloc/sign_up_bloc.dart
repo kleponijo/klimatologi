@@ -20,15 +20,5 @@ class SignUpBloc extends Bloc<SignUpEvent, SignUpState> {
         emit(SignUpFailure(e.toString()));
       }
     });
-
-    on<GoogleSignInRequired>((event, emit) async {
-      emit(SignUpProcess());
-      try {
-        await _userRepository.signInWithGoogle();
-        emit(SignUpSuccess());
-      } catch (e) {
-        emit(SignUpFailure(e.toString()));
-      }
-    });
   }
 }

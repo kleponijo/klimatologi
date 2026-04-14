@@ -25,19 +25,20 @@ class _SignInScreenState extends State<SignInScreen> {
   Widget build(BuildContext context) {
     return BlocListener<SignInBloc, SignInState>(
       listener: (context, state) {
-        if (state is SignInSuccess) {
-          setState(() {
-            signInRequired = false;
-          });
-        } else if (state is SignInProcess) {
+        if (state is SignInProcess) {
           setState(() {
             signInRequired = true;
           });
-        } else if (state is SignInFailure) {
+        } else {
           setState(() {
             signInRequired = false;
-            _errorMsg = 'Invalid email or password';
           });
+          if (state is SignInFailure) {
+            setState(() {
+              // PERUBAHAN: Pesan error lebih umum karena Google gagal belum tentu soal password
+              _errorMsg = 'Sign in failed. Please try again.';
+            });
+          }
         }
       },
       child: Form(

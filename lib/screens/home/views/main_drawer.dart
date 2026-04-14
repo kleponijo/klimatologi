@@ -35,7 +35,11 @@ class MainDrawer extends StatelessWidget {
 
           // Daftar Menu
           ListTile(
-            leading: const Icon(Icons.speed),
+            leading: Image.asset(
+              'images/windy.png',
+              height: 20,
+              width: 20,
+            ),
             title: const Text("Wind Speed"),
             onTap: () {
               // Navigasi ke Wind Speed
@@ -52,7 +56,7 @@ class MainDrawer extends StatelessWidget {
               height: 20,
               width: 20,
             ),
-            title: const Text("Udara"),
+            title: const Text("Tekanan Udara"),
             onTap: () {},
           ),
           const Spacer(), // Dorong menu logout ke paling bawah

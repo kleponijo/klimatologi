@@ -17,11 +17,14 @@ class FirebaseMonitoringRepo implements MonitoringRepository {
   ) {
     /// === ambil data mentah dari firebase === ///
     return _db.ref(path).onValue.map((event) {
-      /// == ambil value-nya dan pastikan tipenya map == ///
-      final data = event.snapshot.value as Map<dynamic, dynamic>? ?? {};
+      final Object? value = event.snapshot.value;
 
-      /// == masukan ke dalam "pabrik" (mapper) agar jadi objek == ///
-      return mapper(data);
+      if (value is Map) {
+        return mapper(value);
+      } else {
+        // Jika data kosong atau bukan Map, berikan Map kosong agar mapper tidak crash
+        return mapper({});
+      }
     });
   }
 

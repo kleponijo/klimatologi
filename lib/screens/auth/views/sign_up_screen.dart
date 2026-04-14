@@ -3,10 +3,13 @@ import 'package:user_repository/user_repository.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../../components/my_text_field.dart';
-import '../blocs/sign_up_bloc/sign_up_bloc.dart';
+import '../blocs/sign_up_bloc/sign_up_bloc.dart' as signUp;
+// import '../../../blocs/authentication_bloc/authentication_bloc.dart';
+import '../blocs/sign_in_bloc/sign_in_bloc.dart' as signIn;
 
 class SignUpScreen extends StatefulWidget {
-  const SignUpScreen({super.key});
+  final VoidCallback? onSignInTap;
+  const SignUpScreen({super.key, this.onSignInTap});
 
   @override
   State<SignUpScreen> createState() => _SignUpScreenState();
@@ -30,18 +33,26 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<SignUpBloc, SignUpState>(
+    return BlocListener<signUp.SignUpBloc, signUp.SignUpState>(
       listener: (context, state) {
-        if (state is SignUpSuccess) {
-          setState(() {
-            signUpRequired = false;
-          });
-        } else if (state is SignUpProcess) {
+        if (state is signUp.SignUpProcess) {
           setState(() {
             signUpRequired = true;
           });
-        } else if (state is SignUpFailure) {
-          return;
+        } else if (state is signUp.SignUpFailure) {
+          setState(() {
+            signUpRequired = false; // Matikan loading!
+          });
+          // Tampilkan pesan error lewat Snackbar biar user tahu kenapa gagal
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text(state.message ?? 'An error ocurred'),
+                backgroundColor: Colors.red),
+          );
+        } else if (state is signUp.SignUpSuccess) {
+          setState(() {
+            signUpRequired = false;
+          });
         }
       },
       child: Form(
@@ -181,41 +192,48 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                         const SizedBox(height: 18),
 
+                        /// == Sign Up == ///
                         // Button
                         !signUpRequired
-                            ? SizedBox(
-                                width: MediaQuery.of(context).size.width * 0.92,
-                                child: ElevatedButton(
-                                  onPressed: () {
-                                    if (_formKey.currentState!.validate()) {
-                                      MyUser myUser = MyUser.empty;
-                                      myUser.email = emailController.text;
-                                      myUser.name = nameController.text;
+                            ? Center(
+                                child: SizedBox(
+                                  width:
+                                      MediaQuery.of(context).size.width * 0.5,
+                                  child: ElevatedButton(
+                                    onPressed: () {
+                                      if (_formKey.currentState!.validate()) {
+                                        MyUser myUser = MyUser.empty;
+                                        myUser.email = emailController.text;
+                                        myUser.name = nameController.text;
 
-                                      setState(() {
-                                        context.read<SignUpBloc>().add(
-                                              SignUpRequired(
-                                                myUser,
-                                                passwordController.text,
-                                              ),
-                                            );
-                                      });
-                                    }
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.black87,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 16),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
+                                        setState(() {
+                                          context.read<signUp.SignUpBloc>().add(
+                                                signUp.SignUpRequired(
+                                                  myUser,
+                                                  passwordController.text,
+                                                ),
+                                              );
+                                        });
+                                      }
+                                    },
+                                    style: TextButton.styleFrom(
+                                      backgroundColor:
+                                          Theme.of(context).colorScheme.primary,
+                                      foregroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(60),
+                                      ),
                                     ),
-                                  ),
-                                  child: const Text(
-                                    'Daftar',
-                                    style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600),
+                                    child: Padding(
+                                      padding: EdgeInsets.symmetric(
+                                          horizontal: 25, vertical: 5),
+                                      child: const Text(
+                                        'Sign Up',
+                                        style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600),
+                                      ),
+                                    ),
                                   ),
                                 ),
                               )
@@ -225,39 +243,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         Center(
                           child: Text('Atau'),
                         ),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          width: MediaQuery.of(context).size.width * 0.92,
-                          child: TextButton.icon(
-                            onPressed: () {
-                              context
-                                  .read<SignUpBloc>()
-                                  .add(GoogleSignInRequired());
-                            },
-                            icon: SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: Image.asset(
-                                'images/google-icon-logo.png',
-                                fit: BoxFit.contain,
-                              ),
-                            ),
-                            label: const Text(
-                              'Sign In With Google',
-                              style: TextStyle(
-                                  color: Colors.black,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600),
-                            ),
-                            style: TextButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  side: const BorderSide(color: Colors.grey)),
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                            ),
-                          ),
-                        ),
+
                         const SizedBox(height: 12),
                         Center(
                           child: Row(
@@ -266,9 +252,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               const Text('Sudah punya akun? '),
                               TextButton(
                                 onPressed: () {
-                                  Navigator.of(context).pop();
+                                  widget.onSignInTap?.call();
                                 },
-                                child: const Text('Login di sini'),
+                                child: const Text(
+                                  'Login di sini',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
                               )
                             ],
                           ),
