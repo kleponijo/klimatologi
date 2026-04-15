@@ -9,6 +9,12 @@ class MyWindSpeed {
     required this.timestamp,
   });
 
+  static final empty = MyWindSpeed(
+    speed: 0.0,
+    pulse: 0,
+    timestamp: DateTime.fromMillisecondsSinceEpoch(0),
+  );
+
   factory MyWindSpeed.fromJson(Map<dynamic, dynamic> json) {
     return MyWindSpeed(
       speed: (json['speed'] ?? 0).toDouble(),

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart';
+// import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/wind_speed_bloc.dart';
 import './widgets/wind_speed_chart_widget.dart';
+import 'widgets/period_selector.dart';
 
 class WindSpeedScreen extends StatelessWidget {
   const WindSpeedScreen({super.key});
@@ -37,10 +38,13 @@ class WindSpeedScreen extends StatelessWidget {
                 _buildMainSpeedDisplay(state.currentSpeed),
                 const SizedBox(height: 30),
 
-                const Text("Tren Real-time",
+                const Text("Tren Kecepatan",
                     style:
                         TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 15),
+                const PeriodSelector(),
+                const SizedBox(height: 15),
+
                 WindSpeedChartWidget(dailySpeeds: state.dailySpeeds),
 
                 const SizedBox(height: 30),
