@@ -34,10 +34,20 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
           _repository.getSensorStream(
               'anemometer/realtime', (json) => MyWindSpeed.fromJson(json)),
           onData: (data) {
-            // Mengambil list lama dan menambah data baru untuk grafik
+            // 1. Ambil list kecepatan yang ada saat ini di state
+            final updatedSpeeds = List<double>.from(state.dailySpeeds);
+
+            // 2. Tentukan di index mana data ini harus masuk (misal berdasarkan menit saat ini)
+            final int index = DateTime.now().minute;
+
+            // 3. Update nilai di index tersebut
+            if (index < updatedSpeeds.length) {
+              updatedSpeeds[index] = data.speed;
+            }
 
             return state.copyWith(
               currentSpeed: data.speed,
+              dailySpeeds: updatedSpeeds,
               isLoading: false,
             );
           },
@@ -76,16 +86,22 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
 
 List<double> _mapHistoryToDaily(List<MyWindSpeed> history) {
   // Buat list 24 angka nol (representasi jam 00:00 - 23:00)
-  List<double> slots = List.generate(24, (_) => 0.0);
+  List<double> slots = List.generate(24, (_) => 0.0); // mode asli
+  // Kita buat 60 slot (representasi menit 0-59) agar tiap menit kelihatan titik baru
+  // List<double> slots = List.generate(60, (_) => 0.0); // mode percobaan
 
   for (var item in history) {
     // Ubah timestamp UTC ke jam lokal
-    DateTime date = item.timestamp;
+    DateTime date = item.timestamp; // sudah dateTime dari model
 
     // Jika data ini adalah data hari ini, masukkan ke slot jamnya
     if (date.day == DateTime.now().day) {
       slots[date.hour] = item.speed;
-    }
+    } // mode asli
+    // pakai menit untuk percobaan (date.minute) sebagai index supaya kelihatan pergerakannya
+    // if (date.day == DateTime.now().day) {
+    //   slots[date.minute] = item.speed;
+    // } // mode percobaan/testing
   }
   return slots;
 }

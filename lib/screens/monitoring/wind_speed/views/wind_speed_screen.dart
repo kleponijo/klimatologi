@@ -45,7 +45,10 @@ class WindSpeedScreen extends StatelessWidget {
                 const PeriodSelector(),
                 const SizedBox(height: 15),
 
-                WindSpeedChartWidget(dailySpeeds: state.dailySpeeds),
+                WindSpeedChartWidget(
+                  dailySpeeds: state.dailySpeeds,
+                  period: state.selectedPeriod,
+                ),
 
                 const SizedBox(height: 30),
 
