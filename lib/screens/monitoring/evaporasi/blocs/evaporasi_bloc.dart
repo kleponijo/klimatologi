@@ -3,7 +3,7 @@ import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:monitoring_repository/monitoring_repository.dart';
 
-import '../../../core/utils/time_series_mapper.dart';
+import '../../../../core/utils/time_series_mapper.dart';
 
 part 'evaporasi_event.dart';
 part 'evaporasi_state.dart';
@@ -15,7 +15,6 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
   EvaporasiBloc({required MonitoringRepository repository})
       : _repository = repository,
         super(const EvaporasiState()) {
-
     on<WatchEvaporasiStarted>(_onStarted);
     on<_EvaporasiRealtimeUpdated>(_onRealtimeUpdated);
     on<EvaporasiPeriodChanged>(_onPeriodChanged);
@@ -25,10 +24,9 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
   /// 🚀 START
   /// =========================
   Future<void> _onStarted(
-      WatchEvaporasiStarted event,
-      Emitter<EvaporasiState> emit,
-      ) async {
-
+    WatchEvaporasiStarted event,
+    Emitter<EvaporasiState> emit,
+  ) async {
     emit(state.copyWith(isLoading: true));
 
     final history = await _repository.getSensorHistory(
@@ -39,7 +37,7 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
     final dailyGraph = TimeSeriesMapper.toDaily(
       data: history,
       getTime: (e) => e.timestamp,
-      getValue: (e) => e.value, // ⚠️ sesuaikan nama field
+      getValue: (e) => e.evaporasi, // ⚠️ sesuaikan nama field
     );
 
     emit(state.copyWith(
@@ -52,7 +50,7 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
 
     _subscription = _repository
         .getSensorStream(
-      'evaporasi/realtime',
+      'kelompok1/evaporasi',
       (json) => Evaporasi.fromJson(json),
     )
         .listen((data) {
@@ -64,20 +62,21 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
   /// ⚡ REALTIME
   /// =========================
   void _onRealtimeUpdated(
-      _EvaporasiRealtimeUpdated event,
-      Emitter<EvaporasiState> emit,
-      ) {
-
+    _EvaporasiRealtimeUpdated event,
+    Emitter<EvaporasiState> emit,
+  ) {
     final updated = List<double>.from(state.dailyValues);
 
     final index = DateTime.now().hour;
 
     if (index < updated.length) {
-      updated[index] = event.data.value; // ⚠️ sesuaikan field
+      updated[index] = event.data.evaporasi; // ⚠️ sesuaikan field
     }
 
     emit(state.copyWith(
-      currentValue: event.data.value,
+      currentValue: event.data.evaporasi,
+      temperature: event.data.suhu,
+      waterLevel: event.data.tinggiAir,
       dailyValues: updated,
     ));
   }
@@ -86,10 +85,9 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
   /// 📊 PERIOD
   /// =========================
   Future<void> _onPeriodChanged(
-      EvaporasiPeriodChanged event,
-      Emitter<EvaporasiState> emit,
-      ) async {
-
+    EvaporasiPeriodChanged event,
+    Emitter<EvaporasiState> emit,
+  ) async {
     emit(state.copyWith(isLoading: true, selectedPeriod: event.period));
 
     final history = state.history;
@@ -100,19 +98,19 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
       updated = TimeSeriesMapper.toWeekly(
         data: history,
         getTime: (e) => e.timestamp,
-        getValue: (e) => e.value,
+        getValue: (e) => e.evaporasi,
       );
     } else if (event.period == "Bulan Ini") {
       updated = TimeSeriesMapper.toMonthly(
         data: history,
         getTime: (e) => e.timestamp,
-        getValue: (e) => e.value,
+        getValue: (e) => e.evaporasi,
       );
     } else {
       updated = TimeSeriesMapper.toDaily(
         data: history,
         getTime: (e) => e.timestamp,
-        getValue: (e) => e.value,
+        getValue: (e) => e.evaporasi,
       );
     }
 

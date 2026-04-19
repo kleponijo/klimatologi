@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../blocs/evaporasi_bloc.dart';
+import '../blocs/atmospheric_conditions_bloc.dart';
 
-class EvaporasiScreen extends StatelessWidget {
-  const EvaporasiScreen({super.key});
+class AtmosphericScreen extends StatelessWidget {
+  const AtmosphericScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -11,7 +11,7 @@ class EvaporasiScreen extends StatelessWidget {
       backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
         title: const Text(
-          "Evaporasi",
+          "Kondisi Atmosfer",
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
@@ -19,7 +19,7 @@ class EvaporasiScreen extends StatelessWidget {
         elevation: 0,
         foregroundColor: Colors.black,
       ),
-      body: BlocBuilder<EvaporasiBloc, EvaporasiState>(
+      body: BlocBuilder<AtmosphericConditionsBloc, AtmosphericConditionsState>(
         builder: (context, state) {
           if (state.isLoading) {
             return const Center(child: CircularProgressIndicator());
@@ -29,11 +29,9 @@ class EvaporasiScreen extends StatelessWidget {
             padding: const EdgeInsets.all(20),
             child: Column(
               children: [
-                _mainCard(state),
+                _mainTemperature(state),
                 const SizedBox(height: 25),
-                _infoRow(state),
-                const SizedBox(height: 25),
-                _trendSection(),
+                _gridInfo(state),
               ],
             ),
           );
@@ -43,24 +41,34 @@ class EvaporasiScreen extends StatelessWidget {
   }
 
   /// =========================
-  /// 🔥 MAIN CARD (EVAPORASI)
+  /// 🌡️ TEMPERATURE (HERO CARD)
   /// =========================
-  Widget _mainCard(EvaporasiState state) {
+  Widget _mainTemperature(AtmosphericConditionsState state) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 40),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.blue.shade400, Colors.blue.shade800],
+          colors: [
+            const Color.fromARGB(255, 38, 255, 222),
+            const Color.fromARGB(255, 53, 132, 229)
+          ],
         ),
         borderRadius: BorderRadius.circular(25),
+        boxShadow: [
+          BoxShadow(
+            color: const Color.fromARGB(255, 0, 191, 255).withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          )
+        ],
       ),
       child: Column(
         children: [
-          const Icon(Icons.water_drop, color: Colors.white, size: 45),
+          const Icon(Icons.thermostat, color: Colors.white, size: 50),
           const SizedBox(height: 10),
           Text(
-            state.currentValue.toStringAsFixed(1),
+            state.temperature.toStringAsFixed(1),
             style: const TextStyle(
               fontSize: 70,
               fontWeight: FontWeight.bold,
@@ -68,7 +76,7 @@ class EvaporasiScreen extends StatelessWidget {
             ),
           ),
           const Text(
-            "mm",
+            "°C",
             style: TextStyle(color: Colors.white70, fontSize: 18),
           ),
         ],
@@ -77,31 +85,41 @@ class EvaporasiScreen extends StatelessWidget {
   }
 
   /// =========================
-  /// 📊 INFO KECIL (SUHU & AIR)
+  /// 📊 INFO GRID
   /// =========================
-  Widget _infoRow(EvaporasiState state) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  Widget _gridInfo(AtmosphericConditionsState state) {
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 15,
+      crossAxisSpacing: 15,
+      childAspectRatio: 1.6,
       children: [
-        _miniCard(
-          "Suhu",
-          "${state.temperature.toStringAsFixed(1)} °C",
-          Icons.thermostat,
-          Colors.orange,
-        ),
-        _miniCard(
-          "Tinggi Air",
-          "${state.waterLevel.toStringAsFixed(1)} cm",
-          Icons.water,
+        _infoCard(
+          "Kelembapan",
+          "${state.humidity.toStringAsFixed(1)} %",
+          Icons.water_drop,
           Colors.blue,
+        ),
+        _infoCard(
+          "Tekanan",
+          "${state.pressure.toStringAsFixed(1)} hPa",
+          Icons.speed,
+          Colors.green,
+        ),
+        _infoCard(
+          "Ketinggian",
+          "${state.altitude.toStringAsFixed(1)} m",
+          Icons.terrain,
+          Colors.brown,
         ),
       ],
     );
   }
 
-  Widget _miniCard(String title, String value, IconData icon, Color color) {
+  Widget _infoCard(String title, String value, IconData icon, Color color) {
     return Container(
-      width: 160,
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -109,37 +127,23 @@ class EvaporasiScreen extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(icon, color: color),
+          Icon(icon, color: color, size: 30),
           const SizedBox(width: 10),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(title,
-                  style: const TextStyle(fontSize: 12, color: Colors.grey)),
-              Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text(
+                title,
+                style: const TextStyle(color: Colors.grey, fontSize: 12),
+              ),
+              Text(
+                value,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
             ],
           )
         ],
-      ),
-    );
-  }
-
-  /// =========================
-  /// 📈 TREND (SIMPLE PLACEHOLDER)
-  /// =========================
-  Widget _trendSection() {
-    return Container(
-      width: double.infinity,
-      height: 200,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: const Center(
-        child: Text(
-          "Grafik Evaporasi",
-          style: TextStyle(color: Colors.grey),
-        ),
       ),
     );
   }
