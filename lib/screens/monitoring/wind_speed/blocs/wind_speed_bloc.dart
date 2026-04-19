@@ -3,138 +3,149 @@ import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:monitoring_repository/monitoring_repository.dart';
 import 'package:bloc_concurrency/bloc_concurrency.dart';
+import '../../../../core/utils/time_series_mapper.dart';
+
 part 'wind_speed_event.dart';
 part 'wind_speed_state.dart';
 
 class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
   final MonitoringRepository _repository;
+  StreamSubscription<MyWindSpeed>? _subscription;
 
   WindSpeedBloc({required MonitoringRepository repository})
       : _repository = repository,
         super(const WindSpeedState()) {
-    // Handler saat aplikasi minta mulai monitoring
-    on<WatchWindSpeedStarted>(
-      (event, emit) async {
-        emit(state.copyWith(isLoading: true));
 
-        // 1. Ambil semua history
-        final history = await _repository.getSensorHistory(
-            'anemometer/history', (json) => MyWindSpeed.fromJson(json));
+    /// 🔥 START MONITORING
+    on<WatchWindSpeedStarted>(_onStarted, transformer: restartable());
 
-        // 2. Petakan ke 24 jam (Harian)
-        final List<double> dailyGraph = _mapHistoryToDaily(history);
+    /// 🔥 REALTIME UPDATE
+    on<_WindSpeedRealtimeUpdated>(_onRealtimeUpdated);
 
-        emit(state.copyWith(
-          dailySpeeds: dailyGraph,
-          isLoading: false,
-        ));
+    /// 🔥 CHANGE PERIOD
+    on<WindSpeedPeriodChanged>(_onPeriodChanged);
+  }
 
-        // 2. Monitoring Real-time
-        await emit.forEach<MyWindSpeed>(
-          _repository.getSensorStream(
-              'anemometer/realtime', (json) => MyWindSpeed.fromJson(json)),
-          onData: (data) {
-            // 1. Ambil list kecepatan yang ada saat ini di state
-            final updatedSpeeds = List<double>.from(state.dailySpeeds);
+  /// =========================
+  /// 🚀 START
+  /// =========================
+  Future<void> _onStarted(
+      WatchWindSpeedStarted event,
+      Emitter<WindSpeedState> emit,
+      ) async {
 
-            // 2. Tentukan di index mana data ini harus masuk (misal berdasarkan menit saat ini)
-            final int index = DateTime.now().minute;
+    emit(state.copyWith(isLoading: true));
 
-            // 3. Update nilai di index tersebut
-            if (index < updatedSpeeds.length) {
-              updatedSpeeds[index] = data.speed;
-            }
-
-            return state.copyWith(
-              currentSpeed: data.speed,
-              dailySpeeds: updatedSpeeds,
-              isLoading: false,
-            );
-          },
-          onError: (error, stackTrace) => state.copyWith(isLoading: false),
-        ); // emit forEach
-      },
-      transformer: restartable(),
+    /// 1. Ambil history SEKALI
+    final history = await _repository.getSensorHistory(
+      'anemometer/history',
+          (json) => MyWindSpeed.fromJson(json),
     );
 
-    on<WindSpeedPeriodChanged>((event, emit) async {
-      emit(state.copyWith(selectedPeriod: event.period));
-      // Ambil ulang history dari database
-      final history = await _repository.getSensorHistory(
-          'anemometer/history', (json) => MyWindSpeed.fromJson(json));
-      List<double> updatedGraph;
+    /// 2. Mapping default (harian)
+    final dailyGraph = TimeSeriesMapper.toDaily(
+      data: history,
+  getTime: (e) => e.timestamp,
+  getValue: (e) => e.speed,
+  );
 
-      // Pilih mapper berdasarkan pilihan user
-      if (event.period == "Minggu Ini") {
-        updatedGraph = _mapHistoryToWeekly(history);
-      } else if (event.period == "Bulan Ini") {
-        updatedGraph = _mapHistoryToMonthly(history);
-      } else {
-        updatedGraph = _mapHistoryToDaily(history);
-      }
+    emit(state.copyWith(
+      history: history,
+      dailySpeeds: dailyGraph,
+      isLoading: false,
+    ));
 
-      emit(state.copyWith(
-        dailySpeeds: updatedGraph,
-        isLoading: false,
-      ));
+    /// 3. Start realtime stream (manual subscription)
+    await _subscription?.cancel();
+
+    _subscription = _repository
+        .getSensorStream(
+      'anemometer/realtime',
+          (json) => MyWindSpeed.fromJson(json),
+    )
+        .listen((data) {
+      add(_WindSpeedRealtimeUpdated(data));
     });
   }
 
+  /// =========================
+  /// ⚡ REALTIME UPDATE
+  /// =========================
+  void _onRealtimeUpdated(
+      _WindSpeedRealtimeUpdated event,
+      Emitter<WindSpeedState> emit,
+      ) {
+
+    final updatedSpeeds = List<double>.from(state.dailySpeeds);
+
+    /// 🔥 FIX: pakai JAM bukan menit
+    final int index = DateTime.now().hour;
+
+    if (index < updatedSpeeds.length) {
+      updatedSpeeds[index] = event.data.speed;
+    }
+
+    emit(state.copyWith(
+      currentSpeed: event.data.speed,
+      dailySpeeds: updatedSpeeds,
+    ));
+  }
+
+  /// =========================
+  /// 📊 CHANGE PERIOD
+  /// =========================
+  Future<void> _onPeriodChanged(
+      WindSpeedPeriodChanged event,
+      Emitter<WindSpeedState> emit,
+      ) async {
+
+    emit(state.copyWith(isLoading: true, selectedPeriod: event.period));
+
+    final history = state.history;
+
+    List<double> updatedGraph;
+
+    if (event.period == "Minggu Ini") {
+  updatedGraph = TimeSeriesMapper.toWeekly(
+    data: history,
+    getTime: (e) => e.timestamp,
+    getValue: (e) => e.speed,
+  );
+} else if (event.period == "Bulan Ini") {
+  updatedGraph = TimeSeriesMapper.toMonthly(
+    data: history,
+    getTime: (e) => e.timestamp,
+    getValue: (e) => e.speed,
+  );
+} else {
+  updatedGraph = TimeSeriesMapper.toDaily(
+    data: history,
+    getTime: (e) => e.timestamp,
+    getValue: (e) => e.speed,
+  );
+}
+
+    emit(state.copyWith(
+      dailySpeeds: updatedGraph,
+      isLoading: false,
+    ));
+  }
+
   @override
-  Future<void> close() => super.close();
+  Future<void> close() async {
+    await _subscription?.cancel();
+    return super.close();
+  }
 }
 
-List<double> _mapHistoryToDaily(List<MyWindSpeed> history) {
-  // Buat list 24 angka nol (representasi jam 00:00 - 23:00)
-  List<double> slots = List.generate(24, (_) => 0.0); // mode asli
-  // Kita buat 60 slot (representasi menit 0-59) agar tiap menit kelihatan titik baru
-  // List<double> slots = List.generate(60, (_) => 0.0); // mode percobaan
+/// =========================
+/// 🔒 INTERNAL EVENT (PRIVATE)
+/// =========================
+class _WindSpeedRealtimeUpdated extends WindSpeedEvent {
+  final MyWindSpeed data;
 
-  for (var item in history) {
-    // Ubah timestamp UTC ke jam lokal
-    DateTime date = item.timestamp; // sudah dateTime dari model
+  const _WindSpeedRealtimeUpdated(this.data);
 
-    // Jika data ini adalah data hari ini, masukkan ke slot jamnya
-    if (date.day == DateTime.now().day) {
-      slots[date.hour] = item.speed;
-    } // mode asli
-    // pakai menit untuk percobaan (date.minute) sebagai index supaya kelihatan pergerakannya
-    // if (date.day == DateTime.now().day) {
-    //   slots[date.minute] = item.speed;
-    // } // mode percobaan/testing
-  }
-  return slots;
-}
-
-// Mapper Mingguan (7 Slot: Senin - Minggu)
-List<double> _mapHistoryToWeekly(List<MyWindSpeed> history) {
-  List<double> slots = List.generate(7, (_) => 0.0);
-  final now = DateTime.now();
-
-  // Mencari awal minggu ini (Senin)
-  DateTime startOfWeek = now.subtract(Duration(days: now.weekday - 1));
-  startOfWeek = DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day);
-
-  for (var item in history) {
-    if (item.timestamp.isAfter(startOfWeek)) {
-      // index 0 = Senin, dst.
-      slots[item.timestamp.weekday - 1] = item.speed;
-    }
-  }
-  return slots;
-}
-
-// Mapper Bulanan (Sesuai jumlah hari di bulan ini)
-List<double> _mapHistoryToMonthly(List<MyWindSpeed> history) {
-  final now = DateTime.now();
-  final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
-  List<double> slots = List.generate(daysInMonth, (_) => 0.0);
-
-  for (var item in history) {
-    if (item.timestamp.month == now.month && item.timestamp.year == now.year) {
-      // index 0 = Tanggal 1, dst.
-      slots[item.timestamp.day - 1] = item.speed;
-    }
-  }
-  return slots;
+  @override
+  List<Object> get props => [data];
 }

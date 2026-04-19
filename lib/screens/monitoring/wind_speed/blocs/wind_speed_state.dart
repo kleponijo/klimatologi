@@ -5,12 +5,14 @@ class WindSpeedState extends Equatable {
   final String selectedPeriod;
   final List<double> dailySpeeds; // Untuk grafik
   final bool isLoading;
+  final List<MyWindSpeed> history;
 
   const WindSpeedState({
     this.currentSpeed = 0.0,
     this.selectedPeriod = "Hari Ini",
     this.dailySpeeds = const [],
     this.isLoading = true,
+    this.history = const [],
   });
 
   WindSpeedState copyWith({
@@ -18,16 +20,18 @@ class WindSpeedState extends Equatable {
     String? selectedPeriod,
     List<double>? dailySpeeds,
     bool? isLoading,
+    List<MyWindSpeed>? history,
   }) {
     return WindSpeedState(
       currentSpeed: currentSpeed ?? this.currentSpeed,
       selectedPeriod: selectedPeriod ?? this.selectedPeriod,
       dailySpeeds: dailySpeeds ?? this.dailySpeeds,
       isLoading: isLoading ?? this.isLoading,
+      history: history ?? this.history,
     );
   }
 
   @override
   List<Object> get props =>
-      [currentSpeed, selectedPeriod, dailySpeeds, isLoading];
+      [currentSpeed, selectedPeriod, dailySpeeds, isLoading, history];
 }
