@@ -73,6 +73,8 @@ class FirebaseUserRepo implements UserRepository {
   /// == Melakukan Implement Log Out == ///
   @override
   Future<void> logOut() async {
+    final GoogleSignIn googleSignIn = GoogleSignIn();
+    await googleSignIn.signOut();
     await _firebaseAuth.signOut();
   }
 
@@ -94,14 +96,18 @@ class FirebaseUserRepo implements UserRepository {
   @override
   Future<void> signInWithGoogle() async {
     try {
-      final account = await GoogleSignIn.instance.authenticate(
-        serverClientId: "1234567890-abcxyz.apps.googleusercontent.com",
-      );
+      final GoogleSignIn googleSignIn = GoogleSignIn();
 
-      final auth = await account.authentication;
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+
+      if (googleUser == null) return;
+
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
 
       final credential = GoogleAuthProvider.credential(
-        idToken: auth.idToken,
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
       );
 
       final userCredential =
