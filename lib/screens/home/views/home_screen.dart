@@ -27,16 +27,12 @@ class HomeScreen extends StatelessWidget {
         title: Row(
           children: [
             // Ganti dengan Image.asset jika sudah ada logo
-            const Icon(Icons.cloud_queue, color: Colors.blue, size: 28),
-            const SizedBox(width: 10),
-            Text(
-              "Klimatologi",
-              style: GoogleFonts.rubik(
-                color: Colors.black,
-                fontWeight: FontWeight.bold,
-                fontSize: 20,
-              ),
+            Image.asset(
+              'images/logo_klimatologi.png',
+              height: 90,
+              fit: BoxFit.contain,
             ),
+            const SizedBox(width: 10),
           ],
         ),
         actions: [
