@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:user_repository/user_repository.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class FirebaseUserRepo implements UserRepository {
   final FirebaseAuth _firebaseAuth;
@@ -93,21 +94,29 @@ class FirebaseUserRepo implements UserRepository {
   @override
   Future<void> signInWithGoogle() async {
     try {
-      final GoogleAuthProvider googleProvider = GoogleAuthProvider();
-      final UserCredential userCredential =
-          await _firebaseAuth.signInWithPopup(googleProvider);
+      final account = await GoogleSignIn.instance.authenticate(
+        serverClientId: "1234567890-abcxyz.apps.googleusercontent.com",
+      );
 
-      final User? firebaseUser = userCredential.user;
-      if (firebaseUser != null) {
-        // Check if user data already exists in Firestore
-        final existingUser = await userCollection.doc(firebaseUser.uid).get();
+      final auth = await account.authentication;
+
+      final credential = GoogleAuthProvider.credential(
+        idToken: auth.idToken,
+      );
+
+      final userCredential =
+          await _firebaseAuth.signInWithCredential(credential);
+
+      final user = userCredential.user;
+
+      if (user != null) {
+        final existingUser = await userCollection.doc(user.uid).get();
 
         if (!existingUser.exists) {
-          // Create new user data from Google account info
           final newUser = MyUser(
-            userId: firebaseUser.uid,
-            email: firebaseUser.email ?? '',
-            name: firebaseUser.displayName ?? 'User',
+            userId: user.uid,
+            email: user.email ?? '',
+            name: user.displayName ?? 'User',
             hasActiveCart: false,
           );
 
