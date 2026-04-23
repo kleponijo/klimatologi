@@ -15,7 +15,6 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
   WindSpeedBloc({required MonitoringRepository repository})
       : _repository = repository,
         super(const WindSpeedState()) {
-
     /// 🔥 START MONITORING
     on<WatchWindSpeedStarted>(_onStarted, transformer: restartable());
 
@@ -30,24 +29,24 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
   /// 🚀 START
   /// =========================
   Future<void> _onStarted(
-      WatchWindSpeedStarted event,
-      Emitter<WindSpeedState> emit,
-      ) async {
-
+    WatchWindSpeedStarted event,
+    Emitter<WindSpeedState> emit,
+  ) async {
     emit(state.copyWith(isLoading: true));
 
     /// 1. Ambil history SEKALI
     final history = await _repository.getSensorHistory(
       'anemometer/history',
-          (json) => MyWindSpeed.fromJson(json),
+      (json) => MyWindSpeed.fromJson(json),
     );
 
     /// 2. Mapping default (harian)
-    final dailyGraph = TimeSeriesMapper.toDaily(
+    final raw = TimeSeriesMapper.toDaily(
       data: history,
-  getTime: (e) => e.timestamp,
-  getValue: (e) => e.speed,
-  );
+      getTime: (e) => e.timestamp,
+      getValue: (e) => e.speed,
+    );
+    final dailyGraph = TimeSeriesMapper.smooth(raw);
 
     emit(state.copyWith(
       history: history,
@@ -61,7 +60,7 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
     _subscription = _repository
         .getSensorStream(
       'anemometer/realtime',
-          (json) => MyWindSpeed.fromJson(json),
+      (json) => MyWindSpeed.fromJson(json),
     )
         .listen((data) {
       add(_WindSpeedRealtimeUpdated(data));
@@ -72,22 +71,32 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
   /// ⚡ REALTIME UPDATE
   /// =========================
   void _onRealtimeUpdated(
-      _WindSpeedRealtimeUpdated event,
-      Emitter<WindSpeedState> emit,
-      ) {
+    _WindSpeedRealtimeUpdated event,
+    Emitter<WindSpeedState> emit,
+  ) {
+    final updated = List<double>.from(state.dailySpeeds);
 
-    final updatedSpeeds = List<double>.from(state.dailySpeeds);
+    final index = DateTime.now().hour;
+    double newValue = event.data.speed;
 
-    /// 🔥 FIX: pakai JAM bukan menit
-    final int index = DateTime.now().hour;
+    if (index < updated.length) {
+      final lastValue = updated[index];
 
-    if (index < updatedSpeeds.length) {
-      updatedSpeeds[index] = event.data.speed;
+      /// 🔥 ANTI SPIKE + SMOOTHING
+      if (lastValue != 0) {
+        if ((newValue - lastValue).abs() > 15) {
+          newValue = lastValue; // buang spike
+        } else {
+          newValue = (lastValue + newValue) / 2; // smoothing
+        }
+      }
+
+      updated[index] = newValue;
     }
 
     emit(state.copyWith(
-      currentSpeed: event.data.speed,
-      dailySpeeds: updatedSpeeds,
+      currentSpeed: newValue,
+      dailySpeeds: updated,
     ));
   }
 
@@ -95,10 +104,9 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
   /// 📊 CHANGE PERIOD
   /// =========================
   Future<void> _onPeriodChanged(
-      WindSpeedPeriodChanged event,
-      Emitter<WindSpeedState> emit,
-      ) async {
-
+    WindSpeedPeriodChanged event,
+    Emitter<WindSpeedState> emit,
+  ) async {
     emit(state.copyWith(isLoading: true, selectedPeriod: event.period));
 
     final history = state.history;
@@ -106,24 +114,24 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
     List<double> updatedGraph;
 
     if (event.period == "Minggu Ini") {
-  updatedGraph = TimeSeriesMapper.toWeekly(
-    data: history,
-    getTime: (e) => e.timestamp,
-    getValue: (e) => e.speed,
-  );
-} else if (event.period == "Bulan Ini") {
-  updatedGraph = TimeSeriesMapper.toMonthly(
-    data: history,
-    getTime: (e) => e.timestamp,
-    getValue: (e) => e.speed,
-  );
-} else {
-  updatedGraph = TimeSeriesMapper.toDaily(
-    data: history,
-    getTime: (e) => e.timestamp,
-    getValue: (e) => e.speed,
-  );
-}
+      updatedGraph = TimeSeriesMapper.toWeekly(
+        data: history,
+        getTime: (e) => e.timestamp,
+        getValue: (e) => e.speed,
+      );
+    } else if (event.period == "Bulan Ini") {
+      updatedGraph = TimeSeriesMapper.toMonthly(
+        data: history,
+        getTime: (e) => e.timestamp,
+        getValue: (e) => e.speed,
+      );
+    } else {
+      updatedGraph = TimeSeriesMapper.toDaily(
+        data: history,
+        getTime: (e) => e.timestamp,
+        getValue: (e) => e.speed,
+      );
+    }
 
     emit(state.copyWith(
       dailySpeeds: updatedGraph,

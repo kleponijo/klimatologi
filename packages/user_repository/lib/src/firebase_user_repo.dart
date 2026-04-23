@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:user_repository/user_repository.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class FirebaseUserRepo implements UserRepository {
   final FirebaseAuth _firebaseAuth;
@@ -96,38 +97,25 @@ class FirebaseUserRepo implements UserRepository {
   @override
   Future<void> signInWithGoogle() async {
     try {
-      final GoogleSignIn googleSignIn = GoogleSignIn();
+      if (kIsWeb) {
+        final googleProvider = GoogleAuthProvider();
+        await _firebaseAuth.signInWithPopup(googleProvider);
+      } else {
+        final GoogleSignIn googleSignIn = GoogleSignIn();
+        final googleUser = await googleSignIn.signIn();
 
-      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
-
-      if (googleUser == null) return;
-
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
-
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      final userCredential =
-          await _firebaseAuth.signInWithCredential(credential);
-
-      final user = userCredential.user;
-
-      if (user != null) {
-        final existingUser = await userCollection.doc(user.uid).get();
-
-        if (!existingUser.exists) {
-          final newUser = MyUser(
-            userId: user.uid,
-            email: user.email ?? '',
-            name: user.displayName ?? 'User',
-            hasActiveCart: false,
-          );
-
-          await setUserData(newUser);
+        if (googleUser == null) {
+          throw Exception("cancelled");
         }
+
+        final GoogleSignInAuthentication googleAuth =
+            await googleUser.authentication;
+
+        final credential = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        );
+        await _firebaseAuth.signInWithCredential(credential);
       }
     } catch (e) {
       log('Google sign-in error: $e');
