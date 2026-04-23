@@ -10,8 +10,20 @@ class WindSpeedChartWidget extends StatelessWidget {
   const WindSpeedChartWidget(
       {super.key, required this.dailySpeeds, required this.period});
 
+  double _getMaxY() {
+    if (dailySpeeds.isEmpty) return 10;
+
+    final max = dailySpeeds.reduce((a, b) => a > b ? a : b);
+
+    return (max + 5).clamp(10, 100); // kasih padding
+  }
+
   @override
   Widget build(BuildContext context) {
+    final List<double> safeData = dailySpeeds.map((e) {
+      if (e.isNaN || e.isInfinite) return 0.0;
+      return e < 0 ? 0.0 : e;
+    }).toList();
     return Container(
       height: 270,
       padding: const EdgeInsets.fromLTRB(10, 20, 20, 10),
@@ -27,9 +39,12 @@ class WindSpeedChartWidget extends StatelessWidget {
         ],
       ),
       child: LineChart(
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeOutCubic,
         LineChartData(
           minY: 0,
-          maxY: 50,
+
+          maxY: _getMaxY(),
           gridData: const FlGridData(show: false),
           borderData: FlBorderData(show: false),
 
@@ -61,27 +76,60 @@ class WindSpeedChartWidget extends StatelessWidget {
                       }))),
           lineBarsData: [
             LineChartBarData(
-              spots: dailySpeeds.asMap().entries.map((e) {
+              spots: safeData.asMap().entries.map((e) {
                 return FlSpot(e.key.toDouble(), e.value);
               }).toList(),
               isCurved: true,
+              curveSmoothness: 0.2,
+              preventCurveOverShooting: true,
               color: Colors.blue.shade700,
-              barWidth: 4,
+              barWidth: 3,
               isStrokeCapRound: true,
-              dotData: const FlDotData(show: false),
+              dotData: FlDotData(
+                show: true,
+                getDotPainter: (spot, percent, bar, index) {
+                  if (index == dailySpeeds.length - 1) {
+                    return FlDotCirclePainter(
+                      radius: 5,
+                      color: Colors.red,
+                      strokeWidth: 2,
+                      strokeColor: Colors.white,
+                    );
+                  }
+                  return FlDotCirclePainter(radius: 0);
+                },
+              ),
               belowBarData: BarAreaData(
                 show: true,
                 gradient: LinearGradient(
                   colors: [
-                    Colors.blue.withOpacity(0.3),
-                    Colors.blue.withOpacity(0.0)
+                    Colors.blue.withOpacity(0.35),
+                    Colors.blue.withOpacity(0.1),
+                    Colors.transparent
                   ],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                 ),
               ),
+              shadow: Shadow(
+                color: Colors.blue.withOpacity(0.3),
+                blurRadius: 6,
+              ),
             ),
           ],
+          lineTouchData: LineTouchData(
+            handleBuiltInTouches: true,
+            touchTooltipData: LineTouchTooltipData(
+              getTooltipItems: (touchedSpots) {
+                return touchedSpots.map((spot) {
+                  return LineTooltipItem(
+                    "${spot.y.toStringAsFixed(1)} m/s",
+                    const TextStyle(color: Colors.white),
+                  );
+                }).toList();
+              },
+            ),
+          ),
         ),
       ),
     );
