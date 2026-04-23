@@ -111,27 +111,30 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
 
     final history = state.history;
 
-    List<double> updatedGraph;
+    List<double> raw;
 
     if (event.period == "Minggu Ini") {
-      updatedGraph = TimeSeriesMapper.toWeekly(
+      raw = TimeSeriesMapper.toWeekly(
         data: history,
         getTime: (e) => e.timestamp,
         getValue: (e) => e.speed,
       );
     } else if (event.period == "Bulan Ini") {
-      updatedGraph = TimeSeriesMapper.toMonthly(
+      raw = TimeSeriesMapper.toMonthly(
         data: history,
         getTime: (e) => e.timestamp,
         getValue: (e) => e.speed,
       );
     } else {
-      updatedGraph = TimeSeriesMapper.toDaily(
+      raw = TimeSeriesMapper.toDaily(
         data: history,
         getTime: (e) => e.timestamp,
         getValue: (e) => e.speed,
       );
     }
+
+    /// 🔥 baru di-smooth
+    final updatedGraph = TimeSeriesMapper.smooth(raw);
 
     emit(state.copyWith(
       dailySpeeds: updatedGraph,

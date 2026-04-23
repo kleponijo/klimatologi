@@ -37,7 +37,9 @@ class TimeSeriesMapper {
     required double Function(T) getValue,
   }) {
     final now = DateTime.now();
-    final slots = List<double>.filled(7, 0.0);
+
+    final sums = List<double>.filled(7, 0.0);
+    final counts = List<int>.filled(7, 0);
 
     DateTime startOfWeek = now.subtract(Duration(days: now.weekday - 1));
     startOfWeek =
@@ -47,11 +49,16 @@ class TimeSeriesMapper {
       final time = getTime(item);
 
       if (time.isAfter(startOfWeek)) {
-        slots[time.weekday - 1] = getValue(item);
+        final index = time.weekday - 1;
+        sums[index] += getValue(item);
+        counts[index]++;
       }
     }
 
-    return slots;
+    return List.generate(7, (i) {
+      if (counts[i] == 0) return 0;
+      return sums[i] / counts[i];
+    });
   }
 
   /// =========================
@@ -64,17 +71,24 @@ class TimeSeriesMapper {
   }) {
     final now = DateTime.now();
     final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
-    final slots = List<double>.filled(daysInMonth, 0.0);
+
+    final sums = List<double>.filled(daysInMonth, 0.0);
+    final counts = List<int>.filled(daysInMonth, 0);
 
     for (final item in data) {
       final time = getTime(item);
 
       if (time.month == now.month && time.year == now.year) {
-        slots[time.day - 1] = getValue(item);
+        final index = time.day - 1;
+        sums[index] += getValue(item);
+        counts[index]++;
       }
     }
 
-    return slots;
+    return List.generate(daysInMonth, (i) {
+      if (counts[i] == 0) return 0;
+      return sums[i] / counts[i];
+    });
   }
 
   /// =========================
