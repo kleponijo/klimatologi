@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/evaporasi_bloc.dart';
+import '../../shared/utils/pdf/pdf_export_service.dart';
+import '../../shared/widgets/export_pdf_button.dart';
 
 class EvaporasiScreen extends StatelessWidget {
   const EvaporasiScreen({super.key});
@@ -25,6 +27,15 @@ class EvaporasiScreen extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
 
+          final historyMaps = state.history
+              .map((e) => {
+                    'timestamp': e.timestamp,
+                    'evaporasi': e.evaporasi,
+                    'suhu': e.suhu,
+                    'tinggiAir': e.tinggiAir,
+                  })
+              .toList();
+
           return SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -34,6 +45,16 @@ class EvaporasiScreen extends StatelessWidget {
                 _infoRow(state),
                 const SizedBox(height: 25),
                 _trendSection(),
+                const SizedBox(height: 25),
+                ExportPdfButton(
+                  onExport: () => PdfExportService.evaporasi(
+                    evaporasi: state.currentValue,
+                    suhu: state.temperature,
+                    tinggiAir: state.waterLevel,
+                    timestamp: DateTime.now(),
+                    historyData: historyMaps.isNotEmpty ? historyMaps : null,
+                  ),
+                ),
               ],
             ),
           );

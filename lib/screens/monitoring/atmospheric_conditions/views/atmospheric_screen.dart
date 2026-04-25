@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/atmospheric_conditions_bloc.dart';
+import '../../shared/utils/pdf/pdf_export_service.dart';
+import '../../shared/widgets/export_pdf_button.dart';
 
 class AtmosphericScreen extends StatelessWidget {
   const AtmosphericScreen({super.key});
@@ -32,6 +34,20 @@ class AtmosphericScreen extends StatelessWidget {
                 _mainTemperature(state),
                 const SizedBox(height: 25),
                 _gridInfo(state),
+                const SizedBox(height: 25),
+
+                // ← Tombol Export PDF
+                ExportPdfButton(
+                  onExport: () => PdfExportService.atmospheric(
+                    temperature: state.temperature,
+                    humidity: state.humidity,
+                    pressure: state.pressure,
+                    altitude: state.altitude,
+                    timestamp: DateTime.now(),
+                    // atmospheric state belum punya history,
+                    // kalau nanti ditambah tinggal isi historyData di sini
+                  ),
+                ),
               ],
             ),
           );
