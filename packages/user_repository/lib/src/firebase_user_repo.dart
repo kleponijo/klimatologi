@@ -3,6 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:user_repository/user_repository.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class FirebaseUserRepo implements UserRepository {
   final FirebaseAuth _firebaseAuth;
@@ -72,6 +74,8 @@ class FirebaseUserRepo implements UserRepository {
   /// == Melakukan Implement Log Out == ///
   @override
   Future<void> logOut() async {
+    final GoogleSignIn googleSignIn = GoogleSignIn();
+    await googleSignIn.signOut();
     await _firebaseAuth.signOut();
   }
 
@@ -93,26 +97,25 @@ class FirebaseUserRepo implements UserRepository {
   @override
   Future<void> signInWithGoogle() async {
     try {
-      final GoogleAuthProvider googleProvider = GoogleAuthProvider();
-      final UserCredential userCredential =
-          await _firebaseAuth.signInWithPopup(googleProvider);
+      if (kIsWeb) {
+        final googleProvider = GoogleAuthProvider();
+        await _firebaseAuth.signInWithPopup(googleProvider);
+      } else {
+        final GoogleSignIn googleSignIn = GoogleSignIn();
+        final googleUser = await googleSignIn.signIn();
 
-      final User? firebaseUser = userCredential.user;
-      if (firebaseUser != null) {
-        // Check if user data already exists in Firestore
-        final existingUser = await userCollection.doc(firebaseUser.uid).get();
-
-        if (!existingUser.exists) {
-          // Create new user data from Google account info
-          final newUser = MyUser(
-            userId: firebaseUser.uid,
-            email: firebaseUser.email ?? '',
-            name: firebaseUser.displayName ?? 'User',
-            hasActiveCart: false,
-          );
-
-          await setUserData(newUser);
+        if (googleUser == null) {
+          throw Exception("cancelled");
         }
+
+        final GoogleSignInAuthentication googleAuth =
+            await googleUser.authentication;
+
+        final credential = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        );
+        await _firebaseAuth.signInWithCredential(credential);
       }
     } catch (e) {
       log('Google sign-in error: $e');

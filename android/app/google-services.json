@@ -15,6 +15,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "219079385989-qtvssir2q3c4lo6ijn3p07kl77ukdme2.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.klimatologiot",
+            "certificate_hash": "f5be897daa6ad87f2bd9c04560f67ef379eac6fe"
+          }
+        },
+        {
           "client_id": "219079385989-8hkp1kg2pprs5k269s4c08r6rpdj1gjd.apps.googleusercontent.com",
           "client_type": 3
         }

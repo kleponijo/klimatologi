@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:klimatologiot/screens/monitoring/evaporasi/blocs/evaporasi_bloc.dart';
 import 'package:monitoring_repository/monitoring_repository.dart';
 import '../../../blocs/authentication_bloc/authentication_bloc.dart';
 import '../../monitoring/wind_speed/views/wind_speed_screen.dart';
 import '../../monitoring/wind_speed/blocs/wind_speed_bloc.dart';
+import '../../monitoring/evaporasi/views/evaporasi_screen.dart';
+import '../../monitoring/atmospheric_conditions/blocs/atmospheric_conditions_bloc.dart';
+import '../../monitoring/atmospheric_conditions/views/atmospheric_screen.dart';
 
 class MainDrawer extends StatelessWidget {
   const MainDrawer({super.key});
@@ -68,7 +72,20 @@ class MainDrawer extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.water_drop),
             title: const Text("Evaporasi"),
-            onTap: () {},
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => BlocProvider<EvaporasiBloc>(
+                    create: (context) => EvaporasiBloc(
+                      repository: context.read<MonitoringRepository>(),
+                    )..add(WatchEvaporasiStarted()),
+                    child: const EvaporasiScreen(),
+                  ),
+                ),
+              );
+            },
           ),
           ListTile(
             leading: Image.asset(
@@ -76,8 +93,21 @@ class MainDrawer extends StatelessWidget {
               height: 20,
               width: 20,
             ),
-            title: const Text("Tekanan Udara"),
-            onTap: () {},
+            title: const Text("Kondisi Atmosfer"),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => BlocProvider<AtmosphericConditionsBloc>(
+                    create: (context) => AtmosphericConditionsBloc(
+                      repository: context.read<MonitoringRepository>(),
+                    )..add(WatchAtmosphericConditionsStarted()),
+                    child: AtmosphericScreen(),
+                  ),
+                ),
+              );
+            },
           ),
           const Spacer(), // Dorong menu logout ke paling bawah
           const Divider(),

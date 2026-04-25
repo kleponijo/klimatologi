@@ -18,13 +18,15 @@ dependencies:
     sdk: flutter
   flutter_bloc: ^8.1.0
   google_fonts: ^8.0.2
-  google_sign_in: ^7.2.0
+  google_sign_in: ^6.3.0
   intl: ^0.20.2
   monitoring_repository:
     path: packages/monitoring_repository
   rxdart: ^0.27.7
   user_repository:
     path: packages/user_repository
+  pdf: ^3.11.1
+  printing: ^5.13.1
 
 dev_dependencies:
   flutter_lints: ^3.0.0
