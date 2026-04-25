@@ -5,6 +5,9 @@ import '../blocs/wind_speed_bloc.dart';
 import './widgets/wind_speed_chart_widget.dart';
 import 'widgets/period_selector.dart';
 
+import '../../shared/utils/pdf/pdf_export_service.dart';
+import '../../shared/widgets/export_pdf_button.dart';
+
 class WindSpeedScreen extends StatelessWidget {
   const WindSpeedScreen({super.key});
 
@@ -30,6 +33,32 @@ class WindSpeedScreen extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
 
+          // Pilih data sesuai periode
+          final List<double> data = switch (state.selectedPeriod) {
+            "Minggu Ini" => state.weeklySpeeds,
+            "Bulan Ini" => state.monthlySpeeds,
+            _ => state.dailySpeeds,
+          };
+
+          // List<double> data;
+
+          // if (state.selectedPeriod == "Minggu Ini") {
+          //   data = state.weeklySpeeds;
+          // } else if (state.selectedPeriod == "Bulan Ini") {
+          //   data = state.monthlySpeeds;
+          // } else {
+          //   data = state.dailySpeeds;
+          // }
+
+          // Konversi history MyWindSpeed → Map (untuk tabel PDF)
+          final historyMaps = state.history
+              .map((e) => {
+                    'timestamp': e.timestamp,
+                    'speed': e.speed,
+                    'pulse': e.pulse,
+                  })
+              .toList();
+
           return SingleChildScrollView(
             padding: const EdgeInsets.all(20.0),
             child: Column(
@@ -46,7 +75,7 @@ class WindSpeedScreen extends StatelessWidget {
                 const SizedBox(height: 15),
 
                 WindSpeedChartWidget(
-                  dailySpeeds: state.dailySpeeds,
+                  dailySpeeds: data,
                   period: state.selectedPeriod,
                 ),
 
@@ -54,6 +83,18 @@ class WindSpeedScreen extends StatelessWidget {
 
                 // 3. Info Tambahan (Status/Periode)
                 _buildDetailRow(state.selectedPeriod),
+                const SizedBox(height: 24),
+
+                // ← Tombol Export PDF
+                ExportPdfButton(
+                  onExport: () => PdfExportService.windSpeed(
+                    currentSpeed: state.currentSpeed,
+                    period: state.selectedPeriod,
+                    speeds: data,
+                    timestamp: DateTime.now(),
+                    historyData: historyMaps.isNotEmpty ? historyMaps : null,
+                  ),
+                ),
               ],
             ),
           );

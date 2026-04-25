@@ -25,6 +25,8 @@ dependencies:
   rxdart: ^0.27.7
   user_repository:
     path: packages/user_repository
+  pdf: ^3.11.1
+  printing: ^5.13.1
 
 dev_dependencies:
   flutter_lints: ^3.0.0

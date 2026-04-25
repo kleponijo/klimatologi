@@ -48,9 +48,35 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
     );
     final dailyGraph = TimeSeriesMapper.smooth(raw);
 
+    final daily = TimeSeriesMapper.smooth(
+      TimeSeriesMapper.toDaily(
+        data: history,
+        getTime: (e) => e.timestamp,
+        getValue: (e) => e.speed,
+      ),
+    );
+
+    final weekly = TimeSeriesMapper.smooth(
+      TimeSeriesMapper.toWeekly(
+        data: history,
+        getTime: (e) => e.timestamp,
+        getValue: (e) => e.speed,
+      ),
+    );
+
+    final monthly = TimeSeriesMapper.smooth(
+      TimeSeriesMapper.toMonthly(
+        data: history,
+        getTime: (e) => e.timestamp,
+        getValue: (e) => e.speed,
+      ),
+    );
+
     emit(state.copyWith(
       history: history,
       dailySpeeds: dailyGraph,
+      weeklySpeeds: weekly,
+      monthlySpeeds: monthly,
       isLoading: false,
     ));
 
@@ -91,7 +117,7 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
         }
       }
 
-      updated[index] = newValue;
+      updated[index] = newValue.clamp(0, 100);
     }
 
     emit(state.copyWith(
@@ -107,7 +133,7 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
     WindSpeedPeriodChanged event,
     Emitter<WindSpeedState> emit,
   ) async {
-    emit(state.copyWith(isLoading: true, selectedPeriod: event.period));
+    emit(state.copyWith(selectedPeriod: event.period));
 
     final history = state.history;
 
