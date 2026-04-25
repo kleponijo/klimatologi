@@ -50,7 +50,7 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
 
     _subscription = _repository
         .getSensorStream(
-      'kelompok1/evaporasi',
+      'Monitoring',
       (json) => Evaporasi.fromJson(json),
     )
         .listen((data) {
