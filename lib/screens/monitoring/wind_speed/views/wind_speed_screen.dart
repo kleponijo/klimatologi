@@ -55,7 +55,6 @@ class WindSpeedScreen extends StatelessWidget {
               .map((e) => {
                     'timestamp': e.timestamp,
                     'speed': e.speed,
-                    'pulse': e.pulse,
                   })
               .toList();
 

@@ -51,11 +51,19 @@ class FirebaseMonitoringRepo implements MonitoringRepository {
       if (snapshot.exists && snapshot.value is Map) {
         final Map<dynamic, dynamic> data = snapshot.value as Map;
 
-        // Karena RTDB push() menghasilkan Map dengan ID unik,
-        // kita ambil values-nya saja dan ubah jadi List objek
-        return data.values.map((item) {
+        final list = data.values.map((item) {
           return mapper(item as Map<dynamic, dynamic>);
         }).toList();
+
+        // ✅ Sort by timestamp — Firebase push tidak jamin urutan
+        list.sort((a, b) {
+          if (a is MyWindSpeed && b is MyWindSpeed) {
+            return a.timestamp.compareTo(b.timestamp);
+          }
+          return 0;
+        });
+
+        return list;
       }
       return [];
     } catch (e) {

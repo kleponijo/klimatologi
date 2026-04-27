@@ -30,10 +30,14 @@ Future<void> exportWindSpeedPdf({
           title: 'Data Terkini',
           subtitle: 'Periode: $period',
           items: [
-            SummaryItem('Kecepatan', '${currentSpeed.toStringAsFixed(1)} m/s', '💨'),
-            SummaryItem('Rata-rata', '${stats['avg']!.toStringAsFixed(1)} m/s', '📊'),
-            SummaryItem('Maksimum', '${stats['max']!.toStringAsFixed(1)} m/s', '⬆️'),
-            SummaryItem('Minimum', '${stats['min']!.toStringAsFixed(1)} m/s', '⬇️'),
+            SummaryItem(
+                'Kecepatan', '${currentSpeed.toStringAsFixed(1)} m/s', '💨'),
+            SummaryItem(
+                'Rata-rata', '${stats['avg']!.toStringAsFixed(1)} m/s', '📊'),
+            SummaryItem(
+                'Maksimum', '${stats['max']!.toStringAsFixed(1)} m/s', '⬆️'),
+            SummaryItem(
+                'Minimum', '${stats['min']!.toStringAsFixed(1)} m/s', '⬇️'),
           ],
         ),
         pw.SizedBox(height: 24),
@@ -63,11 +67,15 @@ pw.Widget _buildPeriodTable(List<double> speeds, String period) {
   final labels = _periodLabels(speeds.length, period);
   return buildDataTable(
     headers: ['No', 'Label', 'Kecepatan (m/s)'],
-    rows: speeds.asMap().entries.map((e) => [
-      '${e.key + 1}',
-      labels[e.key],
-      e.value.toStringAsFixed(2),
-    ]).toList(),
+    rows: speeds
+        .asMap()
+        .entries
+        .map((e) => [
+              '${e.key + 1}',
+              labels[e.key],
+              e.value.toStringAsFixed(2),
+            ])
+        .toList(),
     colWidths: {
       0: const pw.FixedColumnWidth(30),
       1: const pw.FlexColumnWidth(2),
@@ -78,7 +86,7 @@ pw.Widget _buildPeriodTable(List<double> speeds, String period) {
 
 pw.Widget _buildHistoryTable(List<Map<String, dynamic>> data) {
   return buildDataTable(
-    headers: ['No', 'Waktu', 'Kecepatan (m/s)', 'Pulse'],
+    headers: ['No', 'Waktu', 'Kecepatan (m/s)'],
     rows: data.asMap().entries.map((e) {
       final d = e.value;
       final ts = d['timestamp'] as DateTime?;
@@ -86,21 +94,20 @@ pw.Widget _buildHistoryTable(List<Map<String, dynamic>> data) {
         '${e.key + 1}',
         ts != null ? pdfFullFormat.format(ts) : '-',
         (d['speed'] as double? ?? 0).toStringAsFixed(2),
-        '${d['pulse'] ?? 0}',
       ];
     }).toList(),
     colWidths: {
       0: const pw.FixedColumnWidth(25),
       1: const pw.FlexColumnWidth(2.5),
       2: const pw.FlexColumnWidth(1.5),
-      3: const pw.FlexColumnWidth(1),
     },
   );
 }
 
 List<String> _periodLabels(int count, String period) {
   if (period == 'Hari Ini') {
-    return List.generate(count, (i) => 'Jam ${i.toString().padLeft(2, '0')}:00');
+    return List.generate(
+        count, (i) => 'Jam ${i.toString().padLeft(2, '0')}:00');
   } else if (period == 'Minggu Ini') {
     const days = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
     return List.generate(count, (i) => days[i % 7]);
