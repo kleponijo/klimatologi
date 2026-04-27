@@ -163,7 +163,12 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
     final updatedGraph = TimeSeriesMapper.smooth(raw);
 
     emit(state.copyWith(
-      dailySpeeds: updatedGraph,
+      dailySpeeds:
+          event.period == "Hari Ini" ? updatedGraph : state.dailySpeeds,
+      weeklySpeeds:
+          event.period == "Minggu Ini" ? updatedGraph : state.weeklySpeeds,
+      monthlySpeeds:
+          event.period == "Bulan Ini" ? updatedGraph : state.monthlySpeeds,
       isLoading: false,
     ));
   }
