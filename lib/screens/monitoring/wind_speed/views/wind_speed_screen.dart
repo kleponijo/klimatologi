@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-// import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/wind_speed_bloc.dart';
 import './widgets/wind_speed_chart_widget.dart';
@@ -54,16 +53,6 @@ class WindSpeedScreen extends StatelessWidget {
             "Bulan Ini" => state.monthlySpeeds,
             _ => state.dailySpeeds,
           };
-
-          // List<double> data;
-// sadadasda
-          // if (state.selectedPeriod == "Minggu Ini") {
-          //   data = state.weeklySpeeds;
-          // } else if (state.selectedPeriod == "Bulan Ini") {
-          //   data = state.monthlySpeeds;
-          // } else {
-          //   data = state.dailySpeeds;
-          // }
 
           // Konversi history MyWindSpeed → Map (untuk tabel PDF)
           final historyMaps = state.history
@@ -130,7 +119,7 @@ class WindSpeedScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
-            color: Colors.blue.withOpacity(0.3),
+            color: Colors.blue.withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           )
