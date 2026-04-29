@@ -7,6 +7,7 @@ import 'widgets/period_selector.dart';
 
 import '../../shared/utils/pdf/pdf_export_service.dart';
 import '../../shared/widgets/export_pdf_button.dart';
+import '../../device_setup/views/device_setup_screen.dart';
 
 class WindSpeedScreen extends StatelessWidget {
   const WindSpeedScreen({super.key});
@@ -24,6 +25,20 @@ class WindSpeedScreen extends StatelessWidget {
         elevation: 0,
         backgroundColor: Colors.transparent,
         foregroundColor: Colors.black,
+        actions: [
+          IconButton(
+            tooltip: 'Pengaturan Perangkat',
+            icon: const Icon(Icons.settings_rounded),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const DeviceSetupScreen(),
+                ),
+              );
+            },
+          ),
+        ],
       ),
 
       /// === Body area, lokasi dan tata letak Widgets === ///
