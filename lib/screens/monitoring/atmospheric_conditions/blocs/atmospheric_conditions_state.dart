@@ -5,6 +5,7 @@ class AtmosphericConditionsState extends Equatable {
   final double humidity;
   final double pressure;
   final double altitude;
+  final List<double> dailyTemperatures;
 
   final bool isLoading;
 
@@ -13,6 +14,7 @@ class AtmosphericConditionsState extends Equatable {
     this.humidity = 0.0,
     this.pressure = 0.0,
     this.altitude = 0.0,
+    this.dailyTemperatures = const [],
     this.isLoading = true,
   });
 
@@ -21,6 +23,7 @@ class AtmosphericConditionsState extends Equatable {
     double? humidity,
     double? pressure,
     double? altitude,
+    List<double>? dailyTemperatures,
     bool? isLoading,
   }) {
     return AtmosphericConditionsState(
@@ -28,6 +31,7 @@ class AtmosphericConditionsState extends Equatable {
       humidity: humidity ?? this.humidity,
       pressure: pressure ?? this.pressure,
       altitude: altitude ?? this.altitude,
+      dailyTemperatures: dailyTemperatures ?? this.dailyTemperatures,
       isLoading: isLoading ?? this.isLoading,
     );
   }
@@ -38,6 +42,7 @@ class AtmosphericConditionsState extends Equatable {
         humidity,
         pressure,
         altitude,
+        dailyTemperatures,
         isLoading,
       ];
 }

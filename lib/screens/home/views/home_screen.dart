@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../blocs/authentication_bloc/authentication_bloc.dart';
 import '../../../core/notification_notifier.dart';
 import 'main_drawer.dart';
+import 'home_dashboard_body.dart';
+import 'package:monitoring_repository/monitoring_repository.dart';
+import '../../../../screens/monitoring/evaporasi/blocs/evaporasi_bloc.dart';
+import '../../../../screens/monitoring/wind_speed/blocs/wind_speed_bloc.dart';
+import '../../../../screens/monitoring/atmospheric_conditions/blocs/atmospheric_conditions_bloc.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -87,8 +91,25 @@ class HomeScreen extends StatelessWidget {
           const SizedBox(width: 8),
         ],
       ),
-      body: const Center(
-        child: Text("body home page"),
+  body: MultiBlocProvider(
+        providers: [
+          BlocProvider(
+            create: (context) => EvaporasiBloc(
+              repository: context.read<MonitoringRepository>(),
+            )..add(WatchEvaporasiStarted()),
+          ),
+          BlocProvider(
+            create: (context) => WindSpeedBloc(
+              repository: context.read<MonitoringRepository>(),
+            )..add(WatchWindSpeedStarted()),
+          ),
+          BlocProvider(
+            create: (context) => AtmosphericConditionsBloc(
+              repository: context.read<MonitoringRepository>(),
+            )..add(WatchAtmosphericConditionsStarted()),
+          ),
+        ],
+        child: const HomeDashboardBody(),
       ),
     );
   }

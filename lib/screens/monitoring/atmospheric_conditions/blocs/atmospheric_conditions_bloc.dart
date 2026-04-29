@@ -41,12 +41,20 @@ class AtmosphericConditionsBloc
   void _onUpdated(
     _AtmosphericConditionsUpdated event,
     Emitter<AtmosphericConditionsState> emit,
-  ) {
+  ) async {
+    // Maintain rolling 24-point history for live streaming graph
+    final temps = List<double>.from(state.dailyTemperatures);
+    temps.add(event.data.temperature);
+    if (temps.length > 24) {
+      temps.removeAt(0);
+    }
+
     emit(state.copyWith(
       temperature: event.data.temperature,
       humidity: event.data.humidity,
       pressure: event.data.pressure,
       altitude: event.data.altitude,
+      dailyTemperatures: temps,
       isLoading: false,
     ));
   }
