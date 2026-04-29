@@ -21,17 +21,15 @@ class HomeScreen extends StatelessWidget {
         elevation: 0.5, // Kasih sedikit bayangan tipis agar elegan
         centerTitle: false,
         leading: Builder(
-            builder: (context) => IconButton(
-                  icon: const Icon(Icons.menu,
-                      color: Colors.black), // Ikon garis 3 horizontal
-                  onPressed: () {
-                    // ini kodenya untuk membuka:
-                    Scaffold.of(context).openDrawer();
-                  },
-                )),
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu, color: Colors.black), // Ikon garis 3 horizontal
+            onPressed: () {
+              Scaffold.of(context).openDrawer();
+            },
+          ),
+        ),
         title: Row(
           children: [
-            // Ganti dengan Image.asset jika sudah ada logo
             Image.asset(
               'images/logo_klimatologi.png',
               height: 90,
@@ -47,10 +45,8 @@ class HomeScreen extends StatelessWidget {
               return Stack(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.notifications_none,
-                        color: Colors.black),
+                    icon: const Icon(Icons.notifications_none, color: Colors.black),
                     onPressed: () {
-                      // Aksi notifikasi
                       if (hasAlert) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
@@ -82,16 +78,13 @@ class HomeScreen extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.black),
             onPressed: () {
-              // Trigger Logout di AuthenticationBloc kamu
-              context
-                  .read<AuthenticationBloc>()
-                  .add(AuthenticationLogoutRequested());
+              context.read<AuthenticationBloc>().add(AuthenticationLogoutRequested());
             },
           ),
           const SizedBox(width: 8),
         ],
       ),
-  body: MultiBlocProvider(
+      body: MultiBlocProvider(
         providers: [
           BlocProvider(
             create: (context) => EvaporasiBloc(
