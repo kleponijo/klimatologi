@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../blocs/authentication_bloc/authentication_bloc.dart';
+import '../../../core/notification_notifier.dart';
 import 'main_drawer.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -36,10 +37,42 @@ class HomeScreen extends StatelessWidget {
           ],
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_none, color: Colors.black),
-            onPressed: () {
-              // Aksi notifikasi
+          ValueListenableBuilder<bool>(
+            valueListenable: hasWeatherAlert,
+            builder: (context, hasAlert, child) {
+              return Stack(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.notifications_none,
+                        color: Colors.black),
+                    onPressed: () {
+                      // Aksi notifikasi
+                      if (hasAlert) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(weatherAlertMessage.value),
+                            backgroundColor: Colors.orange.shade800,
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                  if (hasAlert)
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: Container(
+                        width: 10,
+                        height: 10,
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                ],
+              );
             },
           ),
           IconButton(

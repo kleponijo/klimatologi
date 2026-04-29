@@ -4,6 +4,7 @@ import 'package:equatable/equatable.dart';
 import 'package:monitoring_repository/monitoring_repository.dart';
 
 import '../../../../core/utils/time_series_mapper.dart';
+import '../../../../core/notification_notifier.dart';
 
 part 'evaporasi_event.dart';
 part 'evaporasi_state.dart';
@@ -37,12 +38,26 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
     final dailyGraph = TimeSeriesMapper.toDaily(
       data: history,
       getTime: (e) => e.timestamp,
-      getValue: (e) => e.evaporasi, // ⚠️ sesuaikan nama field
+      getValue: (e) => e.evaporasi,
     );
+
+    final dailyTempGraph = TimeSeriesMapper.toDaily(
+      data: history,
+      getTime: (e) => e.timestamp,
+      getValue: (e) => e.suhu,
+    );
+
+    // Hitung status dari data terakhir history jika ada
+    final lastValue = history.isNotEmpty ? history.last.evaporasi : 0.0;
+    final (status, rain) = _computeWeatherStatus(lastValue);
+    _updateGlobalNotifier(status, rain);
 
     emit(state.copyWith(
       history: history,
       dailyValues: dailyGraph,
+      dailyTemperatures: dailyTempGraph,
+      weatherStatus: status,
+      willRain: rain,
       isLoading: false,
     ));
 
@@ -66,18 +81,26 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
     Emitter<EvaporasiState> emit,
   ) {
     final updated = List<double>.from(state.dailyValues);
+    final updatedTemp = List<double>.from(state.dailyTemperatures);
 
     final index = DateTime.now().hour;
 
     if (index < updated.length) {
-      updated[index] = event.data.evaporasi; // ⚠️ sesuaikan field
+      updated[index] = event.data.evaporasi;
+      updatedTemp[index] = event.data.suhu;
     }
+
+    final (status, rain) = _computeWeatherStatus(event.data.evaporasi);
+    _updateGlobalNotifier(status, rain);
 
     emit(state.copyWith(
       currentValue: event.data.evaporasi,
       temperature: event.data.suhu,
       waterLevel: event.data.tinggiAir,
       dailyValues: updated,
+      dailyTemperatures: updatedTemp,
+      weatherStatus: status,
+      willRain: rain,
     ));
   }
 
@@ -93,6 +116,7 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
     final history = state.history;
 
     List<double> updated;
+    List<double> updatedTemp;
 
     if (event.period == "Minggu Ini") {
       updated = TimeSeriesMapper.toWeekly(
@@ -100,11 +124,21 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
         getTime: (e) => e.timestamp,
         getValue: (e) => e.evaporasi,
       );
+      updatedTemp = TimeSeriesMapper.toWeekly(
+        data: history,
+        getTime: (e) => e.timestamp,
+        getValue: (e) => e.suhu,
+      );
     } else if (event.period == "Bulan Ini") {
       updated = TimeSeriesMapper.toMonthly(
         data: history,
         getTime: (e) => e.timestamp,
         getValue: (e) => e.evaporasi,
+      );
+      updatedTemp = TimeSeriesMapper.toMonthly(
+        data: history,
+        getTime: (e) => e.timestamp,
+        getValue: (e) => e.suhu,
       );
     } else {
       updated = TimeSeriesMapper.toDaily(
@@ -112,10 +146,17 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
         getTime: (e) => e.timestamp,
         getValue: (e) => e.evaporasi,
       );
+      updatedTemp = TimeSeriesMapper.toDaily(
+        data: history,
+        getTime: (e) => e.timestamp,
+        getValue: (e) => e.suhu,
+      );
     }
 
+    // Pertahankan status cuaca saat ini (tidak berubah karena hanya ganti periode)
     emit(state.copyWith(
       dailyValues: updated,
+      dailyTemperatures: updatedTemp,
       isLoading: false,
     ));
   }
@@ -124,6 +165,29 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
   Future<void> close() async {
     await _subscription?.cancel();
     return super.close();
+  }
+
+  /// =========================
+  /// 🌤️ HELPER: Status Cuaca
+  /// =========================
+  static (String status, bool willRain) _computeWeatherStatus(double value) {
+    if (value <= 5.0) {
+      return ("Baik", false);
+    } else if (value > 5.0 && value <= 10.0) {
+      return ("Sedang", true);
+    } else {
+      return ("Buruk", true);
+    }
+  }
+
+  static void _updateGlobalNotifier(String status, bool willRain) {
+    hasWeatherAlert.value = willRain;
+    if (willRain) {
+      weatherAlertMessage.value =
+          'Status evaporasi $status — potensi hujan tinggi';
+    } else {
+      weatherAlertMessage.value = '';
+    }
   }
 }
 
