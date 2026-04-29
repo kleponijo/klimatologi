@@ -41,7 +41,7 @@ class WindSpeedScreen extends StatelessWidget {
           };
 
           // List<double> data;
-
+// sadadasda
           // if (state.selectedPeriod == "Minggu Ini") {
           //   data = state.weeklySpeeds;
           // } else if (state.selectedPeriod == "Bulan Ini") {
