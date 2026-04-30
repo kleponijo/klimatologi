@@ -4,6 +4,7 @@ import 'package:klimatologiot/app_view.dart';
 import 'package:user_repository/user_repository.dart';
 import 'package:monitoring_repository/monitoring_repository.dart';
 import 'blocs/authentication_bloc/authentication_bloc.dart';
+import 'blocs/notification_bloc/notification_bloc.dart';
 
 class MyApp extends StatelessWidget {
   final UserRepository userRepository;
@@ -13,17 +14,26 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MultiRepositoryProvider(
+      providers: [
+        // 1. Daftarkan UserRepository
+        RepositoryProvider<UserRepository>.value(value: userRepository),
+        RepositoryProvider<MonitoringRepository>.value(
+            value: monitoringRepository),
+      ],
+      child: MultiBlocProvider(
         providers: [
-          // 1. Daftarkan UserRepository
-          RepositoryProvider<UserRepository>.value(value: userRepository),
-          RepositoryProvider<MonitoringRepository>.value(
-              value: monitoringRepository),
-        ],
-        child: BlocProvider<AuthenticationBloc>(
-          create: (context) => AuthenticationBloc(
-            userRepository: userRepository,
+          BlocProvider<AuthenticationBloc>(
+            create: (context) => AuthenticationBloc(
+              userRepository: userRepository,
+            ),
           ),
-          child: const MyAppView(),
-        ));
+          BlocProvider<NotificationBloc>(
+            // ← tambahan ini
+            create: (_) => NotificationBloc(),
+          ),
+        ],
+        child: const MyAppView(),
+      ),
+    );
   }
 }

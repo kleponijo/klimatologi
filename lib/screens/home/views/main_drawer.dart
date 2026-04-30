@@ -8,6 +8,7 @@ import '../../monitoring/wind_speed/blocs/wind_speed_bloc.dart';
 import '../../monitoring/evaporasi/views/evaporasi_screen.dart';
 import '../../monitoring/atmospheric_conditions/blocs/atmospheric_conditions_bloc.dart';
 import '../../monitoring/atmospheric_conditions/views/atmospheric_screen.dart';
+import '../../../blocs/notification_bloc/notification_bloc.dart';
 
 class MainDrawer extends StatelessWidget {
   const MainDrawer({super.key});
@@ -59,10 +60,9 @@ class MainDrawer extends StatelessWidget {
                 MaterialPageRoute(
                   builder: (context) => BlocProvider<WindSpeedBloc>(
                     create: (context) => WindSpeedBloc(
-                      // AMBIL MonitoringRepository
                       repository: context.read<MonitoringRepository>(),
-                    )..add(
-                        WatchWindSpeedStarted()), // Langsung mulai monitoring
+                      notificationBloc: context.read<NotificationBloc>(),
+                    )..add(WatchWindSpeedStarted()),
                     child: const WindSpeedScreen(),
                   ),
                 ),
@@ -80,6 +80,7 @@ class MainDrawer extends StatelessWidget {
                   builder: (context) => BlocProvider<EvaporasiBloc>(
                     create: (context) => EvaporasiBloc(
                       repository: context.read<MonitoringRepository>(),
+                      notificationBloc: context.read<NotificationBloc>(),
                     )..add(WatchEvaporasiStarted()),
                     child: const EvaporasiScreen(),
                   ),

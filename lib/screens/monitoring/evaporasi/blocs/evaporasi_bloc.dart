@@ -4,17 +4,21 @@ import 'package:equatable/equatable.dart';
 import 'package:monitoring_repository/monitoring_repository.dart';
 
 import '../../../../core/utils/time_series_mapper.dart';
-import '../../../../core/notification_notifier.dart';
+import '../../../../blocs/notification_bloc/notification_bloc.dart';
 
 part 'evaporasi_event.dart';
 part 'evaporasi_state.dart';
 
 class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
   final MonitoringRepository _repository;
+  final NotificationBloc _notificationBloc;
   StreamSubscription<Evaporasi>? _subscription;
 
-  EvaporasiBloc({required MonitoringRepository repository})
-      : _repository = repository,
+  EvaporasiBloc({
+    required MonitoringRepository repository,
+    required NotificationBloc notificationBloc,
+  })  : _repository = repository,
+        _notificationBloc = notificationBloc,
         super(const EvaporasiState()) {
     on<WatchEvaporasiStarted>(_onStarted);
     on<_EvaporasiRealtimeUpdated>(_onRealtimeUpdated);
@@ -50,7 +54,7 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
     // Hitung status dari data terakhir history jika ada
     final lastValue = history.isNotEmpty ? history.last.evaporasi : 0.0;
     final (status, rain) = _computeWeatherStatus(lastValue);
-    _updateGlobalNotifier(status, rain);
+    _emitEvaporasiAlert(status, rain, lastValue);
 
     emit(state.copyWith(
       history: history,
@@ -62,15 +66,9 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
     ));
 
     await _subscription?.cancel();
-
     _subscription = _repository
-        .getSensorStream(
-      'Monitoring',
-      (json) => Evaporasi.fromJson(json),
-    )
-        .listen((data) {
-      add(_EvaporasiRealtimeUpdated(data));
-    });
+        .getSensorStream('Monitoring', (json) => Evaporasi.fromJson(json))
+        .listen((data) => add(_EvaporasiRealtimeUpdated(data)));
   }
 
   /// =========================
@@ -82,7 +80,6 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
   ) {
     final updated = List<double>.from(state.dailyValues);
     final updatedTemp = List<double>.from(state.dailyTemperatures);
-
     final index = DateTime.now().hour;
 
     if (index < updated.length) {
@@ -91,7 +88,7 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
     }
 
     final (status, rain) = _computeWeatherStatus(event.data.evaporasi);
-    _updateGlobalNotifier(status, rain);
+    _emitEvaporasiAlert(status, rain, event.data.evaporasi);
 
     emit(state.copyWith(
       currentValue: event.data.evaporasi,
@@ -112,7 +109,6 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
     Emitter<EvaporasiState> emit,
   ) async {
     emit(state.copyWith(isLoading: true, selectedPeriod: event.period));
-
     final history = state.history;
 
     List<double> updated;
@@ -171,23 +167,37 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
   /// 🌤️ HELPER: Status Cuaca
   /// =========================
   static (String status, bool willRain) _computeWeatherStatus(double value) {
-    if (value <= 5.0) {
-      return ("Baik", false);
-    } else if (value > 5.0 && value <= 10.0) {
-      return ("Sedang", true);
-    } else {
-      return ("Buruk", true);
-    }
+    if (value <= 5.0) return ('Baik', false);
+    if (value <= 10.0) return ('Sedang', true);
+    return ('Buruk', true);
   }
 
-  static void _updateGlobalNotifier(String status, bool willRain) {
-    hasWeatherAlert.value = willRain;
-    if (willRain) {
-      weatherAlertMessage.value =
-          'Status evaporasi $status — potensi hujan tinggi';
+  void _emitEvaporasiAlert(String status, bool willRain, double value) {
+    final AlertSeverity severity;
+    final String message;
+
+    if (status == 'Buruk') {
+      severity = AlertSeverity.danger;
+      message =
+          'Evaporasi ${value.toStringAsFixed(1)} mm — status BURUK, potensi hujan tinggi';
+    } else if (status == 'Sedang') {
+      severity = AlertSeverity.warning;
+      message =
+          'Evaporasi ${value.toStringAsFixed(1)} mm — status sedang, potensi hujan';
     } else {
-      weatherAlertMessage.value = '';
+      severity = AlertSeverity.info; // normal → bersihkan alert
+      message = '';
     }
+
+    _notificationBloc.add(SensorAlertAdded(
+      SensorAlert(
+        sensorId: 'evaporasi',
+        sensorName: 'Evaporasi',
+        message: message,
+        severity: severity,
+        timestamp: DateTime.now(),
+      ),
+    ));
   }
 }
 
