@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 import '../blocs/evaporasi_bloc.dart';
 import 'widgets/evaporasi_chart_widget.dart';
 import 'widgets/evaporasi_period_selector.dart';
@@ -52,12 +53,44 @@ class EvaporasiScreen extends StatelessWidget {
                     style:
                         TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 15),
-                const EvaporasiPeriodSelector(),
+// Period selector with date picker
+                Builder(
+                  builder: (context) {
+                    final state = context.watch<EvaporasiBloc>().state;
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Show selected date info when in custom mode
+                        if (state.viewMode == EvaporasiViewMode.customDate &&
+                            state.selectedDate != null)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Text(
+                              "📅 ${_formatDateInfo(state.selectedDate!)}",
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.blue.shade700,
+                              ),
+                            ),
+                          ),
+                        const EvaporasiPeriodSelector(),
+                      ],
+                    );
+                  },
+                ),
                 const SizedBox(height: 15),
-                EvaporasiChartWidget(
-                  dailyValues: state.dailyValues,
-                  dailyTemperatures: state.dailyTemperatures,
-                  period: state.selectedPeriod,
+                Builder(
+                  builder: (context) {
+                    final state = context.watch<EvaporasiBloc>().state;
+                    return EvaporasiChartWidget(
+                      dailyValues: state.dailyValues,
+                      dailyTemperatures: state.dailyTemperatures,
+                      period: state.viewMode == EvaporasiViewMode.customDate
+                          ? "Tanggal Khusus"
+                          : state.selectedPeriod,
+                    );
+                  },
                 ),
                 const SizedBox(height: 25),
                 ExportPdfButton(
@@ -223,8 +256,26 @@ class EvaporasiScreen extends StatelessWidget {
               ],
             ),
           ),
-        ],
+],
       ),
     );
+  }
+
+  /// =========================
+  /// 📅 FORMAT DATE INFO (for custom date display)
+  /// =========================
+  String _formatDateInfo(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final selected = DateTime(date.year, date.month, date.day);
+
+    if (selected == today) {
+      return "Hari Ini";
+    } else if (selected == yesterday) {
+      return "Kemarin";
+    } else {
+      return DateFormat('EEEE, d MMMM yyyy', 'id_ID').format(date);
+    }
   }
 }

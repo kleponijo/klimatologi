@@ -91,6 +91,34 @@ class TimeSeriesMapper {
     });
   }
 
+/// =========================
+  /// 📅 SPECIFIC DATE (24 JAM - TANGGAL KHUSUS)
+  /// =========================
+  static List<double> toSpecificDate<T>({
+    required List<T> data,
+    required DateTime Function(T) getTime,
+    required double Function(T) getValue,
+    required DateTime targetDate,
+  }) {
+    final sums = List<double>.filled(24, 0.0);
+    final counts = List<int>.filled(24, 0);
+
+    for (final item in data) {
+      final time = getTime(item);
+
+      if (_isSameDay(time, targetDate)) {
+        final hour = time.hour;
+        sums[hour] += getValue(item);
+        counts[hour]++;
+      }
+    }
+
+    return List.generate(24, (i) {
+      if (counts[i] == 0) return 0;
+      return sums[i] / counts[i];
+    });
+  }
+
   /// =========================
   /// 🧠 HELPER
   /// =========================

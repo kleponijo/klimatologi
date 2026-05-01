@@ -19,3 +19,23 @@ class EvaporasiPeriodChanged extends EvaporasiEvent {
   @override
   List<Object> get props => [period];
 }
+
+/// 📅 PILIH TANGGAL KHUSUS (Custom Date Picker)
+class EvaporasiDateSelected extends EvaporasiEvent {
+  final DateTime date;
+
+  const EvaporasiDateSelected(this.date);
+
+  @override
+  List<Object> get props => [date];
+}
+
+/// 🔄 KEMBALI KE MODE PERIOD
+class EvaporasiViewModeChanged extends EvaporasiEvent {
+  final EvaporasiViewMode mode;
+
+  const EvaporasiViewModeChanged(this.mode);
+
+  @override
+  List<Object> get props => [mode];
+}

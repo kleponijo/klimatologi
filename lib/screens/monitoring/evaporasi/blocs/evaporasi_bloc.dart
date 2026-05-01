@@ -23,6 +23,8 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
     on<WatchEvaporasiStarted>(_onStarted);
     on<_EvaporasiRealtimeUpdated>(_onRealtimeUpdated);
     on<EvaporasiPeriodChanged>(_onPeriodChanged);
+    on<EvaporasiDateSelected>(_onDateSelected);
+    on<EvaporasiViewModeChanged>(_onViewModeChanged);
   }
 
   /// =========================
@@ -149,12 +151,63 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
       );
     }
 
-    // Pertahankan status cuaca saat ini (tidak berubah karena hanya ganti periode)
+// Pertahankan status cuaca saat ini (tidak berubah karena hanya ganti periode)
     emit(state.copyWith(
       dailyValues: updated,
       dailyTemperatures: updatedTemp,
       isLoading: false,
     ));
+  }
+
+  /// =========================
+  /// 📅 DATE SELECTED (Custom Date)
+  /// =========================
+  Future<void> _onDateSelected(
+    EvaporasiDateSelected event,
+    Emitter<EvaporasiState> emit,
+  ) async {
+    emit(state.copyWith(
+      isLoading: true,
+      selectedDate: event.date,
+      viewMode: EvaporasiViewMode.customDate,
+    ));
+
+    final history = state.history;
+
+    final updated = TimeSeriesMapper.toSpecificDate(
+      data: history,
+      getTime: (e) => e.timestamp,
+      getValue: (e) => e.evaporasi,
+      targetDate: event.date,
+    );
+
+    final updatedTemp = TimeSeriesMapper.toSpecificDate(
+      data: history,
+      getTime: (e) => e.timestamp,
+      getValue: (e) => e.suhu,
+      targetDate: event.date,
+    );
+
+    emit(state.copyWith(
+      dailyValues: updated,
+      dailyTemperatures: updatedTemp,
+      isLoading: false,
+    ));
+  }
+
+  /// =========================
+  /// 🔄 VIEW MODE CHANGED
+  /// =========================
+  Future<void> _onViewModeChanged(
+    EvaporasiViewModeChanged event,
+    Emitter<EvaporasiState> emit,
+  ) async {
+    if (event.mode == EvaporasiViewMode.period) {
+      // Kembali ke mode period - trigger period change
+      add(EvaporasiPeriodChanged(state.selectedPeriod));
+    } else {
+      emit(state.copyWith(viewMode: event.mode));
+    }
   }
 
   @override
