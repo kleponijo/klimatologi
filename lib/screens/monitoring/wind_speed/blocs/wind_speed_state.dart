@@ -51,6 +51,7 @@ class WindSpeedState extends Equatable {
         weeklySpeeds,
         monthlySpeeds,
         isLoading,
-        history
+        history,
+        alertLevel,
       ];
 }

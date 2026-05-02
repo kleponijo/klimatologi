@@ -115,7 +115,8 @@ class DeviceSetupBloc extends Bloc<DeviceSetupEvent, DeviceSetupState> {
       // ESP restart setelah terima kredensial → koneksi putus → itu normal!
       // DioException di sini kemungkinan besar karena ESP sudah restart.
       if (e.type == DioExceptionType.receiveTimeout ||
-          e.type == DioExceptionType.connectionError) {
+          e.type == DioExceptionType.connectionError ||
+          e.type == DioExceptionType.sendTimeout) {
         emit(state.copyWith(
           status: DeviceSetupStatus.success,
           successMessage:
