@@ -6,8 +6,12 @@ class EvaporasiState extends Equatable {
   final double waterLevel; // tinggi air
   final String selectedPeriod;
 
-  final List<double> dailyValues; // untuk grafik
+  final List<double> dailyValues; // untuk grafik evaporasi
+  final List<double> dailyTemperatures; // untuk grafik suhu
   final List<Evaporasi> history;
+
+  final String weatherStatus; // Baik / Sedang / Buruk
+  final bool willRain; // true jika status Sedang/Buruk
 
   final bool isLoading;
 
@@ -17,7 +21,10 @@ class EvaporasiState extends Equatable {
     this.waterLevel = 0.0,
     this.selectedPeriod = "Hari Ini",
     this.dailyValues = const [],
+    this.dailyTemperatures = const [],
     this.history = const [],
+    this.weatherStatus = "Baik",
+    this.willRain = false,
     this.isLoading = true,
   });
 
@@ -27,7 +34,10 @@ class EvaporasiState extends Equatable {
     double? waterLevel,
     String? selectedPeriod,
     List<double>? dailyValues,
+    List<double>? dailyTemperatures,
     List<Evaporasi>? history,
+    String? weatherStatus,
+    bool? willRain,
     bool? isLoading,
   }) {
     return EvaporasiState(
@@ -36,7 +46,10 @@ class EvaporasiState extends Equatable {
       waterLevel: waterLevel ?? this.waterLevel,
       selectedPeriod: selectedPeriod ?? this.selectedPeriod,
       dailyValues: dailyValues ?? this.dailyValues,
+      dailyTemperatures: dailyTemperatures ?? this.dailyTemperatures,
       history: history ?? this.history,
+      weatherStatus: weatherStatus ?? this.weatherStatus,
+      willRain: willRain ?? this.willRain,
       isLoading: isLoading ?? this.isLoading,
     );
   }
@@ -48,7 +61,10 @@ class EvaporasiState extends Equatable {
         waterLevel,
         selectedPeriod,
         dailyValues,
+        dailyTemperatures,
         history,
+        weatherStatus,
+        willRain,
         isLoading,
       ];
 }

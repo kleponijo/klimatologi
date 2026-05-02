@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-// import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/wind_speed_bloc.dart';
 import './widgets/wind_speed_chart_widget.dart';
@@ -7,6 +6,7 @@ import 'widgets/period_selector.dart';
 
 import '../../shared/utils/pdf/pdf_export_service.dart';
 import '../../shared/widgets/export_pdf_button.dart';
+import '../../device_setup/views/device_setup_screen.dart';
 
 class WindSpeedScreen extends StatelessWidget {
   const WindSpeedScreen({super.key});
@@ -24,6 +24,20 @@ class WindSpeedScreen extends StatelessWidget {
         elevation: 0,
         backgroundColor: Colors.transparent,
         foregroundColor: Colors.black,
+        actions: [
+          IconButton(
+            tooltip: 'Pengaturan Perangkat',
+            icon: const Icon(Icons.settings_rounded),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const DeviceSetupScreen(),
+                ),
+              );
+            },
+          ),
+        ],
       ),
 
       /// === Body area, lokasi dan tata letak Widgets === ///
@@ -39,16 +53,6 @@ class WindSpeedScreen extends StatelessWidget {
             "Bulan Ini" => state.monthlySpeeds,
             _ => state.dailySpeeds,
           };
-
-          // List<double> data;
-
-          // if (state.selectedPeriod == "Minggu Ini") {
-          //   data = state.weeklySpeeds;
-          // } else if (state.selectedPeriod == "Bulan Ini") {
-          //   data = state.monthlySpeeds;
-          // } else {
-          //   data = state.dailySpeeds;
-          // }
 
           // Konversi history MyWindSpeed → Map (untuk tabel PDF)
           final historyMaps = state.history
@@ -81,7 +85,7 @@ class WindSpeedScreen extends StatelessWidget {
                 const SizedBox(height: 30),
 
                 // 3. Info Tambahan (Status/Periode)
-                _buildDetailRow(state.selectedPeriod),
+                _buildDetailRow(state.selectedPeriod, state.alertLevel),
                 const SizedBox(height: 24),
 
                 // ← Tombol Export PDF
@@ -115,7 +119,7 @@ class WindSpeedScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
-            color: Colors.blue.withOpacity(0.3),
+            color: Colors.blue.withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           )
@@ -139,11 +143,16 @@ class WindSpeedScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDetailRow(String period) {
+  Widget _buildDetailRow(String period, String alertLevel) {
+    final (icon, color) = switch (alertLevel) {
+      "Bahaya" => (Icons.warning_rounded, Colors.red),
+      "Waspada" => (Icons.info_outline, Colors.orange),
+      _ => (Icons.check_circle, Colors.green),
+    };
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        _miniInfoCard("Status", "Normal", Icons.check_circle, Colors.green),
+        _miniInfoCard("Status", alertLevel, icon, color),
         _miniInfoCard("Periode", period, Icons.timer, Colors.orange),
       ],
     );
