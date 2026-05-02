@@ -85,7 +85,7 @@ class WindSpeedScreen extends StatelessWidget {
                 const SizedBox(height: 30),
 
                 // 3. Info Tambahan (Status/Periode)
-                _buildDetailRow(state.selectedPeriod),
+                _buildDetailRow(state.selectedPeriod, state.alertLevel),
                 const SizedBox(height: 24),
 
                 // ← Tombol Export PDF
@@ -143,11 +143,16 @@ class WindSpeedScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDetailRow(String period) {
+  Widget _buildDetailRow(String period, String alertLevel) {
+    final (icon, color) = switch (alertLevel) {
+      "Bahaya" => (Icons.warning_rounded, Colors.red),
+      "Waspada" => (Icons.info_outline, Colors.orange),
+      _ => (Icons.check_circle, Colors.green),
+    };
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        _miniInfoCard("Status", "Normal", Icons.check_circle, Colors.green),
+        _miniInfoCard("Status", alertLevel, icon, color),
         _miniInfoCard("Periode", period, Icons.timer, Colors.orange),
       ],
     );
