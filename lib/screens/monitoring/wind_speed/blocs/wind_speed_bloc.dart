@@ -11,8 +11,8 @@ part 'wind_speed_state.dart';
 
 /// Threshold kecepatan angin (satuan m/s)
 /// Referensi: Beaufort scale & BMKG
-const double _kWindWarning = 2.0; // Waspada: 8–12.5 m/s (~29–45 km/h)
-const double _kWindDanger = 4.0; // Bahaya:  > 12.5 m/s (> 45 km/h)
+const double _kWindWarning = 8.0; // Waspada: 8–12.5 m/s (~29–45 km/h)
+const double _kWindDanger = 12.5; // Bahaya:  > 12.5 m/s (> 45 km/h)
 
 class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
   final MonitoringRepository _repository;
@@ -50,15 +50,8 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
       (json) => MyWindSpeed.fromJson(json),
     );
 
-    /// 2. Mapping default (harian)
-    final raw = TimeSeriesMapper.toDaily(
-      data: history,
-      getTime: (e) => e.timestamp,
-      getValue: (e) => e.speed,
-    );
-    final dailyGraph = TimeSeriesMapper.smooth(raw);
-
-    final daily = TimeSeriesMapper.smooth(
+    // ✅ Ini saja yang benar
+    final dailyGraph = TimeSeriesMapper.smooth(
       TimeSeriesMapper.toDaily(
         data: history,
         getTime: (e) => e.timestamp,
@@ -93,6 +86,9 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
       weeklySpeeds: weekly,
       monthlySpeeds: monthly,
       isLoading: false,
+      alertLevel: history.isNotEmpty // ← tambah ini
+          ? _getAlertLevel(history.last.speed)
+          : "Normal",
     ));
 
     /// 3. Start realtime stream (manual subscription)
@@ -138,6 +134,7 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
     emit(state.copyWith(
       currentSpeed: newValue,
       dailySpeeds: updated,
+      alertLevel: _getAlertLevel(newValue),
     ));
   }
 
@@ -192,6 +189,12 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
   Future<void> close() async {
     await _subscription?.cancel();
     return super.close();
+  }
+
+  String _getAlertLevel(double speed) {
+    if (speed >= _kWindDanger) return "Bahaya";
+    if (speed >= _kWindWarning) return "Waspada";
+    return "Normal";
   }
 
 // =========================

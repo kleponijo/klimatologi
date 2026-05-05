@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/device_setup_bloc.dart';
+import 'package:app_settings/app_settings.dart';
 
 class DeviceSetupScreen extends StatefulWidget {
   const DeviceSetupScreen({super.key});
@@ -159,7 +160,7 @@ class _DeviceSetupScreenState extends State<DeviceSetupScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
           children: [
@@ -173,12 +174,21 @@ class _DeviceSetupScreenState extends State<DeviceSetupScreen> {
         ),
         content: Text(message),
         actions: [
+          if (!success) // ← tambah tombol Coba Lagi jika gagal
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(); // tutup dialog
+                context.read<DeviceSetupBloc>().add(
+                    ResetDeviceSetupEvent()); // kembali ke wind_speed_screen
+              },
+              child: const Text('Coba Lagi'),
+            ),
           TextButton(
             onPressed: () {
-              Navigator.of(context).pop(); // tutup dialog
-              Navigator.of(context).pop(); // kembali ke wind_speed_screen
+              Navigator.of(dialogContext).pop();
+              Navigator.of(context).pop();
             },
-            child: const Text('Selesai'),
+            child: Text(success ? 'Selesai' : 'Tutup'),
           ),
         ],
       ),
@@ -353,13 +363,7 @@ class _OpenWifiSettingsButton extends StatelessWidget {
         // Buka pengaturan WiFi sistem HP
         // Butuh package: app_settings (opsional)
         // AppSettings.openWIFISettings();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-                'Buka Pengaturan WiFi HP → sambungkan ke "Anemometer-Setup"'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        AppSettings.openAppSettings(type: AppSettingsType.wifi);
       },
       icon: const Icon(Icons.settings_rounded, size: 16),
       label: const Text('Buka Setting'),

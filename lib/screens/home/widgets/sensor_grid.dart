@@ -50,68 +50,6 @@ class SensorGrid extends StatelessWidget {
               ),
             ),
 
-            // --- SUHU AIR (dari Evaporasi) ---
-            BlocBuilder<EvaporasiBloc, EvaporasiState>(
-              builder: (context, state) => SensorCard(
-                width: cardWidth,
-                icon: Icons.thermostat_outlined,
-                iconColor: Colors.orange.shade600,
-                iconBgColor: Colors.orange.shade50,
-                label: 'Suhu Air',
-                value: state.isLoading
-                    ? '—'
-                    : state.temperature.toStringAsFixed(1),
-                unit: '°C',
-                isLoading: state.isLoading,
-              ),
-            ),
-
-            // --- TINGGI AIR (dari Evaporasi) ---
-            BlocBuilder<EvaporasiBloc, EvaporasiState>(
-              builder: (context, state) => SensorCard(
-                width: cardWidth,
-                icon: Icons.straighten_outlined,
-                iconColor: Colors.cyan.shade600,
-                iconBgColor: Colors.cyan.shade50,
-                label: 'Tinggi Air',
-                value:
-                    state.isLoading ? '—' : state.waterLevel.toStringAsFixed(1),
-                unit: 'cm',
-                isLoading: state.isLoading,
-              ),
-            ),
-
-            // --- SUHU UDARA (dari Atmospheric) ---
-            BlocBuilder<AtmosphericConditionsBloc, AtmosphericConditionsState>(
-              builder: (context, state) => SensorCard(
-                width: cardWidth,
-                icon: Icons.device_thermostat,
-                iconColor: Colors.red.shade400,
-                iconBgColor: Colors.red.shade50,
-                label: 'Suhu Udara',
-                value: state.isLoading
-                    ? '—'
-                    : state.temperature.toStringAsFixed(1),
-                unit: '°C',
-                isLoading: state.isLoading,
-              ),
-            ),
-
-            // --- KELEMBAPAN ---
-            BlocBuilder<AtmosphericConditionsBloc, AtmosphericConditionsState>(
-              builder: (context, state) => SensorCard(
-                width: cardWidth,
-                icon: Icons.water_outlined,
-                iconColor: Colors.indigo.shade400,
-                iconBgColor: Colors.indigo.shade50,
-                label: 'Kelembapan',
-                value:
-                    state.isLoading ? '—' : state.humidity.toStringAsFixed(1),
-                unit: '%',
-                isLoading: state.isLoading,
-              ),
-            ),
-
             // --- TEKANAN UDARA ---
             BlocBuilder<AtmosphericConditionsBloc, AtmosphericConditionsState>(
               builder: (context, state) => SensorCard(
@@ -123,21 +61,6 @@ class SensorGrid extends StatelessWidget {
                 value:
                     state.isLoading ? '—' : state.pressure.toStringAsFixed(1),
                 unit: 'hPa',
-                isLoading: state.isLoading,
-              ),
-            ),
-
-            // --- KETINGGIAN ---
-            BlocBuilder<AtmosphericConditionsBloc, AtmosphericConditionsState>(
-              builder: (context, state) => SensorCard(
-                width: cardWidth,
-                icon: Icons.terrain_outlined,
-                iconColor: Colors.green.shade600,
-                iconBgColor: Colors.green.shade50,
-                label: 'Ketinggian',
-                value:
-                    state.isLoading ? '—' : state.altitude.toStringAsFixed(1),
-                unit: 'm',
                 isLoading: state.isLoading,
               ),
             ),
@@ -181,7 +104,7 @@ class SensorCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
