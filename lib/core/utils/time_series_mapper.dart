@@ -1,3 +1,5 @@
+import 'package:monitoring_repository/monitoring_repository.dart';
+
 class TimeSeriesMapper {
   /// =========================
   /// 📅 DAILY (24 JAM)
@@ -114,4 +116,30 @@ class TimeSeriesMapper {
 
     return result;
   }
+
+  // ── Tambahkan ini setelah method smooth() ──────────────────────
+
+  /// Shortcut untuk model yang implement HasTimestamp.
+  /// Dari: TimeSeriesMapper.toDaily(data: h, getTime: (e) => e.timestamp, getValue: (e) => e.speed)
+  /// Ke:  TimeSeriesMapper.dailyFrom(h, (e) => e.speed)
+  static List<double> dailyFrom<T extends HasTimestamp>(
+    List<T> data,
+    double Function(T) getValue,
+  ) =>
+      smooth(
+          toDaily(data: data, getTime: (e) => e.timestamp, getValue: getValue));
+
+  static List<double> weeklyFrom<T extends HasTimestamp>(
+    List<T> data,
+    double Function(T) getValue,
+  ) =>
+      smooth(toWeekly(
+          data: data, getTime: (e) => e.timestamp, getValue: getValue));
+
+  static List<double> monthlyFrom<T extends HasTimestamp>(
+    List<T> data,
+    double Function(T) getValue,
+  ) =>
+      smooth(toMonthly(
+          data: data, getTime: (e) => e.timestamp, getValue: getValue));
 }

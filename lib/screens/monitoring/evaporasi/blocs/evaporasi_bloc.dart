@@ -35,26 +35,29 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
     emit(state.copyWith(isLoading: true));
 
     final history = await _repository.getSensorHistory(
-      'evaporasi/history',
+      'Monitoring/History',
       (json) => Evaporasi.fromJson(json),
+      orderByChild: null, // waktu = string, tidak bisa orderByChild
+      limit: 500,
     );
 
-    final dailyGraph = TimeSeriesMapper.toDaily(
-      data: history,
-      getTime: (e) => e.timestamp,
-      getValue: (e) => e.evaporasi,
-    );
-
-    final dailyTempGraph = TimeSeriesMapper.toDaily(
-      data: history,
-      getTime: (e) => e.timestamp,
-      getValue: (e) => e.suhu,
-    );
+    final dailyGraph =
+        TimeSeriesMapper.dailyFrom<Evaporasi>(history, (e) => e.evaporasi);
+    final dailyTempGraph =
+        TimeSeriesMapper.dailyFrom<Evaporasi>(history, (e) => e.suhu);
+    final weeklyGraph =
+        TimeSeriesMapper.weeklyFrom<Evaporasi>(history, (e) => e.evaporasi);
+    final monthlyGraph =
+        TimeSeriesMapper.monthlyFrom<Evaporasi>(history, (e) => e.evaporasi);
+    final weeklyTemp =
+        TimeSeriesMapper.weeklyFrom<Evaporasi>(history, (e) => e.suhu);
+    final monthlyTemp =
+        TimeSeriesMapper.monthlyFrom<Evaporasi>(history, (e) => e.suhu);
 
     // Hitung status dari data terakhir history jika ada
     final lastValue = history.isNotEmpty ? history.last.evaporasi : 0.0;
     final (status, rain) = _computeWeatherStatus(lastValue);
-    _emitEvaporasiAlert(status, rain, lastValue);
+    _emitEvaporasiAlert(status, lastValue);
 
     emit(state.copyWith(
       history: history,
@@ -63,6 +66,10 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
       weatherStatus: status,
       willRain: rain,
       isLoading: false,
+      weeklyValues: weeklyGraph,
+      monthlyValues: monthlyGraph,
+      weeklyTemperatures: weeklyTemp,
+      monthlyTemperatures: monthlyTemp,
     ));
 
     await _subscription?.cancel();
@@ -88,7 +95,7 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
     }
 
     final (status, rain) = _computeWeatherStatus(event.data.evaporasi);
-    _emitEvaporasiAlert(status, rain, event.data.evaporasi);
+    _emitEvaporasiAlert(status, event.data.evaporasi);
 
     emit(state.copyWith(
       currentValue: event.data.evaporasi,
@@ -104,57 +111,11 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
   /// =========================
   /// 📊 PERIOD
   /// =========================
-  Future<void> _onPeriodChanged(
+  void _onPeriodChanged(
     EvaporasiPeriodChanged event,
     Emitter<EvaporasiState> emit,
-  ) async {
-    emit(state.copyWith(isLoading: true, selectedPeriod: event.period));
-    final history = state.history;
-
-    List<double> updated;
-    List<double> updatedTemp;
-
-    if (event.period == "Minggu Ini") {
-      updated = TimeSeriesMapper.toWeekly(
-        data: history,
-        getTime: (e) => e.timestamp,
-        getValue: (e) => e.evaporasi,
-      );
-      updatedTemp = TimeSeriesMapper.toWeekly(
-        data: history,
-        getTime: (e) => e.timestamp,
-        getValue: (e) => e.suhu,
-      );
-    } else if (event.period == "Bulan Ini") {
-      updated = TimeSeriesMapper.toMonthly(
-        data: history,
-        getTime: (e) => e.timestamp,
-        getValue: (e) => e.evaporasi,
-      );
-      updatedTemp = TimeSeriesMapper.toMonthly(
-        data: history,
-        getTime: (e) => e.timestamp,
-        getValue: (e) => e.suhu,
-      );
-    } else {
-      updated = TimeSeriesMapper.toDaily(
-        data: history,
-        getTime: (e) => e.timestamp,
-        getValue: (e) => e.evaporasi,
-      );
-      updatedTemp = TimeSeriesMapper.toDaily(
-        data: history,
-        getTime: (e) => e.timestamp,
-        getValue: (e) => e.suhu,
-      );
-    }
-
-    // Pertahankan status cuaca saat ini (tidak berubah karena hanya ganti periode)
-    emit(state.copyWith(
-      dailyValues: updated,
-      dailyTemperatures: updatedTemp,
-      isLoading: false,
-    ));
+  ) {
+    emit(state.copyWith(selectedPeriod: event.period));
   }
 
   @override
@@ -172,7 +133,7 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
     return ('Buruk', true);
   }
 
-  void _emitEvaporasiAlert(String status, bool willRain, double value) {
+  void _emitEvaporasiAlert(String status, double value) {
     final AlertSeverity severity;
     final String message;
 
