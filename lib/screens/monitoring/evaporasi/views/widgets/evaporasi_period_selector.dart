@@ -68,7 +68,20 @@ Widget _buildDatePickerButton(BuildContext context, EvaporasiViewMode viewMode, 
         context.read<EvaporasiBloc>().add(
               const EvaporasiViewModeChanged(EvaporasiViewMode.customDate),
             );
-        showEvaporasiDatePicker(context);
+
+        // Penting: pastikan bottom sheet masih punya context yang memiliki EvaporasiBloc
+        final bloc = context.read<EvaporasiBloc>();
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (sheetContext) {
+            return BlocProvider.value(
+              value: bloc,
+              child: const EvaporasiDatePicker(),
+            );
+          },
+        );
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

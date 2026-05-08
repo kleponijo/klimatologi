@@ -53,7 +53,8 @@ class EvaporasiScreen extends StatelessWidget {
                     style:
                         TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 15),
-// Period selector with date picker
+
+                // Period selector with date picker
                 Builder(
                   builder: (context) {
                     final state = context.watch<EvaporasiBloc>().state;
@@ -83,16 +84,24 @@ class EvaporasiScreen extends StatelessWidget {
                 Builder(
                   builder: (context) {
                     final state = context.watch<EvaporasiBloc>().state;
-                    return EvaporasiChartWidget(
-                      dailyValues: state.dailyValues,
-                      dailyTemperatures: state.dailyTemperatures,
-                      period: state.viewMode == EvaporasiViewMode.customDate
-                          ? "Tanggal Khusus"
-                          : state.selectedPeriod,
+                    return Column(
+                      children: [
+                        EvaporasiChartWidget(
+                          dailyValues: state.dailyValues,
+                          dailyTemperatures: state.dailyTemperatures,
+                          period: state.viewMode == EvaporasiViewMode.customDate
+                              ? "Tanggal Khusus"
+                              : state.selectedPeriod,
+                          chartLabels: state.chartLabels,
+                        ),
+                        const SizedBox(height: 20),
+                        _evaporasiList(state),
+                        const SizedBox(height: 10),
+                      ],
                     );
                   },
                 ),
-                const SizedBox(height: 25),
+                const SizedBox(height: 10),
                 ExportPdfButton(
                   onExport: () => PdfExportService.evaporasi(
                     evaporasi: state.currentValue,
@@ -257,6 +266,82 @@ class EvaporasiScreen extends StatelessWidget {
             ),
           ),
 ],
+      ),
+    );
+  }
+
+  /// =========================
+  /// 🧾 LIST DATA EVAPORASI
+  /// =========================
+  Widget _evaporasiList(EvaporasiState state) {
+    final data = state.listData;
+    if (data.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: const Text('Belum ada data evaporasi',
+            style: TextStyle(color: Colors.grey)),
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'List Data Evaporasi',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: data.length,
+            separatorBuilder: (_, __) => const Divider(height: 1),
+            itemBuilder: (context, index) {
+              final e = data[index];
+              final dateLabel = DateFormat('dd MMM yyyy HH:mm:ss', 'id_ID')
+                  .format(e.timestamp);
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        dateLabel,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.black87,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      '${e.evaporasi.toStringAsFixed(1)} mm',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.blue,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
