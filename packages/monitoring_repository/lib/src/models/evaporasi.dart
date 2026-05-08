@@ -1,7 +1,13 @@
-class Evaporasi {
+import 'has_timestamp.dart';
+import '../utils/timestamp_parser.dart';
+
+class Evaporasi implements HasTimestamp {
   final double evaporasi;
   final double suhu;
   final double tinggiAir;
+  final String status;
+
+  @override
   final DateTime timestamp;
 
   Evaporasi({
@@ -9,6 +15,7 @@ class Evaporasi {
     required this.suhu,
     required this.tinggiAir,
     required this.timestamp,
+    this.status = '',
   });
 
   static final empty = Evaporasi(
@@ -19,27 +26,22 @@ class Evaporasi {
   );
 
   factory Evaporasi.fromJson(Map<dynamic, dynamic> json) {
-    final now = DateTime.now();
-    DateTime timestamp = now;
+    // ✅ Handle perbedaan field name antara history dan realtime:
+    // History path  : suhu, tinggi, evaporasi, waktu
+    // Realtime path : suhu_air, tinggi_air, evaporasi, waktu, status
+    final suhu = (json['suhu'] ?? json['suhu_air'] ?? 0).toDouble();
+    final tinggi = (json['tinggi'] ?? json['tinggi_air'] ?? 0).toDouble();
 
-    final waktuStr = json['waktu'] as String?;
-    if (waktuStr != null) {
-      final parts = waktuStr.split(':');
-      if (parts.length >= 2) {
-        final jam = int.tryParse(parts[0]) ?? 0;
-        final menit = int.tryParse(parts[1]) ?? 0;
-        final detik = parts.length >= 3 ? (int.tryParse(parts[2]) ?? 0) : 0;
-        timestamp = DateTime(now.year, now.month, now.day, jam, menit, detik);
-      }
-    }
+    // ✅ Prioritas: timestamp (Unix, kalau firmware sudah diupdate)
+    //              → fallback ke waktu ("HH:MM:SS")
+    final rawTime = json['timestamp'] ?? json['waktu'];
 
     return Evaporasi(
       evaporasi: (json['evaporasi'] ?? 0).toDouble(),
-      suhu: (json['suhu_air'] ?? 0).toDouble(),
-      tinggiAir: (json['tinggi_air'] ?? 0).toDouble(),
-
-      /// 🔥 bikin timestamp dari jam & menit
-      timestamp: timestamp,
+      suhu: suhu,
+      tinggiAir: tinggi,
+      status: json['status'] ?? '',
+      timestamp: TimestampParser.parse(rawTime), // ✅ pakai TimestampParser
     );
   }
 }

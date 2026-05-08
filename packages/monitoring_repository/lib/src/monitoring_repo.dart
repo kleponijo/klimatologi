@@ -1,21 +1,22 @@
-// import 'models/models.dart';
+/// file monitoring_repo.dart di "C:\App_project\klimatologi\packages\monitoring_repository\lib\src\monitoring_repo.dart"
+
+import 'models/has_timestamp.dart';
 
 abstract class MonitoringRepository {
-  // fungsi untuk ambil data berkali/streaming
   Stream<T> getSensorStream<T>(
     String path,
     T Function(Map<dynamic, dynamic> json) mapper,
   );
 
-  // fungsi untuk ambil sensor sekali
   Future<T> getSensorSnapshot<T>(
     String path,
     T Function(Map<dynamic, dynamic> json) mapper,
   );
 
-  // Fungsi untuk ambil riwayat (List)
-  Future<List<T>> getSensorHistory<T>(
+  Future<List<T>> getSensorHistory<T extends HasTimestamp>(
     String path,
-    T Function(Map<dynamic, dynamic> json) mapper,
-  );
+    T Function(Map<dynamic, dynamic> json) mapper, {
+    String? orderByChild,
+    int limit = 500,
+  });
 }

@@ -48,32 +48,16 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
     final history = await _repository.getSensorHistory(
       'anemometer/history',
       (json) => MyWindSpeed.fromJson(json),
+      orderByChild: 'timestamp',
+      limit: 500,
     );
 
-    // ✅ Ini saja yang benar
-    final dailyGraph = TimeSeriesMapper.smooth(
-      TimeSeriesMapper.toDaily(
-        data: history,
-        getTime: (e) => e.timestamp,
-        getValue: (e) => e.speed,
-      ),
-    );
-
-    final weekly = TimeSeriesMapper.smooth(
-      TimeSeriesMapper.toWeekly(
-        data: history,
-        getTime: (e) => e.timestamp,
-        getValue: (e) => e.speed,
-      ),
-    );
-
-    final monthly = TimeSeriesMapper.smooth(
-      TimeSeriesMapper.toMonthly(
-        data: history,
-        getTime: (e) => e.timestamp,
-        getValue: (e) => e.speed,
-      ),
-    );
+    final dailyGraph =
+        TimeSeriesMapper.dailyFrom<MyWindSpeed>(history, (e) => e.speed);
+    final weekly =
+        TimeSeriesMapper.weeklyFrom<MyWindSpeed>(history, (e) => e.speed);
+    final monthly =
+        TimeSeriesMapper.monthlyFrom<MyWindSpeed>(history, (e) => e.speed);
 
     // Cek kondisi awal dari history
     if (history.isNotEmpty) {
@@ -141,48 +125,11 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
   /// =========================
   /// 📊 CHANGE PERIOD
   /// =========================
-  Future<void> _onPeriodChanged(
+  void _onPeriodChanged(
     WindSpeedPeriodChanged event,
     Emitter<WindSpeedState> emit,
-  ) async {
+  ) {
     emit(state.copyWith(selectedPeriod: event.period));
-
-    final history = state.history;
-
-    List<double> raw;
-
-    if (event.period == "Minggu Ini") {
-      raw = TimeSeriesMapper.toWeekly(
-        data: history,
-        getTime: (e) => e.timestamp,
-        getValue: (e) => e.speed,
-      );
-    } else if (event.period == "Bulan Ini") {
-      raw = TimeSeriesMapper.toMonthly(
-        data: history,
-        getTime: (e) => e.timestamp,
-        getValue: (e) => e.speed,
-      );
-    } else {
-      raw = TimeSeriesMapper.toDaily(
-        data: history,
-        getTime: (e) => e.timestamp,
-        getValue: (e) => e.speed,
-      );
-    }
-
-    /// 🔥 baru di-smooth
-    final updatedGraph = TimeSeriesMapper.smooth(raw);
-
-    emit(state.copyWith(
-      dailySpeeds:
-          event.period == "Hari Ini" ? updatedGraph : state.dailySpeeds,
-      weeklySpeeds:
-          event.period == "Minggu Ini" ? updatedGraph : state.weeklySpeeds,
-      monthlySpeeds:
-          event.period == "Bulan Ini" ? updatedGraph : state.monthlySpeeds,
-      isLoading: false,
-    ));
   }
 
   @override

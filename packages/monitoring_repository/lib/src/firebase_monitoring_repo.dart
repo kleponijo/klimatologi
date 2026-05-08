@@ -1,72 +1,61 @@
-// import 'dart:developer';
 import 'dart:async';
-// import 'package:rxdart/rxdart.dart';
 import 'package:firebase_database/firebase_database.dart';
-import 'package:monitoring_repository/monitoring_repository.dart';
+import 'monitoring_repo.dart';
+import 'models/has_timestamp.dart';
+import 'models/models.dart';
 
-/// === ambil data dari realtime database firebase === ///
 class FirebaseMonitoringRepo implements MonitoringRepository {
   final FirebaseDatabase _db = FirebaseDatabase.instance;
 
-  // Satu fungsi untuk semua jenis sensor
-  // Kamu cukup masukkan "path" database-nya saja
   @override
   Stream<T> getSensorStream<T>(
     String path,
     T Function(Map<dynamic, dynamic> json) mapper,
   ) {
-    /// === ambil data mentah dari firebase === ///
     return _db.ref(path).onValue.map((event) {
-      final Object? value = event.snapshot.value;
-
-      if (value is Map) {
-        return mapper(value);
-      } else {
-        // Jika data kosong atau bukan Map, berikan Map kosong agar mapper tidak crash
-        return mapper({});
-      }
+      final value = event.snapshot.value;
+      return mapper(value is Map ? value : {});
     });
   }
 
   @override
-  // Jika ingin mengambil data sekali saja (bukan stream)
   Future<T> getSensorSnapshot<T>(
     String path,
     T Function(Map<dynamic, dynamic> json) mapper,
   ) async {
     final snapshot = await _db.ref(path).get();
-    final data = snapshot.value as Map<dynamic, dynamic>? ?? {};
-    return mapper(data);
+    return mapper(snapshot.value as Map<dynamic, dynamic>? ?? {});
   }
 
   @override
-  Future<List<T>> getSensorHistory<T>(
+  Future<List<T>> getSensorHistory<T extends HasTimestamp>(
     String path,
-    T Function(Map<dynamic, dynamic> json) mapper,
-  ) async {
+    T Function(Map<dynamic, dynamic> json) mapper, {
+    String? orderByChild,
+    int limit = 500,
+  }) async {
     try {
-      // Ambil data dari path history
-      final snapshot = await _db.ref(path).get();
+      Query query = _db.ref(path);
 
-      if (snapshot.exists && snapshot.value is Map) {
-        final Map<dynamic, dynamic> data = snapshot.value as Map;
-
-        final list = data.values.map((item) {
-          return mapper(item as Map<dynamic, dynamic>);
-        }).toList();
-
-        // ✅ Sort by timestamp — Firebase push tidak jamin urutan
-        list.sort((a, b) {
-          if (a is MyWindSpeed && b is MyWindSpeed) {
-            return a.timestamp.compareTo(b.timestamp);
-          }
-          return 0;
-        });
-
-        return list;
+      if (orderByChild != null) {
+        query = query.orderByChild(orderByChild).limitToLast(limit);
+      } else {
+        query = query.limitToLast(limit);
       }
-      return [];
-    } catch (e) {
+
+      final snapshot = await query.get();
+      if (!snapshot.exists || snapshot.value is! Map) return [];
+
+      final data = snapshot.value as Map<dynamic, dynamic>;
+      final list = data.values
+          .whereType<Map>()
+          .map((item) => mapper(item))
+          .toList();
+
+      // Sort generik — works untuk SEMUA sensor karena T extends HasTimestamp
+      list.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+      return list;
+    } catch (_) {
       return [];
     }
   }
