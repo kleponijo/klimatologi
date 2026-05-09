@@ -10,12 +10,8 @@ class EvaporasiState extends Equatable {
   final DateTime? selectedDate; // tanggal spesifik untuk custom date
   final EvaporasiViewMode viewMode; // period vs custom date
 
-  final List<double> dailyValues; // untuk grafik evaporasi
-  final List<double> dailyTemperatures; // untuk grafik suhu
+  final List<double> dailyValues; // untuk grafik
   final List<Evaporasi> history;
-
-  final String weatherStatus; // Baik / Sedang / Buruk
-  final bool willRain; // true jika status Sedang/Buruk
 
   final bool isLoading;
 
@@ -27,10 +23,7 @@ class EvaporasiState extends Equatable {
     this.selectedDate,
     this.viewMode = EvaporasiViewMode.period,
     this.dailyValues = const [],
-    this.dailyTemperatures = const [],
     this.history = const [],
-    this.weatherStatus = "Baik",
-    this.willRain = false,
     this.isLoading = true,
   });
 
@@ -42,10 +35,7 @@ EvaporasiState copyWith({
     DateTime? selectedDate,
     EvaporasiViewMode? viewMode,
     List<double>? dailyValues,
-    List<double>? dailyTemperatures,
     List<Evaporasi>? history,
-    String? weatherStatus,
-    bool? willRain,
     bool? isLoading,
   }) {
     return EvaporasiState(
@@ -56,10 +46,7 @@ EvaporasiState copyWith({
       selectedDate: selectedDate ?? this.selectedDate,
       viewMode: viewMode ?? this.viewMode,
       dailyValues: dailyValues ?? this.dailyValues,
-      dailyTemperatures: dailyTemperatures ?? this.dailyTemperatures,
       history: history ?? this.history,
-      weatherStatus: weatherStatus ?? this.weatherStatus,
-      willRain: willRain ?? this.willRain,
       isLoading: isLoading ?? this.isLoading,
     );
   }
@@ -73,10 +60,7 @@ EvaporasiState copyWith({
         selectedDate,
         viewMode,
         dailyValues,
-        dailyTemperatures,
         history,
-        weatherStatus,
-        willRain,
         isLoading,
       ];
 }

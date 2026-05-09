@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import '../blocs/evaporasi_bloc.dart';
-import 'widgets/evaporasi_chart_widget.dart';
-import 'widgets/evaporasi_period_selector.dart';
 import '../../shared/utils/pdf/pdf_export_service.dart';
 import '../../shared/widgets/export_pdf_button.dart';
 
@@ -47,6 +45,7 @@ class EvaporasiScreen extends StatelessWidget {
                 const SizedBox(height: 25),
                 _infoRow(state),
                 const SizedBox(height: 25),
+<<<<<<< HEAD
                 _statusCard(state),
                 const SizedBox(height: 25),
                 const Text("Tren Evaporasi & Suhu",
@@ -92,6 +91,9 @@ class EvaporasiScreen extends StatelessWidget {
                     );
                   },
                 ),
+=======
+                _trendSection(),
+>>>>>>> parent of 6f38d3b (update evaporsi)
                 const SizedBox(height: 25),
                 ExportPdfButton(
                   onExport: () => PdfExportService.evaporasi(
@@ -193,36 +195,17 @@ class EvaporasiScreen extends StatelessWidget {
   }
 
   /// =========================
-  /// 🌤️ STATUS CARD
+  /// 📈 TREND (SIMPLE PLACEHOLDER)
   /// =========================
-  Widget _statusCard(EvaporasiState state) {
-    Color statusColor;
-    IconData statusIcon;
-
-    switch (state.weatherStatus) {
-      case "Sedang":
-        statusColor = Colors.orange;
-        statusIcon = Icons.warning_amber_rounded;
-        break;
-      case "Buruk":
-        statusColor = Colors.red;
-        statusIcon = Icons.error_outline;
-        break;
-      case "Baik":
-      default:
-        statusColor = Colors.green;
-        statusIcon = Icons.check_circle_outline;
-        break;
-    }
-
+  Widget _trendSection() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      height: 200,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: statusColor.withOpacity(0.3), width: 1.5),
       ),
+<<<<<<< HEAD
       child: Row(
         children: [
           Icon(statusIcon, color: statusColor, size: 40),
@@ -257,6 +240,13 @@ class EvaporasiScreen extends StatelessWidget {
             ),
           ),
 ],
+=======
+      child: const Center(
+        child: Text(
+          "Grafik Evaporasi",
+          style: TextStyle(color: Colors.grey),
+        ),
+>>>>>>> parent of 6f38d3b (update evaporsi)
       ),
     );
   }

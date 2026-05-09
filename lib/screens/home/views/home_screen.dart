@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:monitoring_repository/monitoring_repository.dart';
 import '../../../blocs/authentication_bloc/authentication_bloc.dart';
+<<<<<<< HEAD
 import '../../../blocs/notification_bloc/notification_bloc.dart';
 import '../../monitoring/wind_speed/blocs/wind_speed_bloc.dart';
 import '../../monitoring/evaporasi/blocs/evaporasi_bloc.dart';
@@ -9,6 +10,8 @@ import '../../monitoring/atmospheric_conditions/blocs/atmospheric_conditions_blo
 import '../widgets/notification_panel.dart';
 import '../widgets/sensor_grid.dart';
 import '../widgets/dashboard_charts.dart';
+=======
+>>>>>>> parent of 6f38d3b (update evaporsi)
 import 'main_drawer.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -97,6 +100,7 @@ class _HomeScreenState extends State<HomeScreen>
               height: 90,
               fit: BoxFit.contain,
             ),
+<<<<<<< HEAD
             actions: [
               // Icon lonceng dengan badge
               BlocBuilder<NotificationBloc, NotificationState>(
@@ -174,6 +178,17 @@ class _HomeScreenState extends State<HomeScreen>
                   ),
                 ),
             ],
+=======
+            const SizedBox(width: 10),
+          ],
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications_none, color: Colors.black),
+            onPressed: () {
+              // Aksi notifikasi
+            },
+>>>>>>> parent of 6f38d3b (update evaporsi)
           ),
         ),
       ),

@@ -4,7 +4,10 @@ import 'package:equatable/equatable.dart';
 import 'package:monitoring_repository/monitoring_repository.dart';
 
 import '../../../../core/utils/time_series_mapper.dart';
+<<<<<<< HEAD
 import '../../../../blocs/notification_bloc/notification_bloc.dart';
+=======
+>>>>>>> parent of 6f38d3b (update evaporsi)
 
 part 'evaporasi_event.dart';
 part 'evaporasi_state.dart';
@@ -44,9 +47,10 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
     final dailyGraph = TimeSeriesMapper.toDaily(
       data: history,
       getTime: (e) => e.timestamp,
-      getValue: (e) => e.evaporasi,
+      getValue: (e) => e.evaporasi, // ⚠️ sesuaikan nama field
     );
 
+<<<<<<< HEAD
     final dailyTempGraph = TimeSeriesMapper.toDaily(
       data: history,
       getTime: (e) => e.timestamp,
@@ -58,12 +62,11 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
     final (status, rain) = _computeWeatherStatus(lastValue);
     _emitEvaporasiAlert(status, rain, lastValue);
 
+=======
+>>>>>>> parent of 6f38d3b (update evaporsi)
     emit(state.copyWith(
       history: history,
       dailyValues: dailyGraph,
-      dailyTemperatures: dailyTempGraph,
-      weatherStatus: status,
-      willRain: rain,
       isLoading: false,
     ));
 
@@ -81,25 +84,28 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
     Emitter<EvaporasiState> emit,
   ) {
     final updated = List<double>.from(state.dailyValues);
+<<<<<<< HEAD
     final updatedTemp = List<double>.from(state.dailyTemperatures);
+=======
+
+>>>>>>> parent of 6f38d3b (update evaporsi)
     final index = DateTime.now().hour;
 
     if (index < updated.length) {
-      updated[index] = event.data.evaporasi;
-      updatedTemp[index] = event.data.suhu;
+      updated[index] = event.data.evaporasi; // ⚠️ sesuaikan field
     }
 
+<<<<<<< HEAD
     final (status, rain) = _computeWeatherStatus(event.data.evaporasi);
     _emitEvaporasiAlert(status, rain, event.data.evaporasi);
 
+=======
+>>>>>>> parent of 6f38d3b (update evaporsi)
     emit(state.copyWith(
       currentValue: event.data.evaporasi,
       temperature: event.data.suhu,
       waterLevel: event.data.tinggiAir,
       dailyValues: updated,
-      dailyTemperatures: updatedTemp,
-      weatherStatus: status,
-      willRain: rain,
     ));
   }
 
@@ -114,7 +120,6 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
     final history = state.history;
 
     List<double> updated;
-    List<double> updatedTemp;
 
     if (event.period == "Minggu Ini") {
       updated = TimeSeriesMapper.toWeekly(
@@ -122,21 +127,11 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
         getTime: (e) => e.timestamp,
         getValue: (e) => e.evaporasi,
       );
-      updatedTemp = TimeSeriesMapper.toWeekly(
-        data: history,
-        getTime: (e) => e.timestamp,
-        getValue: (e) => e.suhu,
-      );
     } else if (event.period == "Bulan Ini") {
       updated = TimeSeriesMapper.toMonthly(
         data: history,
         getTime: (e) => e.timestamp,
         getValue: (e) => e.evaporasi,
-      );
-      updatedTemp = TimeSeriesMapper.toMonthly(
-        data: history,
-        getTime: (e) => e.timestamp,
-        getValue: (e) => e.suhu,
       );
     } else {
       updated = TimeSeriesMapper.toDaily(
@@ -144,17 +139,14 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
         getTime: (e) => e.timestamp,
         getValue: (e) => e.evaporasi,
       );
-      updatedTemp = TimeSeriesMapper.toDaily(
-        data: history,
-        getTime: (e) => e.timestamp,
-        getValue: (e) => e.suhu,
-      );
     }
 
+<<<<<<< HEAD
 // Pertahankan status cuaca saat ini (tidak berubah karena hanya ganti periode)
+=======
+>>>>>>> parent of 6f38d3b (update evaporsi)
     emit(state.copyWith(
       dailyValues: updated,
-      dailyTemperatures: updatedTemp,
       isLoading: false,
     ));
   }
@@ -215,6 +207,7 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
     await _subscription?.cancel();
     return super.close();
   }
+<<<<<<< HEAD
 
   /// =========================
   /// 🌤️ HELPER: Status Cuaca
@@ -252,6 +245,8 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
       ),
     ));
   }
+=======
+>>>>>>> parent of 6f38d3b (update evaporsi)
 }
 
 /// INTERNAL EVENT
