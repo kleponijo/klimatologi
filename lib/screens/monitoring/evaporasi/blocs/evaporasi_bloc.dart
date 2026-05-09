@@ -79,11 +79,16 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
     );
 
     final lastValue = history.isNotEmpty ? history.last.evaporasi : 0.0;
+    final lastWaterLevel = history.isNotEmpty ? history.last.tinggiAir : 0.0;
+    final lastTemperature = history.isNotEmpty ? history.last.suhu : 0.0;
     final (status, rain) = _computeWeatherStatus(lastValue);
     _emitEvaporasiAlert(status, rain, lastValue);
 
     emit(state.copyWith(
       history: history,
+      currentValue: lastValue,
+      waterLevel: lastWaterLevel,
+      temperature: lastTemperature,
       dailyValues: dailyGraph,
       dailyTemperatures: dailyTempGraph,
       weeklyValues: weeklyGraph,
@@ -299,4 +304,3 @@ class _EvaporasiRealtimeUpdated extends EvaporasiEvent {
   @override
   List<Object> get props => [data];
 }
-

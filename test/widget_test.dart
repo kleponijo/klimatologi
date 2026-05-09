@@ -5,12 +5,11 @@
 // gestures. You can also use WidgetTester to find child widgets in the widget
 // tree, read text, and verify that the values of widget properties are correct.
 
-import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:klimatologiot/app.dart';
 import 'package:monitoring_repository/monitoring_repository.dart';
 import 'package:user_repository/user_repository.dart';
-import '../lib/app.dart';
 
 // import 'package:klimatologiot/main.dart';
 
@@ -49,31 +48,38 @@ class FakeUserRepository implements UserRepository {
 }
 
 class FakeMonitoringRepository implements MonitoringRepository {
-  get _db => null;
-
-  // Satu fungsi untuk semua jenis sensor
-  // Kamu cukup masukkan "path" database-nya saja
-
   @override
-  // Jika ingin mengambil data sekali saja (bukan stream)
-  Future<DataSnapshot> getSensorSnapshot(String path) async {
-    return await _db.ref(path).get();
+  Future<T> getSensorSnapshot<T>(
+    String path,
+    T Function(Map<dynamic, dynamic>) mapper,
+  ) async {
+    return mapper(<dynamic, dynamic>{});
   }
 
   @override
-  Stream<DatabaseEvent> getSensorStream(String path) {
-    // TODO: implement getSensorStream
-    throw UnimplementedError();
+  Stream<T> getSensorStream<T>(
+    String path,
+    T Function(Map<dynamic, dynamic>) mapper,
+  ) {
+    return const Stream.empty();
+  }
+
+  @override
+  Future<List<T>> getSensorHistory<T>(
+    String path,
+    T Function(Map<dynamic, dynamic>) mapper,
+  ) async {
+    return <T>[];
   }
 }
 
 void main() {
   testWidgets('App loads', (WidgetTester tester) async {
     final fakeRepo = FakeUserRepository();
-    final fakeMonitoring = FakeUserRepository();
+    final fakeMonitoring = FakeMonitoringRepository();
     // Build our app and trigger a frame.
     await tester.pumpWidget(
-      MyApp(fakeRepo, fakeMonitoring as MonitoringRepository),
+      MyApp(fakeRepo, fakeMonitoring),
     );
 
     await tester.pump();

@@ -1,7 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-
-import 'package:monitoring_repository/monitoring_repository.dart';
 
 class EvaporasiDateSearchBar extends StatefulWidget {
   final String initialQuery;
@@ -13,14 +10,12 @@ class EvaporasiDateSearchBar extends StatefulWidget {
     required this.onQueryChanged,
   });
 
-
   @override
   State<EvaporasiDateSearchBar> createState() => _EvaporasiDateSearchBarState();
 }
 
 class _EvaporasiDateSearchBarState extends State<EvaporasiDateSearchBar> {
   late final TextEditingController _controller;
-  DateTime? _selected;
 
   @override
   void initState() {
@@ -34,21 +29,9 @@ class _EvaporasiDateSearchBarState extends State<EvaporasiDateSearchBar> {
     super.dispose();
   }
 
-  bool _matches(Evaporasi item, String query) {
-    if (query.trim().isEmpty) return true;
-
-    final date = item.timestamp;
-    final ddMMyyyy = DateFormat('dd/MM/yyyy', 'id_ID').format(date);
-    final ddMMMYYYY = DateFormat('dd MMM yyyy', 'id_ID').format(date);
-
-    final q = query.trim().toLowerCase();
-    return ddMMyyyy.toLowerCase().contains(q) || ddMMMYYYY.toLowerCase().contains(q);
-  }
-
   @override
   Widget build(BuildContext context) {
     return TextField(
-
       controller: _controller,
       decoration: InputDecoration(
         hintText: 'Cari tanggal (dd/MM/yyyy)',
@@ -69,4 +52,3 @@ class _EvaporasiDateSearchBarState extends State<EvaporasiDateSearchBar> {
     );
   }
 }
-
