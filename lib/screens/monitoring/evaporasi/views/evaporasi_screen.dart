@@ -1,15 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+
 import '../blocs/evaporasi_bloc.dart';
 import 'widgets/evaporasi_chart_widget.dart';
 import 'widgets/evaporasi_period_selector.dart';
 import '../../shared/utils/pdf/pdf_export_service.dart';
 import '../../shared/widgets/export_pdf_button.dart';
 
-class EvaporasiScreen extends StatelessWidget {
+class EvaporasiScreen extends StatefulWidget {
   const EvaporasiScreen({super.key});
 
+  @override
+  State<EvaporasiScreen> createState() => _EvaporasiScreenState();
+}
+
+class _EvaporasiScreenState extends State<EvaporasiScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -49,9 +55,10 @@ class EvaporasiScreen extends StatelessWidget {
                 const SizedBox(height: 25),
                 _statusCard(state),
                 const SizedBox(height: 25),
-                const Text("Tren Evaporasi & Suhu",
-                    style:
-                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const Text(
+                  "Tren Evaporasi & Suhu",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 15),
 
                 // Period selector with date picker
@@ -61,7 +68,6 @@ class EvaporasiScreen extends StatelessWidget {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Show selected date info when in custom mode
                         if (state.viewMode == EvaporasiViewMode.customDate &&
                             state.selectedDate != null)
                           Padding(
@@ -80,28 +86,32 @@ class EvaporasiScreen extends StatelessWidget {
                     );
                   },
                 ),
+
                 const SizedBox(height: 15),
+
+                // Chart
                 Builder(
                   builder: (context) {
                     final state = context.watch<EvaporasiBloc>().state;
-                    return Column(
-                      children: [
-                        EvaporasiChartWidget(
-                          dailyValues: state.dailyValues,
-                          dailyTemperatures: state.dailyTemperatures,
-                          period: state.viewMode == EvaporasiViewMode.customDate
-                              ? "Tanggal Khusus"
-                              : state.selectedPeriod,
-                          chartLabels: state.chartLabels,
-                        ),
-                        const SizedBox(height: 20),
-                        _evaporasiList(state),
-                        const SizedBox(height: 10),
-                      ],
+                    return EvaporasiChartWidget(
+                      dailyValues: state.dailyValues,
+                      dailyTemperatures: state.dailyTemperatures,
+                      period: state.viewMode == EvaporasiViewMode.customDate
+                          ? "Tanggal Khusus"
+                          : state.selectedPeriod,
+                      chartLabels: state.chartLabels,
                     );
                   },
                 ),
+
+                const SizedBox(height: 20),
+
+                // List data (mengikuti chart: period vs custom date)
+                _evaporasiList(state),
+
+
                 const SizedBox(height: 10),
+
                 ExportPdfButton(
                   onExport: () => PdfExportService.evaporasi(
                     evaporasi: state.currentValue,
@@ -224,6 +234,20 @@ class EvaporasiScreen extends StatelessWidget {
         break;
     }
 
+    // Teks peringatan khusus evaporasi (normal/sedang/tinggi)
+    final String warningText;
+    if (state.weatherStatus == 'Baik') {
+      warningText =
+          'Normal — evaporasi stabil, risiko dampak rendah.';
+    } else if (state.weatherStatus == 'Sedang') {
+      warningText =
+          'Sedang — evaporasi mulai tinggi, pantau kondisi cuaca.';
+    } else {
+      warningText =
+          'Tinggi — evaporasi signifikan, berpotensi memengaruhi kondisi lingkungan.';
+    }
+
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -246,26 +270,32 @@ class EvaporasiScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  state.weatherStatus,
+                  state.weatherStatus == 'Baik'
+                      ? 'Normal'
+                      : state.weatherStatus == 'Sedang'
+                          ? 'Sedang'
+                          : 'Tinggi',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: statusColor,
                   ),
                 ),
+
                 if (state.willRain)
-                  const Text(
-                    "⚠️ Potensi hujan tinggi",
-                    style: TextStyle(
+                  Text(
+                    warningText,
+                    style: const TextStyle(
                       fontSize: 12,
                       color: Colors.red,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
+
               ],
             ),
           ),
-],
+        ],
       ),
     );
   }
@@ -274,7 +304,15 @@ class EvaporasiScreen extends StatelessWidget {
   /// 🧾 LIST DATA EVAPORASI
   /// =========================
   Widget _evaporasiList(EvaporasiState state) {
-    final data = state.listData;
+    final data = state.viewMode == EvaporasiViewMode.customDate && state.selectedDate != null
+        ? state.history
+            .where((e) =>
+                e.timestamp.year == state.selectedDate!.year &&
+                e.timestamp.month == state.selectedDate!.month &&
+                e.timestamp.day == state.selectedDate!.day)
+            .toList()
+        : state.history;
+
     if (data.isEmpty) {
       return Container(
         width: double.infinity,
@@ -283,8 +321,10 @@ class EvaporasiScreen extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
         ),
-        child: const Text('Belum ada data evaporasi',
-            style: TextStyle(color: Colors.grey)),
+        child: const Text(
+          'Belum ada data evaporasi',
+          style: TextStyle(color: Colors.grey),
+        ),
       );
     }
 
@@ -303,60 +343,77 @@ class EvaporasiScreen extends StatelessWidget {
             style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: data.length,
-            separatorBuilder: (_, __) => const Divider(height: 1),
-            itemBuilder: (context, index) {
-              final e = data[index];
-              final dateLabel = DateFormat('dd MMM yyyy', 'id_ID')
-                      .format(e.timestamp) +
-                  ' • ' +
-                  DateFormat('HH:mm:ss', 'id_ID').format(e.timestamp);
+          SizedBox(
+            height: 280,
+            child: ListView.separated(
+              itemCount: data.length,
+              itemBuilder: (context, index) {
+                final e = data[index];
+                final dateLabel =
+                    '${DateFormat('dd MMM yyyy', 'id_ID').format(e.timestamp)} • ${DateFormat('HH:mm:ss', 'id_ID').format(e.timestamp)}';
 
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        dateLabel,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.black87,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          '${e.evaporasi.toStringAsFixed(1)} mm',
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          dateLabel,
                           style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.blue,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${e.suhu.toStringAsFixed(1)} °C',
-                          style: TextStyle(
                             fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.orange.shade700,
+                            color: Colors.black87,
                           ),
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ],
-                    ),
-                  ],
-                ),
-              );
-            },
+                      ),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            '${e.evaporasi.toStringAsFixed(1)} mm',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.blue,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Tinggi Air: ${e.tinggiAir.toStringAsFixed(1)} cm',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.blue.shade700,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Suhu: ${e.suhu.toStringAsFixed(1)} °C',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.orange.shade700,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _statusTextForHistory(e.evaporasi),
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: _statusColorForHistory(e.evaporasi),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
+              separatorBuilder: (_, __) => const Divider(height: 1),
+            ),
           ),
         ],
       ),
@@ -366,8 +423,22 @@ class EvaporasiScreen extends StatelessWidget {
   /// =========================
   /// 📅 FORMAT DATE INFO (for custom date display)
   /// =========================
+  String _statusTextForHistory(double evaporasi) {
+    if (evaporasi <= 5.0) return 'Status: Normal';
+    if (evaporasi <= 10.0) return 'Status: Sedang';
+    return 'Status: Tinggi';
+  }
+
+  Color _statusColorForHistory(double evaporasi) {
+    if (evaporasi <= 5.0) return Colors.green;
+    if (evaporasi <= 10.0) return Colors.orange;
+    return Colors.red;
+  }
+
   String _formatDateInfo(DateTime date) {
+
     final now = DateTime.now();
+
     final today = DateTime(now.year, now.month, now.day);
     final yesterday = today.subtract(const Duration(days: 1));
     final selected = DateTime(date.year, date.month, date.day);
@@ -381,3 +452,4 @@ class EvaporasiScreen extends StatelessWidget {
     }
   }
 }
+

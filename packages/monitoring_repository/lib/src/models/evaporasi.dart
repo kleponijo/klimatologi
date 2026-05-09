@@ -32,9 +32,12 @@ class Evaporasi implements HasTimestamp {
     final suhu = (json['suhu'] ?? json['suhu_air'] ?? 0).toDouble();
     final tinggi = (json['tinggi'] ?? json['tinggi_air'] ?? 0).toDouble();
 
-    // ✅ Prioritas: timestamp (Unix, kalau firmware sudah diupdate)
-    //              → fallback ke waktu ("HH:MM:SS")
-    final rawTime = json['timestamp'] ?? json['waktu'];
+    // ✅ Prioritas waktu sesuai firmware ESP32:
+    // 1) timestamp (Unix, kalau pernah dikirim)
+    // 2) datetime ("YYYY-MM-DD HH:MM:SS")
+    // 3) waktu ("HH:MM:SS") fallback (akan memakai tanggal hari ini)
+    final rawTime = json['timestamp'] ?? json['datetime'] ?? json['waktu'];
+
 
     return Evaporasi(
       evaporasi: (json['evaporasi'] ?? 0).toDouble(),

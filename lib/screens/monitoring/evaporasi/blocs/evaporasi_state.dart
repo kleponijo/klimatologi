@@ -10,8 +10,13 @@ class EvaporasiState extends Equatable {
   final DateTime? selectedDate; // tanggal spesifik untuk custom date
   final EvaporasiViewMode viewMode; // period vs custom date
 
-  final List<double> dailyValues; // untuk grafik evaporasi
+  final List<double> dailyValues; // untuk grafik evaporasi (default)
+  final List<double> weeklyValues;
+  final List<double> monthlyValues;
+
   final List<double> dailyTemperatures; // untuk grafik suhu
+  final List<double> weeklyTemperatures;
+  final List<double> monthlyTemperatures;
 
   /// Label X-axis sesuai agregasi period
   /// Contoh: Hari Ini => ["00:00","01:00",...]
@@ -21,6 +26,7 @@ class EvaporasiState extends Equatable {
 
   /// Data untuk list (timestamp asli dari firebase)
   final List<Evaporasi> listData;
+
   final List<Evaporasi> history;
 
   final String weatherStatus; // Baik / Sedang / Buruk
@@ -32,20 +38,24 @@ class EvaporasiState extends Equatable {
     this.currentValue = 0.0,
     this.temperature = 0.0,
     this.waterLevel = 0.0,
-    this.selectedPeriod = "Hari Ini",
+    this.selectedPeriod = 'Hari Ini',
     this.selectedDate,
     this.viewMode = EvaporasiViewMode.period,
     this.dailyValues = const [],
+    this.weeklyValues = const [],
+    this.monthlyValues = const [],
     this.dailyTemperatures = const [],
+    this.weeklyTemperatures = const [],
+    this.monthlyTemperatures = const [],
     this.chartLabels = const [],
     this.listData = const [],
     this.history = const [],
-    this.weatherStatus = "Baik",
+    this.weatherStatus = 'Baik',
     this.willRain = false,
     this.isLoading = true,
   });
 
-EvaporasiState copyWith({
+  EvaporasiState copyWith({
     double? currentValue,
     double? temperature,
     double? waterLevel,
@@ -53,7 +63,11 @@ EvaporasiState copyWith({
     DateTime? selectedDate,
     EvaporasiViewMode? viewMode,
     List<double>? dailyValues,
+    List<double>? weeklyValues,
+    List<double>? monthlyValues,
     List<double>? dailyTemperatures,
+    List<double>? weeklyTemperatures,
+    List<double>? monthlyTemperatures,
     List<String>? chartLabels,
     List<Evaporasi>? listData,
     List<Evaporasi>? history,
@@ -69,10 +83,14 @@ EvaporasiState copyWith({
       selectedDate: selectedDate ?? this.selectedDate,
       viewMode: viewMode ?? this.viewMode,
       dailyValues: dailyValues ?? this.dailyValues,
+      weeklyValues: weeklyValues ?? this.weeklyValues,
+      monthlyValues: monthlyValues ?? this.monthlyValues,
       dailyTemperatures: dailyTemperatures ?? this.dailyTemperatures,
-      history: history ?? this.history,
+      weeklyTemperatures: weeklyTemperatures ?? this.weeklyTemperatures,
+      monthlyTemperatures: monthlyTemperatures ?? this.monthlyTemperatures,
       chartLabels: chartLabels ?? this.chartLabels,
       listData: listData ?? this.listData,
+      history: history ?? this.history,
       weatherStatus: weatherStatus ?? this.weatherStatus,
       willRain: willRain ?? this.willRain,
       isLoading: isLoading ?? this.isLoading,
@@ -88,10 +106,17 @@ EvaporasiState copyWith({
         selectedDate,
         viewMode,
         dailyValues,
+        weeklyValues,
+        monthlyValues,
         dailyTemperatures,
+        weeklyTemperatures,
+        monthlyTemperatures,
+        chartLabels,
+        listData,
         history,
         weatherStatus,
         willRain,
         isLoading,
       ];
 }
+

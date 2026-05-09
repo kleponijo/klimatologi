@@ -72,17 +72,41 @@ class EvaporasiChartWidget extends StatelessWidget {
               duration: const Duration(milliseconds: 600),
               curve: Curves.easeOutCubic,
               LineChartData(
+
                 minY: 0,
                 maxY: maxY,
                 gridData: const FlGridData(show: false),
                 borderData: FlBorderData(show: false),
                 titlesData: FlTitlesData(
                   show: true,
-                  rightTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false)),
+                  // dual axis: kiri untuk Evaporasi (mm), kanan untuk Suhu (°C)
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 40,
+                      interval: _getYAxisInterval(safeValues),
+                      getTitlesWidget: (value, meta) {
+                        return Text(
+                          value.toStringAsFixed(0),
+                          style: const TextStyle(color: Colors.blueGrey, fontSize: 10),
+                        );
+                      },
+                    ),
+                  ),
+                  rightTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 40,
+                      interval: _getYAxisInterval(safeTemps),
+                      getTitlesWidget: (value, meta) {
+                        return Text(
+                          value.toStringAsFixed(0),
+                          style: const TextStyle(color: Colors.orangeAccent, fontSize: 10),
+                        );
+                      },
+                    ),
+                  ),
                   topTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false)),
-                  leftTitles: const AxisTitles(
                       sideTitles: SideTitles(showTitles: false)),
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
@@ -105,7 +129,7 @@ class EvaporasiChartWidget extends StatelessWidget {
                   ),
                 ),
                 lineBarsData: [
-                  // === Garis Evaporasi ===
+                  // === Garis Evaporasi (kiri axis) ===
                   LineChartBarData(
                     spots: safeValues.asMap().entries.map((e) {
                       return FlSpot(e.key.toDouble(), e.value);
@@ -143,7 +167,7 @@ class EvaporasiChartWidget extends StatelessWidget {
                       ),
                     ),
                   ),
-                  // === Garis Suhu ===
+                  // === Garis Suhu (kanan axis) ===
                   LineChartBarData(
                     spots: safeTemps.asMap().entries.map((e) {
                       return FlSpot(e.key.toDouble(), e.value);
@@ -245,5 +269,15 @@ class EvaporasiChartWidget extends StatelessWidget {
     if (period == "Minggu Ini") return 1;
     return 1;
   }
+
+  double _getYAxisInterval(List<double> data) {
+    if (data.isEmpty) return 1;
+    final max = data.reduce((a, b) => a > b ? a : b);
+    if (max <= 10) return 2;
+    if (max <= 20) return 5;
+    if (max <= 30) return 10;
+    return 20;
+  }
 }
+
 
