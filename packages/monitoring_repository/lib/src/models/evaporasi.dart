@@ -30,14 +30,14 @@ class Evaporasi implements HasTimestamp {
     // History path  : suhu, tinggi, evaporasi, waktu
     // Realtime path : suhu_air, tinggi_air, evaporasi, waktu, status
     final suhu = (json['suhu'] ?? json['suhu_air'] ?? 0).toDouble();
-    final tinggi = (json['tinggi'] ?? json['tinggi_air'] ?? 0).toDouble();
+    final tinggi = (json['tinggi'] ?? json['tinggi_air_cm'] ?? 0).toDouble();
 
     // ✅ Prioritas: timestamp (Unix, kalau firmware sudah diupdate)
     //              → fallback ke waktu ("HH:MM:SS")
     final rawTime = json['timestamp'] ?? json['waktu'];
 
     return Evaporasi(
-      evaporasi: (json['evaporasi'] ?? 0).toDouble(),
+      evaporasi: (json['evaporasi_mm'] ?? 0).toDouble(),
       suhu: suhu,
       tinggiAir: tinggi,
       status: json['status'] ?? '',
