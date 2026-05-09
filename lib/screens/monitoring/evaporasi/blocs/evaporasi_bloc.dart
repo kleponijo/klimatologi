@@ -37,8 +37,6 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
     final history = await _repository.getSensorHistory(
       'Monitoring/History',
       (json) => Evaporasi.fromJson(json),
-      orderByChild: null,
-      limit: 500,
     );
 
     final listData = List<Evaporasi>.from(history)
@@ -47,7 +45,7 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
     final dailyGraph = TimeSeriesMapper.toDaily(
       data: history,
       getTime: (e) => e.timestamp,
-      getValue: (e) => e.evaporasi,
+      getValue: (e) => e.evaporasi, // ⚠️ sesuaikan nama field
     );
 
     final dailyTempGraph = TimeSeriesMapper.toDaily(
@@ -86,7 +84,6 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
 
     emit(state.copyWith(
       history: history,
-      listData: listData,
       dailyValues: dailyGraph,
       dailyTemperatures: dailyTempGraph,
       weeklyValues: weeklyGraph,
@@ -96,6 +93,7 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
       chartLabels: _buildChartLabels(period: 'Hari Ini'),
       weatherStatus: status,
       willRain: rain,
+      listData: listData,
       isLoading: false,
     ));
 
@@ -183,8 +181,8 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
       dailyValues: updated,
       dailyTemperatures: updatedTemp,
       chartLabels: _buildChartLabels(period: event.period),
+      viewMode: EvaporasiViewMode.period,
       isLoading: false,
-      // penting: jangan hilangkan list
       listData: state.listData,
       history: state.history,
     ));
@@ -219,7 +217,6 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
     emit(state.copyWith(
       dailyValues: updated,
       dailyTemperatures: updatedTemp,
-      chartLabels: _buildChartLabels(period: 'Tanggal Khusus'),
       isLoading: false,
       // jangan hilangkan list
       listData: state.listData,

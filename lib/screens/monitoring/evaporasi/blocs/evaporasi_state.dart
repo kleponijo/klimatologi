@@ -28,9 +28,8 @@ class EvaporasiState extends Equatable {
   final List<Evaporasi> listData;
 
   final List<Evaporasi> history;
-
-  final String weatherStatus; // Baik / Sedang / Buruk
-  final bool willRain; // true jika status Sedang/Buruk
+  final String weatherStatus;
+  final bool willRain;
 
   final bool isLoading;
 

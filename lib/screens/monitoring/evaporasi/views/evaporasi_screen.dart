@@ -3,10 +3,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 
 import '../blocs/evaporasi_bloc.dart';
-import 'widgets/evaporasi_chart_widget.dart';
-import 'widgets/evaporasi_period_selector.dart';
 import '../../shared/utils/pdf/pdf_export_service.dart';
 import '../../shared/widgets/export_pdf_button.dart';
+import 'widgets/evaporasi_period_selector.dart';
+import 'widgets/evaporasi_chart_widget.dart';
 
 class EvaporasiScreen extends StatefulWidget {
   const EvaporasiScreen({super.key});
@@ -60,7 +60,6 @@ class _EvaporasiScreenState extends State<EvaporasiScreen> {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 15),
-
                 // Period selector with date picker
                 Builder(
                   builder: (context) {
@@ -86,9 +85,7 @@ class _EvaporasiScreenState extends State<EvaporasiScreen> {
                     );
                   },
                 ),
-
                 const SizedBox(height: 15),
-
                 // Chart
                 Builder(
                   builder: (context) {
@@ -103,15 +100,10 @@ class _EvaporasiScreenState extends State<EvaporasiScreen> {
                     );
                   },
                 ),
-
                 const SizedBox(height: 20),
-
                 // List data (mengikuti chart: period vs custom date)
                 _evaporasiList(state),
-
-
                 const SizedBox(height: 10),
-
                 ExportPdfButton(
                   onExport: () => PdfExportService.evaporasi(
                     evaporasi: state.currentValue,
@@ -212,7 +204,7 @@ class _EvaporasiScreenState extends State<EvaporasiScreen> {
   }
 
   /// =========================
-  /// 🌤️ STATUS CARD
+  /// 📈 STATUS CARD
   /// =========================
   Widget _statusCard(EvaporasiState state) {
     Color statusColor;
@@ -237,24 +229,20 @@ class _EvaporasiScreenState extends State<EvaporasiScreen> {
     // Teks peringatan khusus evaporasi (normal/sedang/tinggi)
     final String warningText;
     if (state.weatherStatus == 'Baik') {
-      warningText =
-          'Normal — evaporasi stabil, risiko dampak rendah.';
+      warningText = 'Normal — evaporasi stabil, risiko dampak rendah.';
     } else if (state.weatherStatus == 'Sedang') {
-      warningText =
-          'Sedang — evaporasi mulai tinggi, pantau kondisi cuaca.';
+      warningText = 'Sedang — evaporasi mulai tinggi, pantau kondisi cuaca.';
     } else {
       warningText =
           'Tinggi — evaporasi signifikan, berpotensi memengaruhi kondisi lingkungan.';
     }
 
-
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: statusColor.withOpacity(0.3), width: 1.5),
       ),
       child: Row(
         children: [
@@ -281,7 +269,6 @@ class _EvaporasiScreenState extends State<EvaporasiScreen> {
                     color: statusColor,
                   ),
                 ),
-
                 if (state.willRain)
                   Text(
                     warningText,
@@ -291,7 +278,6 @@ class _EvaporasiScreenState extends State<EvaporasiScreen> {
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-
               ],
             ),
           ),
@@ -304,7 +290,8 @@ class _EvaporasiScreenState extends State<EvaporasiScreen> {
   /// 🧾 LIST DATA EVAPORASI
   /// =========================
   Widget _evaporasiList(EvaporasiState state) {
-    final data = state.viewMode == EvaporasiViewMode.customDate && state.selectedDate != null
+    final data = state.viewMode == EvaporasiViewMode.customDate &&
+            state.selectedDate != null
         ? state.history
             .where((e) =>
                 e.timestamp.year == state.selectedDate!.year &&
