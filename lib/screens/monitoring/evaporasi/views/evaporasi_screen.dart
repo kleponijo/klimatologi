@@ -310,11 +310,8 @@ class EvaporasiScreen extends StatelessWidget {
             separatorBuilder: (_, __) => const Divider(height: 1),
             itemBuilder: (context, index) {
               final e = data[index];
-              final dateLabel = DateFormat('dd MMM yyyy', 'id_ID')
-                      .format(e.timestamp) +
-                  ' • ' +
-                  DateFormat('HH:mm:ss', 'id_ID').format(e.timestamp);
-
+              final dateLabel = DateFormat('dd MMM yyyy HH:mm:ss', 'id_ID')
+                  .format(e.timestamp);
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 child: Row(
@@ -331,27 +328,13 @@ class EvaporasiScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          '${e.evaporasi.toStringAsFixed(1)} mm',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.blue,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${e.suhu.toStringAsFixed(1)} °C',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.orange.shade700,
-                          ),
-                        ),
-                      ],
+                    Text(
+                      '${e.evaporasi.toStringAsFixed(1)} mm',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.blue,
+                      ),
                     ),
                   ],
                 ),
