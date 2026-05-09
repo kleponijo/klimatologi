@@ -11,25 +11,23 @@ class MyAppView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Klimatologi',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.light(
-          background: Colors.grey.shade100,
-          onBackground: Colors.black,
-          primary: Colors.blue,
-          onPrimary: Colors.white
+        title: 'Klimatologi',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          colorScheme: ColorScheme.light(
+              surface: Colors.grey.shade100,
+              onSurface: Colors.black,
+              primary: Colors.blue,
+              onPrimary: Colors.white),
         ),
-      ),
-      home: BlocBuilder<AuthenticationBloc, AuthenticationState>(
-        builder: ((context, state){
-          if(state.status == AuthenticationStatus.authenticated){
-            return HomeScreen();
+        home: BlocBuilder<AuthenticationBloc, AuthenticationState>(
+          builder: ((context, state) {
+            if (state.status == AuthenticationStatus.authenticated) {
+              return HomeScreen();
             } else {
-            return WelcomeScreen();
+              return WelcomeScreen();
             }
           }),
-      )
-    );
+        ));
   }
 }

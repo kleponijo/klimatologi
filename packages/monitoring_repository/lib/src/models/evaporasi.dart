@@ -19,14 +19,21 @@ class Evaporasi {
   );
 
   factory Evaporasi.fromJson(Map<dynamic, dynamic> json) {
-    final now = DateTime.now();
-    DateTime timestamp = now;
+    double toDoubleSafe(dynamic v) {
+      if (v is num) return v.toDouble();
+      if (v is String) return double.tryParse(v) ?? 0;
+      return 0;
+    }
 
-    // ✅ Prioritas waktu sesuai firmware ESP32:
-    // 1) timestamp (Unix atau ISO string, kalau pernah dikirim)
-    // 2) datetime ("YYYY-MM-DD HH:MM:SS")
-    // 3) waktu ("HH:MM:SS") fallback (pakai tanggal hari ini)
+    final evaporasiVal = toDoubleSafe(
+      json['evaporasi_mm'] ?? json['evaporasi'],
+    );
+    final suhuVal = toDoubleSafe(json['suhu'] ?? json['suhu_air']);
+    final tinggiVal = toDoubleSafe(json['tinggi_air_cm'] ?? json['tinggi_air']);
+
+    DateTime timestamp = DateTime.now();
     final rawTimestamp = json['timestamp'];
+
     if (rawTimestamp != null) {
       if (rawTimestamp is int) {
         timestamp = DateTime.fromMillisecondsSinceEpoch(rawTimestamp);
@@ -58,31 +65,24 @@ class Evaporasi {
             final jam = int.tryParse(parts[0]) ?? 0;
             final menit = int.tryParse(parts[1]) ?? 0;
             final detik = parts.length >= 3 ? (int.tryParse(parts[2]) ?? 0) : 0;
-            timestamp = DateTime(now.year, now.month, now.day, jam, menit, detik);
+            final now = DateTime.now();
+            timestamp = DateTime(
+              now.year,
+              now.month,
+              now.day,
+              jam,
+              menit,
+              detik,
+            );
           }
         }
       }
     }
 
-    // Field di DB (dari info Anda):
-    // - evaporasi_mm
-    // - suhu_air
-    // - tinggi_air_cm
-    // Namun tetap toleran jika key berubah.
-    final evaporasiVal = json['evaporasi_mm'] ?? json['evaporasi'] ?? 0;
-    final suhuVal = json['suhu_air'] ?? json['suhu'] ?? 0;
-    final tinggiVal = json['tinggi_air_cm'] ?? json['tinggi_air'] ?? 0;
-
-    double toDoubleSafe(dynamic v) {
-      if (v is num) return v.toDouble();
-      if (v is String) return double.tryParse(v) ?? 0;
-      return 0;
-    }
-
     return Evaporasi(
-      evaporasi: toDoubleSafe(evaporasiVal),
-      suhu: toDoubleSafe(suhuVal),
-      tinggiAir: toDoubleSafe(tinggiVal),
+      evaporasi: evaporasiVal,
+      suhu: suhuVal,
+      tinggiAir: tinggiVal,
       timestamp: timestamp,
     );
   }

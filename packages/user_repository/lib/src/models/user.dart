@@ -1,4 +1,3 @@
-
 import '../entities/entities.dart';
 
 class MyUser {
@@ -7,12 +6,11 @@ class MyUser {
   String name;
   bool hasActiveCart;
 
-  MyUser ({
+  MyUser({
     required this.userId,
     required this.email,
     required this.name,
     required this.hasActiveCart,
-
   });
 
   static final empty = MyUser(
@@ -41,8 +39,18 @@ class MyUser {
   }
 
   @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MyUser &&
+          runtimeType == other.runtimeType &&
+          userId == other.userId &&
+          email == other.email;
+
+  @override
+  int get hashCode => Object.hash(userId, email);
+
+  @override
   String toString() {
     return 'MyUser: $userId, email: $email, name: $name, hasActiveCart: $hasActiveCart}';
   }
-
 }
