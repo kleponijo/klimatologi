@@ -34,8 +34,6 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
     WatchEvaporasiStarted event,
     Emitter<EvaporasiState> emit,
   ) async {
-    // chartLabels & listData untuk list/label di UI
-
     emit(state.copyWith(isLoading: true));
 
     final history = await _repository.getSensorHistory(
@@ -43,13 +41,7 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
       (json) => Evaporasi.fromJson(json),
     );
 
-    // listData dipakai untuk tab/list di UI (default: ambil data yang sudah ada di Firebase)
-    final listData = List<Evaporasi>.from(history)
-      ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
-
-
     final dailyGraph = TimeSeriesMapper.toDaily(
-
       data: history,
       getTime: (e) => e.timestamp,
       getValue: (e) => e.evaporasi,
@@ -68,12 +60,8 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
 
     emit(state.copyWith(
       history: history,
-      listData: listData,
       dailyValues: dailyGraph,
       dailyTemperatures: dailyTempGraph,
-      chartLabels: _buildChartLabels(
-        period: 'Hari Ini',
-      ),
       weatherStatus: status,
       willRain: rain,
       isLoading: false,
@@ -167,7 +155,6 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
     emit(state.copyWith(
       dailyValues: updated,
       dailyTemperatures: updatedTemp,
-      chartLabels: _buildChartLabels(period: event.period),
       isLoading: false,
     ));
   }
@@ -204,7 +191,6 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
     emit(state.copyWith(
       dailyValues: updated,
       dailyTemperatures: updatedTemp,
-      chartLabels: _buildChartLabels(period: 'Tanggal Khusus'),
       isLoading: false,
     ));
   }
@@ -237,22 +223,6 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
     if (value <= 5.0) return ('Baik', false);
     if (value <= 10.0) return ('Sedang', true);
     return ('Buruk', true);
-  }
-
-  List<String> _buildChartLabels({required String period}) {
-    if (period == 'Minggu Ini') {
-      return const ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
-    }
-
-    // Untuk Bulan Ini & Tanggal Khusus/ Hari Ini, biarkan chart pakai 0..23 / 0..days
-    final now = DateTime.now();
-    if (period == 'Bulan Ini') {
-      final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
-      return List.generate(daysInMonth, (i) => '${i + 1}');
-    }
-
-    // Hari Ini / Tanggal Khusus => 24 jam
-    return List.generate(24, (i) => '${i.toString().padLeft(2, '0')}:00');
   }
 
   void _emitEvaporasiAlert(String status, bool willRain, double value) {

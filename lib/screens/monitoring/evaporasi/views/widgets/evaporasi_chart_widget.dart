@@ -5,17 +5,13 @@ class EvaporasiChartWidget extends StatelessWidget {
   final List<double> dailyValues;
   final List<double> dailyTemperatures;
   final String period;
-  final List<String> chartLabels;
-
 
   const EvaporasiChartWidget({
     super.key,
     required this.dailyValues,
     required this.dailyTemperatures,
     required this.period,
-    required this.chartLabels,
   });
-
 
   double _getMaxY(List<double> data) {
     if (data.isEmpty) return 10;
@@ -97,7 +93,6 @@ class EvaporasiChartWidget extends StatelessWidget {
                             _getBottomTitle(value),
                             style: const TextStyle(
                                 color: Colors.grey, fontSize: 10),
-
                           ),
                         );
                       },
@@ -232,13 +227,19 @@ class EvaporasiChartWidget extends StatelessWidget {
   }
 
   String _getBottomTitle(double value) {
-    final index = value.toInt();
-    if (chartLabels.isEmpty) return '';
-    if (index < 0 || index >= chartLabels.length) return '';
-    return chartLabels[index];
+    int index = value.toInt();
+    final len = dailyValues.length;
+    if (index < 0 || index >= len) return '';
+
+    if (period == "Hari Ini") {
+      return index % 4 == 0 ? "${index.toString().padLeft(2, '0')}:00" : "";
+    } else if (period == "Minggu Ini") {
+      const days = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"];
+      return days[index % 7];
+    } else {
+      return (index + 1) % 5 == 0 ? "${index + 1}" : "";
+    }
   }
-
-
 
   double _getInterval() {
     if (period == "Hari Ini") return 1;

@@ -12,15 +12,6 @@ class EvaporasiState extends Equatable {
 
   final List<double> dailyValues; // untuk grafik evaporasi
   final List<double> dailyTemperatures; // untuk grafik suhu
-
-  /// Label X-axis sesuai agregasi period
-  /// Contoh: Hari Ini => ["00:00","01:00",...]
-  /// Minggu Ini => ["Sen","Sel",...]
-  /// Bulan Ini => ["1","2",...]
-  final List<String> chartLabels;
-
-  /// Data untuk list (timestamp asli dari firebase)
-  final List<Evaporasi> listData;
   final List<Evaporasi> history;
 
   final String weatherStatus; // Baik / Sedang / Buruk
@@ -37,8 +28,6 @@ class EvaporasiState extends Equatable {
     this.viewMode = EvaporasiViewMode.period,
     this.dailyValues = const [],
     this.dailyTemperatures = const [],
-    this.chartLabels = const [],
-    this.listData = const [],
     this.history = const [],
     this.weatherStatus = "Baik",
     this.willRain = false,
@@ -54,8 +43,6 @@ EvaporasiState copyWith({
     EvaporasiViewMode? viewMode,
     List<double>? dailyValues,
     List<double>? dailyTemperatures,
-    List<String>? chartLabels,
-    List<Evaporasi>? listData,
     List<Evaporasi>? history,
     String? weatherStatus,
     bool? willRain,
@@ -71,8 +58,6 @@ EvaporasiState copyWith({
       dailyValues: dailyValues ?? this.dailyValues,
       dailyTemperatures: dailyTemperatures ?? this.dailyTemperatures,
       history: history ?? this.history,
-      chartLabels: chartLabels ?? this.chartLabels,
-      listData: listData ?? this.listData,
       weatherStatus: weatherStatus ?? this.weatherStatus,
       willRain: willRain ?? this.willRain,
       isLoading: isLoading ?? this.isLoading,
