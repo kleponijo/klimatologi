@@ -10,11 +10,9 @@ class FirebaseUserRepo implements UserRepository {
   final FirebaseAuth _firebaseAuth;
   final userCollection = FirebaseFirestore.instance.collection('users');
 
-  FirebaseUserRepo({
-    FirebaseAuth? firebaseAuth,
-  }) : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance;
+  FirebaseUserRepo({FirebaseAuth? firebaseAuth})
+      : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance;
 
-  /// == Melakukan Implement User == ///
   @override
   Stream<MyUser?> get user {
     return _firebaseAuth.authStateChanges().flatMap((firebaseUser) async* {
@@ -27,15 +25,8 @@ class FirebaseUserRepo implements UserRepository {
             yield MyUser.fromEntity(
                 MyUserEntity.fromDocument(userData.data()!));
           } else {
-            // User baru yang belum ada data di Firestore, tunggu sebentar
-            await Future.delayed(const Duration(milliseconds: 500));
-            final retryData = await userCollection.doc(firebaseUser.uid).get();
-            if (retryData.exists && retryData.data() != null) {
-              yield MyUser.fromEntity(
-                  MyUserEntity.fromDocument(retryData.data()!));
-            } else {
-              yield MyUser.empty;
-            }
+            // Data Firestore belum ada (seharusnya tidak terjadi dengan flow yang sudah diperbaiki)
+            yield MyUser.empty;
           }
         } catch (e) {
           log('Error fetching user data: $e');
@@ -45,7 +36,6 @@ class FirebaseUserRepo implements UserRepository {
     });
   }
 
-  /// == Melakukan Implement Sign in == ///
   @override
   Future<void> signIn(String email, String password) async {
     try {
@@ -57,7 +47,6 @@ class FirebaseUserRepo implements UserRepository {
     }
   }
 
-  /// == Melakukan Implement Sign Up == ///
   @override
   Future<MyUser> signUp(MyUser myUser, String password) async {
     try {
@@ -71,7 +60,6 @@ class FirebaseUserRepo implements UserRepository {
     }
   }
 
-  /// == Melakukan Implement Log Out == ///
   @override
   Future<void> logOut() async {
     final GoogleSignIn googleSignIn = GoogleSignIn();
@@ -85,27 +73,26 @@ class FirebaseUserRepo implements UserRepository {
       await userCollection
           .doc(myUser.userId)
           .set(myUser.toEntity().toDocument());
-      // Tunggu sebentar agar data tersimpan dengan baik sebelum stream update
-      await Future.delayed(const Duration(milliseconds: 500));
     } catch (e) {
       log(e.toString());
       rethrow;
     }
   }
 
-  /// == Sign in with Google == ///
   @override
   Future<void> signInWithGoogle() async {
     try {
+      UserCredential userCredential;
+
       if (kIsWeb) {
         final googleProvider = GoogleAuthProvider();
-        await _firebaseAuth.signInWithPopup(googleProvider);
+        userCredential = await _firebaseAuth.signInWithPopup(googleProvider);
       } else {
         final GoogleSignIn googleSignIn = GoogleSignIn();
         final googleUser = await googleSignIn.signIn();
 
         if (googleUser == null) {
-          throw Exception("cancelled");
+          throw Exception('cancelled');
         }
 
         final GoogleSignInAuthentication googleAuth =
@@ -115,7 +102,22 @@ class FirebaseUserRepo implements UserRepository {
           accessToken: googleAuth.accessToken,
           idToken: googleAuth.idToken,
         );
-        await _firebaseAuth.signInWithCredential(credential);
+        userCredential = await _firebaseAuth.signInWithCredential(credential);
+      }
+
+      // FIX: Cek apakah user sudah punya data Firestore
+      // Jika belum (user baru), buat dokumen sekarang juga
+      final firebaseUser = userCredential.user!;
+      final doc = await userCollection.doc(firebaseUser.uid).get();
+
+      if (!doc.exists) {
+        final newUser = MyUser(
+          userId: firebaseUser.uid,
+          email: firebaseUser.email ?? '',
+          name: firebaseUser.displayName ?? '',
+          hasActiveCart: false,
+        );
+        await setUserData(newUser);
       }
     } catch (e) {
       log('Google sign-in error: $e');

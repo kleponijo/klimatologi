@@ -19,8 +19,11 @@ class Evaporasi {
   );
 
   factory Evaporasi.fromJson(Map<dynamic, dynamic> json) {
-    final now = DateTime.now();
-    DateTime timestamp = now;
+    // ✅ Handle perbedaan field name antara history dan realtime:
+    // History path  : suhu, tinggi, evaporasi, waktu
+    // Realtime path : suhu_air, tinggi_air, evaporasi, waktu, status
+    final suhu = (json['suhu'] ?? json['suhu_air'] ?? 0).toDouble();
+    final tinggi = (json['tinggi'] ?? json['tinggi_air_cm'] ?? 0).toDouble();
 
     // ✅ Prioritas waktu sesuai firmware ESP32:
     // 1) timestamp (Unix atau ISO string, kalau pernah dikirim)
@@ -58,7 +61,14 @@ class Evaporasi {
             final jam = int.tryParse(parts[0]) ?? 0;
             final menit = int.tryParse(parts[1]) ?? 0;
             final detik = parts.length >= 3 ? (int.tryParse(parts[2]) ?? 0) : 0;
-            timestamp = DateTime(now.year, now.month, now.day, jam, menit, detik);
+            timestamp = DateTime(
+              now.year,
+              now.month,
+              now.day,
+              jam,
+              menit,
+              detik,
+            );
           }
         }
       }
@@ -80,10 +90,11 @@ class Evaporasi {
     }
 
     return Evaporasi(
-      evaporasi: toDoubleSafe(evaporasiVal),
-      suhu: toDoubleSafe(suhuVal),
-      tinggiAir: toDoubleSafe(tinggiVal),
-      timestamp: timestamp,
+      evaporasi: (json['evaporasi_mm'] ?? 0).toDouble(),
+      suhu: suhu,
+      tinggiAir: tinggi,
+      status: json['status'] ?? '',
+      timestamp: TimestampParser.parse(rawTime), // ✅ pakai TimestampParser
     );
   }
 }
