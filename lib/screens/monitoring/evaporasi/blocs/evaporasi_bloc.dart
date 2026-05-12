@@ -112,14 +112,31 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
     _EvaporasiRealtimeUpdated event,
     Emitter<EvaporasiState> emit,
   ) {
-    // Hanya update grafik daily (index jam saat ini).
-    final updated = List<double>.from(state.dailyValues);
-    final updatedTemp = List<double>.from(state.dailyTemperatures);
-    final index = DateTime.now().hour;
+    // Hindari update dobel: jika timestamp event sama dengan yang terakhir, jangan ubah bucket.
+    final previous = state.history.isNotEmpty ? state.history.last.timestamp : null;
+    final isDuplicate =
+        previous != null && event.data.timestamp.toUtc() == previous.toUtc();
 
-    if (index >= 0 && index < updated.length) {
-      updated[index] = event.data.evaporasi;
-      updatedTemp[index] = event.data.suhu;
+    // Update bucket berdasarkan timestamp event (bukan jam lokal sekarang).
+    final updated = isDuplicate ? state.dailyValues : List<double>.from(state.dailyValues);
+    final updatedTemp = isDuplicate
+        ? state.dailyTemperatures
+        : List<double>.from(state.dailyTemperatures);
+
+
+    final eventTime = event.data.timestamp;
+    final now = DateTime.now();
+
+    final isSameDayUtc = eventTime.toUtc().year == now.toUtc().year &&
+        eventTime.toUtc().month == now.toUtc().month &&
+        eventTime.toUtc().day == now.toUtc().day;
+
+    if (isSameDayUtc) {
+      final index = eventTime.hour;
+      if (index >= 0 && index < updated.length) {
+        updated[index] = event.data.evaporasi;
+        updatedTemp[index] = event.data.suhu;
+      }
     }
 
     final (status, rain) = _computeWeatherStatus(event.data.evaporasi);

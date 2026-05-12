@@ -26,7 +26,7 @@ class EvaporasiPeriodSelector extends StatelessWidget {
           _buildTab(context, "Minggu Ini", selectedPeriod, viewMode),
           _buildTab(context, "Bulan Ini", selectedPeriod, viewMode),
           const SizedBox(width: 8),
-          // Date picker button
+        // Date picker button
           _buildDatePickerButton(context, viewMode, selectedDate),
         ],
       ),
@@ -65,10 +65,21 @@ Widget _buildDatePickerButton(BuildContext context, EvaporasiViewMode viewMode, 
     return GestureDetector(
       onTap: () {
         // Set mode ke customDate SEBELUM membuka date picker
-        context.read<EvaporasiBloc>().add(
+        final bloc = context.read<EvaporasiBloc>();
+        bloc.add(
               const EvaporasiViewModeChanged(EvaporasiViewMode.customDate),
             );
-        showEvaporasiDatePicker(context);
+
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (_) => BlocProvider.value(
+            value: bloc,
+            child: const EvaporasiDatePicker(),
+          ),
+        );
+
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

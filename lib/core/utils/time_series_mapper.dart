@@ -122,9 +122,14 @@ class TimeSeriesMapper {
   /// =========================
   /// 🧠 HELPER
   /// =========================
+  /// Sinkronisasi tanggal untuk menghindari mismatch akibat timezone (UTC vs local).
+  /// Kita bandingkan berdasarkan UTC.
   static bool _isSameDay(DateTime a, DateTime b) {
-    return a.year == b.year && a.month == b.month && a.day == b.day;
+    final au = a.toUtc();
+    final bu = b.toUtc();
+    return au.year == bu.year && au.month == bu.month && au.day == bu.day;
   }
+
 
   static List<double> smooth(List<double> data) {
     if (data.length < 3) return data;
