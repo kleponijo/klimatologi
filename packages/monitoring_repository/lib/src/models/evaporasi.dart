@@ -71,7 +71,7 @@ class Evaporasi {
     // Banyak kemungkinan penamaan field tinggi air.
     // Pakai beberapa alias agar tidak default 0.
     final tinggiVal = toDoubleSafe(
-      json['tinggi'] ??
+      json['tinggi_air_cm'] ??
           json['tinggi_air'] ??
           json['tinggiAir'] ??
           json['tinggiAir_cm'] ??
