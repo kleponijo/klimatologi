@@ -113,16 +113,20 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
     Emitter<EvaporasiState> emit,
   ) {
     // Hindari update dobel: jika timestamp event sama dengan yang terakhir, jangan ubah bucket.
-    final previous = state.history.isNotEmpty ? state.history.last.timestamp : null;
+    final previous =
+        state.history.isNotEmpty ? state.history.last.timestamp : null;
+
+    final updatedHistory = List<Evaporasi>.from(state.history)..add(event.data);
+
     final isDuplicate =
         previous != null && event.data.timestamp.toUtc() == previous.toUtc();
 
     // Update bucket berdasarkan timestamp event (bukan jam lokal sekarang).
-    final updated = isDuplicate ? state.dailyValues : List<double>.from(state.dailyValues);
+    final updated =
+        isDuplicate ? state.dailyValues : List<double>.from(state.dailyValues);
     final updatedTemp = isDuplicate
         ? state.dailyTemperatures
         : List<double>.from(state.dailyTemperatures);
-
 
     final eventTime = event.data.timestamp;
     final now = DateTime.now();
@@ -143,6 +147,8 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
     _emitEvaporasiAlert(status, rain, event.data.evaporasi);
 
     emit(state.copyWith(
+      history: updatedHistory,
+      listData: updatedHistory,
       currentValue: event.data.evaporasi,
       temperature: event.data.suhu,
       waterLevel: event.data.tinggiAir,

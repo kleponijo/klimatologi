@@ -47,7 +47,20 @@ class Evaporasi {
           json['evaporasi_k'],
     );
 
-    final suhuVal = toDoubleSafe(
+    /// =========================
+    /// SUHU
+    /// =========================
+    final suhuParsed = toDoubleSafe(
+      json['suhu'] ??
+          json['suhu_air'] ??
+          json['suhuAir'] ??
+          json['temp'] ??
+          json['temperature'],
+    );
+
+    // Filter nilai rusak
+    final suhuVal = (suhuParsed < -50 || suhuParsed > 100) ? 0.0 : suhuParsed;
+    toDoubleSafe(
       json['suhu'] ??
           json['suhu_air'] ??
           json['suhuAir'] ??
@@ -58,7 +71,7 @@ class Evaporasi {
     // Banyak kemungkinan penamaan field tinggi air.
     // Pakai beberapa alias agar tidak default 0.
     final tinggiVal = toDoubleSafe(
-      json['tinggi_air_cm'] ??
+      json['tinggi'] ??
           json['tinggi_air'] ??
           json['tinggiAir'] ??
           json['tinggiAir_cm'] ??
@@ -70,17 +83,14 @@ class Evaporasi {
           json['tinggiAir_m'],
     );
 
-
     // Default timestamp: fallback now (kalau field waktu tidak ada).
     // Catatan: untuk Firebase seharusnya timestamp dikirim konsisten (ms atau ISO string).
     DateTime timestamp = DateTime.now();
 
     // dukung beberapa kemungkinan penamaan timestamp
-    final rawTimestamp =
-        json['timestamp'] ?? json['time'] ?? json['waktu'] ?? json['datetime'];
+    final rawTimestamp = json['timestamp'] ?? json['time'] ?? json['datetime'];
 
-    if (rawTimestamp != null) { 
-
+    if (rawTimestamp != null) {
       if (rawTimestamp is int) {
         timestamp = DateTime.fromMillisecondsSinceEpoch(rawTimestamp);
       } else if (rawTimestamp is double) {
