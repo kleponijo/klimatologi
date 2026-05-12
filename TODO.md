@@ -1,11 +1,10 @@
-# TODO: Fitur Baru Evaporasi (Period Selector + Status + Notifikasi)
+## TODO - Evaporasi (Dual Axis + History Firebase)
 
-## Steps
-- [x] 1. Edit `evaporasi_state.dart` — tambahkan `weatherStatus` & `willRain`
-- [x] 2. Edit `evaporasi_bloc.dart` — hitung status & update global notifier
-- [x] 3. Create `notification_notifier.dart` — global ValueNotifier untuk alert
-- [x] 4. Create `evaporasi_period_selector.dart` — tombol periode
-- [x] 5. Edit `evaporasi_screen.dart` — tambahkan period selector & status card
-- [x] 6. Edit `home_screen.dart` — badge merah di icon lonceng
-- [x] 7. Verifikasi kompilasi
+### Checklist
+- [x] Cek: List Evaporasi sudah mengambil `state.history` dari Firebase `getSensorHistory`.
+- [x] Cek: Filter custom date pada list menggunakan `state.history` (data terdahulu sudah tersedia).
+- [x] Ubah grafik evaporasi menjadi **dual-axis** (melalui mapping skala + label kiri/kanan).
+- [ ] Perbaiki mismatch chart & list dengan sumber history Firebase (sinkronisasi agregasi/label/period + timezone).
+- [ ] Jalankan `flutter analyze` dan minimal compile aplikasi.
+
 

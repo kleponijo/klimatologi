@@ -91,12 +91,45 @@ class TimeSeriesMapper {
     });
   }
 
+/// =========================
+  /// 📅 SPECIFIC DATE (24 JAM - TANGGAL KHUSUS)
+  /// =========================
+  static List<double> toSpecificDate<T>({
+    required List<T> data,
+    required DateTime Function(T) getTime,
+    required double Function(T) getValue,
+    required DateTime targetDate,
+  }) {
+    final sums = List<double>.filled(24, 0.0);
+    final counts = List<int>.filled(24, 0);
+
+    for (final item in data) {
+      final time = getTime(item);
+
+      if (_isSameDay(time, targetDate)) {
+        final hour = time.hour;
+        sums[hour] += getValue(item);
+        counts[hour]++;
+      }
+    }
+
+    return List.generate(24, (i) {
+      if (counts[i] == 0) return 0;
+      return sums[i] / counts[i];
+    });
+  }
+
   /// =========================
   /// 🧠 HELPER
   /// =========================
+  /// Sinkronisasi tanggal untuk menghindari mismatch akibat timezone (UTC vs local).
+  /// Kita bandingkan berdasarkan UTC.
   static bool _isSameDay(DateTime a, DateTime b) {
-    return a.year == b.year && a.month == b.month && a.day == b.day;
+    final au = a.toUtc();
+    final bu = b.toUtc();
+    return au.year == bu.year && au.month == bu.month && au.day == bu.day;
   }
+
 
   static List<double> smooth(List<double> data) {
     if (data.length < 3) return data;

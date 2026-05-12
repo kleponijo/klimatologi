@@ -8,6 +8,7 @@ import '../../monitoring/evaporasi/blocs/evaporasi_bloc.dart';
 import '../../monitoring/atmospheric_conditions/blocs/atmospheric_conditions_bloc.dart';
 import '../widgets/notification_panel.dart';
 import '../widgets/sensor_grid.dart';
+import '../widgets/dashboard_charts.dart';
 import 'main_drawer.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -199,6 +200,9 @@ class _HomeBody extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           const SensorGrid(),
+          const SizedBox(height: 24), // ← TAMBAH
+          const DashboardCharts(), // ← TAMBAH
+          const SizedBox(height: 16),
         ],
       ),
     );
