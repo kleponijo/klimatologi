@@ -5,8 +5,6 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 import '../../blocs/evaporasi_bloc.dart';
 
-
-
 /// 📅 EVAPORASI DATE PICKER - WhatsApp Style
 class EvaporasiDatePicker extends StatefulWidget {
   const EvaporasiDatePicker({super.key});
@@ -109,11 +107,13 @@ class _EvaporasiDatePickerState extends State<EvaporasiDatePicker> {
                   }
                 },
                 onPageChanged: (focusedDay) {
-                  _focusedDay = focusedDay;
+                  setState(() {
+                    _focusedDay = focusedDay;
+                  });
                 },
                 calendarStyle: CalendarStyle(
                   // Default
-                  defaultDecoration: BoxDecoration(
+                  defaultDecoration: const BoxDecoration(
                     color: Colors.transparent,
                     shape: BoxShape.circle,
                   ),
@@ -127,7 +127,7 @@ class _EvaporasiDatePickerState extends State<EvaporasiDatePicker> {
                     fontWeight: FontWeight.bold,
                   ),
                   // Selected
-                  selectedDecoration: BoxDecoration(
+                  selectedDecoration: const BoxDecoration(
                     color: Colors.blue,
                     shape: BoxShape.circle,
                   ),
