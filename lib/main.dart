@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:klimatologiot/simple_bloc_observer.dart';
 import 'package:klimatologiot/app.dart';
 import 'package:user_repository/user_repository.dart';
 import 'package:monitoring_repository/monitoring_repository.dart';
@@ -14,7 +12,6 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   await initializeDateFormatting('id_ID', null);
-  Bloc.observer = SimpleBlocObserver();
   runApp(MyApp(
     FirebaseUserRepo(),
     FirebaseMonitoringRepo(),

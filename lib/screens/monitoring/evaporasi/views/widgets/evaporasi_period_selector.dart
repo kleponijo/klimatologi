@@ -19,21 +19,26 @@ class EvaporasiPeriodSelector extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildTab(context, "Hari Ini", selectedPeriod, viewMode),
-          _buildTab(context, "Minggu Ini", selectedPeriod, viewMode),
-          _buildTab(context, "Bulan Ini", selectedPeriod, viewMode),
-          const SizedBox(width: 8),
-        // Date picker button
-          _buildDatePickerButton(context, viewMode, selectedDate),
-        ],
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildTab(context, "Hari Ini", selectedPeriod, viewMode),
+            _buildTab(context, "Minggu Ini", selectedPeriod, viewMode),
+            _buildTab(context, "Bulan Ini", selectedPeriod, viewMode),
+            const SizedBox(width: 8),
+            // Date picker button
+            _buildDatePickerButton(context, viewMode, selectedDate),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildTab(BuildContext context, String label, String current, EvaporasiViewMode viewMode) {
+  Widget _buildTab(BuildContext context, String label, String current,
+      EvaporasiViewMode viewMode) {
     // If in customDate mode, show period tabs as inactive
     bool isActive = viewMode == EvaporasiViewMode.period && label == current;
 
@@ -59,7 +64,8 @@ class EvaporasiPeriodSelector extends StatelessWidget {
     );
   }
 
-Widget _buildDatePickerButton(BuildContext context, EvaporasiViewMode viewMode, DateTime? selectedDate) {
+  Widget _buildDatePickerButton(BuildContext context,
+      EvaporasiViewMode viewMode, DateTime? selectedDate) {
     final isActive = viewMode == EvaporasiViewMode.customDate;
 
     return GestureDetector(
@@ -67,8 +73,8 @@ Widget _buildDatePickerButton(BuildContext context, EvaporasiViewMode viewMode, 
         // Set mode ke customDate SEBELUM membuka date picker
         final bloc = context.read<EvaporasiBloc>();
         bloc.add(
-              const EvaporasiViewModeChanged(EvaporasiViewMode.customDate),
-            );
+          const EvaporasiViewModeChanged(EvaporasiViewMode.customDate),
+        );
 
         showModalBottomSheet(
           context: context,
@@ -79,7 +85,6 @@ Widget _buildDatePickerButton(BuildContext context, EvaporasiViewMode viewMode, 
             child: const EvaporasiDatePicker(),
           ),
         );
-
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -116,4 +121,3 @@ Widget _buildDatePickerButton(BuildContext context, EvaporasiViewMode viewMode, 
     return "${date.day}/${date.month}";
   }
 }
-
