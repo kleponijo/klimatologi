@@ -105,17 +105,39 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
 
     await _subscription?.cancel();
     _subscription = _repository
-        .getSensorStream('Monitoring', (json) => Evaporasi.fromJson(json))
+        .getSensorStream('Monitoring/History', _latestHistoryEntry)
         .listen((data) => add(_EvaporasiRealtimeUpdated(data)));
+  }
+
+  Evaporasi _latestHistoryEntry(Map<dynamic, dynamic> json) {
+    if (json.isEmpty) return Evaporasi.empty;
+
+    final entries = json.values
+        .whereType<Map<dynamic, dynamic>>()
+        .map((item) => Evaporasi.fromJson(item))
+        .toList();
+
+    if (entries.isEmpty) return Evaporasi.empty;
+
+    entries.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+    return entries.last;
   }
 
   void _onRealtimeUpdated(
     _EvaporasiRealtimeUpdated event,
     Emitter<EvaporasiState> emit,
   ) {
-    // Hindari update dobel: jika timestamp event sama dengan yang terakhir, jangan ubah bucket.
-    final previous =
-        state.history.isNotEmpty ? state.history.last.timestamp : null;
+    final updatedHistory = List<Evaporasi>.from(state.history);
+    final duplicateIndex = updatedHistory.indexWhere(
+      (item) => item.timestamp.toUtc() == event.data.timestamp.toUtc(),
+    );
+
+    if (duplicateIndex >= 0) {
+      updatedHistory[duplicateIndex] = event.data;
+    } else {
+      updatedHistory.add(event.data);
+    }
+    updatedHistory.sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
     // Update bucket berdasarkan timestamp event (bukan jam lokal sekarang).
     final updated = List<double>.from(state.dailyValues);
@@ -140,6 +162,8 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
     _emitEvaporasiAlert(status, rain, event.data.evaporasi);
 
     emit(state.copyWith(
+      history: updatedHistory,
+      listData: updatedHistory,
       currentValue: event.data.evaporasi,
       temperature: event.data.suhu,
       waterLevel: event.data.tinggiAir,

@@ -290,20 +290,15 @@ class _EvaporasiScreenState extends State<EvaporasiScreen> {
   /// 🧾 LIST DATA EVAPORASI
   /// =========================
   Widget _evaporasiList(EvaporasiState state) {
-    final allData = [...state.history];
-    if (state.currentData != null) {
-      allData.add(state.currentData!);
-    }
-
     final data = (state.viewMode == EvaporasiViewMode.customDate &&
             state.selectedDate != null
-        ? allData
+        ? state.history
             .where((e) =>
                 e.timestamp.year == state.selectedDate!.year &&
                 e.timestamp.month == state.selectedDate!.month &&
                 e.timestamp.day == state.selectedDate!.day)
             .toList()
-        : List.of(allData))
+        : List.of(state.history))
       ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
     if (data.isEmpty) {
