@@ -1,11 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
-const _tooltipBgColor = Colors.black87;
-
-
 class EvaporasiChartWidget extends StatelessWidget {
-
   final List<double> dailyValues;
   final List<double> dailyTemperatures;
   final String period;
@@ -114,7 +110,7 @@ class EvaporasiChartWidget extends StatelessWidget {
 
     // Evaporasi mm biasanya >= 0, kita pakai min 0 agar estetik.
     final evapMin = 0.0;
-    final evapMax = _clampDouble(evapMaxRaw * 1.3, 10.0, 100.0);
+    final evapMax = _clampDouble(evapMaxRaw * 1.15, 8.0, 50.0);
 
     // Suhu bisa saja 0 jika data kosong; tetap aman.
     final tempMin = tempMinRaw;
@@ -128,9 +124,8 @@ class EvaporasiChartWidget extends StatelessWidget {
       evapByX[s.x.toInt()] = s.y;
     }
 
-    final dedupEvapSpots = evapByX.entries
-        .toList()
-        ..sort((a, b) => a.key.compareTo(b.key));
+    final dedupEvapSpots = evapByX.entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
 
     final Map<int, double> tempByX = {};
     for (final entry in dailyTemperatures.asMap().entries) {
@@ -149,9 +144,8 @@ class EvaporasiChartWidget extends StatelessWidget {
       return FlSpot(x, y);
     }).toList();
 
-    final evapSpots = dedupEvapSpots
-        .map((e) => FlSpot(e.key.toDouble(), e.value))
-        .toList();
+    final evapSpots =
+        dedupEvapSpots.map((e) => FlSpot(e.key.toDouble(), e.value)).toList();
 
     if (evapSpots.isEmpty && tempSpots.isEmpty) {
       return const SizedBox.shrink();
@@ -167,19 +161,32 @@ class EvaporasiChartWidget extends StatelessWidget {
       );
     }
 
-
     final chart = LineChart(
       LineChartData(
         minY: evapMin,
         maxY: evapMax,
-        gridData: FlGridData(show: false),
+        gridData: FlGridData(
+          show: true,
+          drawVerticalLine: false,
+          horizontalInterval: (evapMax - evapMin) / 4,
+          getDrawingHorizontalLine: (value) {
+            return FlLine(
+              color: Colors.grey.withOpacity(0.15),
+              strokeWidth: 1,
+            );
+          },
+        ),
         borderData: FlBorderData(show: false),
         titlesData: FlTitlesData(
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
               reservedSize: 32,
-              interval: 1,
+              interval: period == 'Hari Ini'
+                  ? 3
+                  : period == 'Minggu Ini'
+                      ? 1
+                      : 5,
               getTitlesWidget: (value, meta) {
                 final index = value.toInt();
                 return Padding(
@@ -228,21 +235,35 @@ class EvaporasiChartWidget extends StatelessWidget {
           handleBuiltInTouches: true,
           touchTooltipData: LineTouchTooltipData(
             getTooltipItems: (spots) {
-
-
               return spots.map((spot) {
-                // fl_chart tidak mengekspos warna ke tooltip spot pada tipe LineBarSpot
-                // jadi kita tampilkan dua informasi sekaligus untuk memudahkan dosen.
-                final temp = _evapScaleToTemp(
-                  yEvap: spot.y,
-                  evapMin: evapMin,
-                  evapMax: evapMax,
-                  tempMin: tempMin,
-                  tempMax: tempMax,
-                );
+                final isTemp = spot.bar.color == Colors.orange.shade700;
+
+                if (isTemp) {
+                  final temp = _evapScaleToTemp(
+                    yEvap: spot.y,
+                    evapMin: evapMin,
+                    evapMax: evapMax,
+                    tempMin: tempMin,
+                    tempMax: tempMax,
+                  );
+
+                  return LineTooltipItem(
+                    '🌡 Suhu\n${temp.toStringAsFixed(1)} °C',
+                    const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  );
+                }
+
                 return LineTooltipItem(
-                  'Evap: ${spot.y.toStringAsFixed(1)} mm\nSuhu: ${temp.toStringAsFixed(1)} °C',
-                  const TextStyle(color: Colors.white, fontSize: 12),
+                  '💧 Evaporasi\n${spot.y.toStringAsFixed(1)} mm',
+                  const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
                 );
               }).toList();
             },
@@ -253,9 +274,15 @@ class EvaporasiChartWidget extends StatelessWidget {
             LineChartBarData(
               spots: evapSpots,
               isCurved: true,
+              curveSmoothness: 0.35,
+              isStrokeCapRound: true,
               color: Colors.blue.shade700,
               barWidth: 3,
-              dotData: FlDotData(show: false),
+              showingIndicators: [0],
+              dotData: FlDotData(
+                show: false,
+                checkToShowDot: (spot, barData) => false,
+              ),
               belowBarData: BarAreaData(
                 show: true,
                 gradient: LinearGradient(
@@ -272,12 +299,20 @@ class EvaporasiChartWidget extends StatelessWidget {
             LineChartBarData(
               spots: tempSpots,
               isCurved: true,
+              curveSmoothness: 0.35,
+              isStrokeCapRound: true,
               color: Colors.orange.shade700,
               barWidth: 3,
-              dotData: FlDotData(show: false),
+              showingIndicators: [0],
+              dotData: FlDotData(
+                show: false,
+                checkToShowDot: (spot, barData) => false,
+              ),
             ),
         ],
       ),
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeOutCubic,
     );
 
     return Container(
@@ -297,25 +332,70 @@ class EvaporasiChartWidget extends StatelessWidget {
       child: Column(
         children: [
           // Legend
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          Wrap(
+            spacing: 16,
+            runSpacing: 8,
+            alignment: WrapAlignment.center,
             children: [
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Container(width: 10, height: 10, decoration: BoxDecoration(color: Colors.blue.shade700, shape: BoxShape.circle)),
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade700,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
                   const SizedBox(width: 6),
-                  const Text('Evaporasi (mm)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.blueGrey)),
+                  const Text(
+                    'Evaporasi (mm)',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.blueGrey,
+                    ),
+                  ),
                 ],
               ),
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Container(width: 10, height: 10, decoration: BoxDecoration(color: Colors.orange.shade700, shape: BoxShape.circle)),
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade700,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
                   const SizedBox(width: 6),
-                  const Text('Suhu (°C)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.brown)),
+                  const Text(
+                    'Suhu (°C)',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.brown,
+                    ),
+                  ),
                 ],
               ),
             ],
           ),
+
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Text(
+              'Monitoring Evaporasi & Suhu',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.blueGrey.shade700,
+              ),
+            ),
+          ),
+
           const SizedBox(height: 8),
           Expanded(
             child: ClipRRect(
@@ -328,4 +408,3 @@ class EvaporasiChartWidget extends StatelessWidget {
     );
   }
 }
-

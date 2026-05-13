@@ -52,7 +52,6 @@ class FirebaseMonitoringRepo implements MonitoringRepository {
         final Map<dynamic, dynamic> data = snapshot.value as Map;
 
         final list = data.values.map((item) {
-          print(item);
           return mapper(item as Map<dynamic, dynamic>);
         }).toList();
 
