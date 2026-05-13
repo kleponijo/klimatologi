@@ -134,10 +134,16 @@ class Evaporasi {
       }
     }
 
+    final evaporasiFiltered = (evaporasiVal < 0 || evaporasiVal > 50)
+        ? 0.0
+        : evaporasiVal;
+
+    final tinggiFiltered = (tinggiVal < 0 || tinggiVal > 100) ? 0.0 : tinggiVal;
+
     return Evaporasi(
-      evaporasi: evaporasiVal,
+      evaporasi: evaporasiFiltered,
       suhu: suhuVal,
-      tinggiAir: tinggiVal,
+      tinggiAir: tinggiFiltered,
       timestamp: timestamp,
     );
   }
