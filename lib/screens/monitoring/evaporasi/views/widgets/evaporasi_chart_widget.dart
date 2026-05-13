@@ -103,7 +103,6 @@ class EvaporasiChartWidget extends StatelessWidget {
     }
 
     // Hitung range masing-masing agar axis kanan (°C) masuk akal.
-    final evapMinRaw = _minOf(dailyValues);
     final evapMaxRaw = _maxOf(dailyValues);
     final tempMinRaw = _minOf(dailyTemperatures);
     final tempMaxRaw = _maxOf(dailyTemperatures);

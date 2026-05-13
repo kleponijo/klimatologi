@@ -83,6 +83,17 @@ class Evaporasi {
           json['tinggiAir_m'],
     );
 
+    // =========================
+    // FILTER DATA INVALID
+    // =========================
+
+    // evaporasi normal 0-50 mm
+    final evaporasiFiltered = (evaporasiVal < 0 || evaporasiVal > 50)
+        ? 0.0
+        : evaporasiVal;
+
+    final tinggiFiltered = (tinggiVal < 0 || tinggiVal > 100) ? 0.0 : tinggiVal;
+
     // Default timestamp: fallback now (kalau field waktu tidak ada).
     // Catatan: untuk Firebase seharusnya timestamp dikirim konsisten (ms atau ISO string).
     DateTime timestamp = DateTime.now();
@@ -133,12 +144,6 @@ class Evaporasi {
         }
       }
     }
-
-    final evaporasiFiltered = (evaporasiVal < 0 || evaporasiVal > 50)
-        ? 0.0
-        : evaporasiVal;
-
-    final tinggiFiltered = (tinggiVal < 0 || tinggiVal > 100) ? 0.0 : tinggiVal;
 
     return Evaporasi(
       evaporasi: evaporasiFiltered,
