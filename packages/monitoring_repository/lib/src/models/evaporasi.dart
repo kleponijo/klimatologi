@@ -96,7 +96,7 @@ class Evaporasi {
 
     // Default timestamp: fallback now (kalau field waktu tidak ada).
     // Catatan: untuk Firebase seharusnya timestamp dikirim konsisten (ms atau ISO string).
-    DateTime timestamp = DateTime.now();
+    DateTime timestamp = DateTime.fromMillisecondsSinceEpoch(0);
 
     // dukung beberapa kemungkinan penamaan timestamp
     final rawTimestamp = json['timestamp'] ?? json['time'] ?? json['datetime'];
@@ -120,7 +120,7 @@ class Evaporasi {
         } else {
           final parsed = DateTime.tryParse(s);
           if (parsed != null) {
-            timestamp = parsed;
+            timestamp = parsed.toLocal();
           }
         }
       }
@@ -129,7 +129,7 @@ class Evaporasi {
       final datetimeStr = json['datetime'] as String?;
       if (datetimeStr != null) {
         final parsed = DateTime.tryParse(datetimeStr);
-        if (parsed != null) timestamp = parsed;
+        if (parsed != null) timestamp = parsed.toLocal();
       }
 
       final waktuStr = json['waktu'] as String?;

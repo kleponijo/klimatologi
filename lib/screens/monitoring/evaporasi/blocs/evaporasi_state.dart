@@ -31,6 +31,8 @@ class EvaporasiState extends Equatable {
   final String weatherStatus;
   final bool willRain;
 
+  final Evaporasi? currentData; // data realtime terbaru
+
   final bool isLoading;
 
   const EvaporasiState({
@@ -51,6 +53,7 @@ class EvaporasiState extends Equatable {
     this.history = const [],
     this.weatherStatus = 'Baik',
     this.willRain = false,
+    this.currentData,
     this.isLoading = true,
   });
 
@@ -72,6 +75,7 @@ class EvaporasiState extends Equatable {
     List<Evaporasi>? history,
     String? weatherStatus,
     bool? willRain,
+    Evaporasi? currentData,
     bool? isLoading,
   }) {
     return EvaporasiState(
@@ -92,6 +96,7 @@ class EvaporasiState extends Equatable {
       history: history ?? this.history,
       weatherStatus: weatherStatus ?? this.weatherStatus,
       willRain: willRain ?? this.willRain,
+      currentData: currentData ?? this.currentData,
       isLoading: isLoading ?? this.isLoading,
     );
   }
@@ -115,7 +120,7 @@ class EvaporasiState extends Equatable {
         history,
         weatherStatus,
         willRain,
+        currentData,
         isLoading,
       ];
 }
-
