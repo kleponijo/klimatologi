@@ -30,8 +30,7 @@ class EvaporasiChartWidget extends StatelessWidget {
   }) {
     final tempRange = (tempMax - tempMin);
     if (tempRange.abs() < 1e-9) return evapMin;
-
-    final normalized = (temp - tempMin) / tempRange; // 0..1
+    final normalized = (temp - tempMin) / tempRange;
     return evapMin + normalized * (evapMax - evapMin);
   }
 
@@ -44,14 +43,21 @@ class EvaporasiChartWidget extends StatelessWidget {
   }) {
     final evapRange = (evapMax - evapMin);
     if (evapRange.abs() < 1e-9) return tempMin;
-
     final normalized = (yEvap - evapMin) / evapRange;
     return tempMin + normalized * (tempMax - tempMin);
   }
 
+  /// ✅ FIX: Interval label X-axis disesuaikan per period agar tidak tumpang tindih
+  double _xLabelInterval() {
+    if (period == 'Minggu Ini') return 1; // 7 label → semua tampil
+    if (period == 'Bulan Ini') return 5;  // ~31 label → tiap 5 hari
+    // Hari Ini / Tanggal Khusus → 24 jam, tampilkan tiap 3 jam
+    return 3;
+  }
+
   String _getBottomLabel(int index) {
     if (chartLabels.isEmpty || index < 0 || index >= chartLabels.length) {
-      return index.toString();
+      return '';
     }
     return chartLabels[index];
   }
@@ -77,13 +83,12 @@ class EvaporasiChartWidget extends StatelessWidget {
       );
     }
 
-    // Sesuai permintaan: evaporasi 0..20 dan suhu 0..30
     const evapMin = 0.0;
     const evapMax = 20.0;
     const tempMin = 0.0;
-    const tempMax = 30.0;
+    const tempMax = 40.0; // ✅ FIX: naikkan batas suhu ke 40°C agar lebih realistis
 
-    // Evaporasi: deduplicate X by index
+    // Evaporasi spots
     final evapSpotsAll = dailyValues.asMap().entries.map((e) {
       return FlSpot(e.key.toDouble(), _safeValue(e.value));
     }).toList();
@@ -92,6 +97,7 @@ class EvaporasiChartWidget extends StatelessWidget {
     for (final s in evapSpotsAll) {
       evapByX[s.x.toInt()] = s.y;
     }
+
     final dedupEvapSpots = evapByX.entries.toList()
       ..sort((a, b) => a.key.compareTo(b.key));
 
@@ -99,7 +105,7 @@ class EvaporasiChartWidget extends StatelessWidget {
         .map((e) => FlSpot(e.key.toDouble(), e.value.clamp(evapMin, evapMax)))
         .toList();
 
-    // Suhu: skala-kan agar bisa ditampilkan di axis evaporasi
+    // Suhu spots — diproyeksikan ke skala evaporasi
     final tempByX = <int, double>{};
     for (final entry in dailyTemperatures.asMap().entries) {
       tempByX[entry.key] = _safeValue(entry.value);
@@ -128,34 +134,58 @@ class EvaporasiChartWidget extends StatelessWidget {
       );
     }
 
+    final xInterval = _xLabelInterval();
+
     final chart = LineChart(
       LineChartData(
         minY: evapMin,
         maxY: evapMax,
-        gridData: FlGridData(show: false),
+        // ✅ FIX: padding kiri/kanan agar garis tidak terpotong di tepi
+        minX: -0.5,
+        maxX: (chartLabels.isNotEmpty ? chartLabels.length - 1 : 23).toDouble() + 0.5,
+        clipData: const FlClipData.all(), // ✅ FIX: clip agar garis tidak keluar area chart
+        gridData: FlGridData(
+          show: true,
+          drawVerticalLine: false,
+          horizontalInterval: (evapMax - evapMin) / 4,
+          getDrawingHorizontalLine: (value) => FlLine(
+            color: Colors.grey.shade200,
+            strokeWidth: 1,
+          ),
+        ),
         borderData: FlBorderData(show: false),
+        extraLinesData: const ExtraLinesData(horizontalLines: []),
         titlesData: FlTitlesData(
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
-              reservedSize: 32,
-              interval: 1,
+              reservedSize: 36, // ✅ FIX: tambah ruang bawah agar label tidak nutup chart
+              interval: xInterval, // ✅ FIX: interval dinamis per periode
               getTitlesWidget: (value, meta) {
                 final index = value.toInt();
+                // ✅ FIX: hanya render label di indeks yang valid & tepat interval
+                if (value != value.roundToDouble()) return const SizedBox();
+                if (index < 0 || index >= chartLabels.length) return const SizedBox();
+                if (index % xInterval.toInt() != 0) return const SizedBox();
                 return Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Text(
                     _getBottomLabel(index),
-                    style: const TextStyle(color: Colors.grey, fontSize: 10),
+                    style: const TextStyle(color: Colors.grey, fontSize: 9),
                   ),
                 );
               },
             ),
           ),
           leftTitles: AxisTitles(
+            axisNameWidget: const Text(
+              'mm',
+              style: TextStyle(color: Colors.blueGrey, fontSize: 10),
+            ),
+            axisNameSize: 16,
             sideTitles: SideTitles(
               showTitles: true,
-              reservedSize: 40,
+              reservedSize: 36,
               interval: (evapMax - evapMin) / 4,
               getTitlesWidget: (value, meta) {
                 return Text(
@@ -169,9 +199,14 @@ class EvaporasiChartWidget extends StatelessWidget {
             ),
           ),
           rightTitles: AxisTitles(
+            axisNameWidget: const Text(
+              '°C',
+              style: TextStyle(color: Colors.brown, fontSize: 10),
+            ),
+            axisNameSize: 16,
             sideTitles: SideTitles(
               showTitles: true,
-              reservedSize: 40,
+              reservedSize: 36,
               interval: (evapMax - evapMin) / 4,
               getTitlesWidget: (value, meta) {
                 final t = getRightTitle(value);
@@ -185,28 +220,42 @@ class EvaporasiChartWidget extends StatelessWidget {
               },
             ),
           ),
-          topTitles: AxisTitles(
+          topTitles: const AxisTitles(
             sideTitles: SideTitles(showTitles: false),
           ),
         ),
         lineTouchData: LineTouchData(
           handleBuiltInTouches: true,
           touchTooltipData: LineTouchTooltipData(
-            getTooltipItems: (spots) {
-              return spots.map((spot) {
-                final temp = _evapScaleToTemp(
-                  yEvap: spot.y,
-                  evapMin: evapMin,
-                  evapMax: evapMax,
-                  tempMin: tempMin,
-                  tempMax: tempMax,
-                );
+            tooltipPadding: const EdgeInsets.all(8),
+            getTooltipItems: (touchedSpots) {
+              if (touchedSpots.isEmpty) return const <LineTooltipItem>[];
 
-                return LineTooltipItem(
-                  'Evap: ${spot.y.toStringAsFixed(1)} mm\nSuhu: ${temp.toStringAsFixed(1)} °C',
-                  const TextStyle(color: Colors.white, fontSize: 12),
-                );
-              }).toList();
+              final List<LineTooltipItem> items = [];
+              for (int i = 0; i < touchedSpots.length; i++) {
+                final spot = touchedSpots[i];
+                final y = _safeValue(spot.y).clamp(evapMin, evapMax);
+
+                if (i == 0) {
+                  items.add(LineTooltipItem(
+                    'Evap: ${y.toStringAsFixed(1)} mm',
+                    const TextStyle(color: Colors.white, fontSize: 12),
+                  ));
+                } else {
+                  final tempOnly = _evapScaleToTemp(
+                    yEvap: y,
+                    evapMin: evapMin,
+                    evapMax: evapMax,
+                    tempMin: tempMin,
+                    tempMax: tempMax,
+                  );
+                  items.add(LineTooltipItem(
+                    'Suhu: ${tempOnly.toStringAsFixed(1)} °C',
+                    const TextStyle(color: Colors.white, fontSize: 12),
+                  ));
+                }
+              }
+              return items;
             },
           ),
         ),
@@ -214,18 +263,23 @@ class EvaporasiChartWidget extends StatelessWidget {
           if (evapSpots.isNotEmpty)
             LineChartBarData(
               spots: evapSpots,
-              isCurved: false,
+              isCurved: true,
+              curveSmoothness: 0.3,
               color: Colors.blue.shade700,
-              barWidth: 2,
+              barWidth: 2.5,
               dotData: FlDotData(show: false),
-              belowBarData: BarAreaData(show: false),
+              belowBarData: BarAreaData(
+                show: true,
+                color: Colors.blue.shade100.withOpacity(0.3),
+              ),
             ),
           if (tempSpots.isNotEmpty)
             LineChartBarData(
               spots: tempSpots,
-              isCurved: false,
+              isCurved: true,
+              curveSmoothness: 0.3,
               color: Colors.orange.shade700,
-              barWidth: 2,
+              barWidth: 2.5,
               dotData: FlDotData(show: false),
               belowBarData: BarAreaData(show: false),
             ),
@@ -234,8 +288,8 @@ class EvaporasiChartWidget extends StatelessWidget {
     );
 
     return Container(
-      height: 380,
-      padding: const EdgeInsets.all(12),
+      height: 400, // ✅ FIX: tambah tinggi container agar label bawah tidak terpotong
+      padding: const EdgeInsets.fromLTRB(8, 12, 8, 4),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(25),
@@ -249,6 +303,7 @@ class EvaporasiChartWidget extends StatelessWidget {
       ),
       child: Column(
         children: [
+          // Legend
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
@@ -297,9 +352,10 @@ class EvaporasiChartWidget extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
+          // ✅ FIX: Expanded + ClipRRect memastikan chart mengisi sisa ruang tanpa overflow
           Expanded(
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(25),
+              borderRadius: BorderRadius.circular(16),
               child: chart,
             ),
           ),
@@ -308,4 +364,3 @@ class EvaporasiChartWidget extends StatelessWidget {
     );
   }
 }
-

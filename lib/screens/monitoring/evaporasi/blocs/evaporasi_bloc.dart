@@ -33,7 +33,6 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
   ) async {
     emit(state.copyWith(isLoading: true));
 
-    // Ambil history yang akan dipakai untuk list + agregasi grafik.
     final history = await _repository.getSensorHistory(
       'Monitoring/History',
       (json) => Evaporasi.fromJson(json),
@@ -45,7 +44,7 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
     final dailyGraph = TimeSeriesMapper.toDaily(
       data: history,
       getTime: (e) => e.timestamp,
-      getValue: (e) => e.evaporasi, // ⚠️ sesuaikan nama field
+      getValue: (e) => e.evaporasi,
     );
 
     final dailyTempGraph = TimeSeriesMapper.toDaily(
@@ -112,7 +111,6 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
     _EvaporasiRealtimeUpdated event,
     Emitter<EvaporasiState> emit,
   ) {
-    // Hindari update dobel: jika timestamp event sama dengan yang terakhir, jangan ubah bucket.
     final previous =
         state.history.isNotEmpty ? state.history.last.timestamp : null;
 
@@ -121,7 +119,6 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
     final isDuplicate =
         previous != null && event.data.timestamp.toUtc() == previous.toUtc();
 
-    // Update bucket berdasarkan timestamp event (bukan jam lokal sekarang).
     final updated =
         isDuplicate ? state.dailyValues : List<double>.from(state.dailyValues);
     final updatedTemp = isDuplicate
@@ -135,7 +132,7 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
         eventTime.toUtc().month == now.toUtc().month &&
         eventTime.toUtc().day == now.toUtc().day;
 
-    if (isSameDayUtc) {
+    if (isSameDayUtc && !isDuplicate) {
       final index = eventTime.hour;
       if (index >= 0 && index < updated.length) {
         updated[index] = event.data.evaporasi;
@@ -210,6 +207,8 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
       dailyTemperatures: updatedTemp,
       chartLabels: _buildChartLabels(period: event.period),
       viewMode: EvaporasiViewMode.period,
+      // ✅ FIX: reset selectedDate saat kembali ke mode period
+      clearSelectedDate: true,
       isLoading: false,
       listData: state.listData,
       history: state.history,
@@ -242,11 +241,12 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
       targetDate: event.date,
     );
 
+    // ✅ FIX: update chartLabels untuk custom date (24 jam label)
     emit(state.copyWith(
       dailyValues: updated,
       dailyTemperatures: updatedTemp,
+      chartLabels: _buildChartLabels(period: 'Tanggal Khusus'),
       isLoading: false,
-      // jangan hilangkan list
       listData: state.listData,
       history: state.history,
     ));

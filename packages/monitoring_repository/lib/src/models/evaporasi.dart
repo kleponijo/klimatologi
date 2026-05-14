@@ -19,117 +19,111 @@ class Evaporasi {
   );
 
   factory Evaporasi.fromJson(Map<dynamic, dynamic> json) {
+    // ===========================
+    // 🔧 HELPER: parse angka aman
+    // ===========================
     double toDoubleSafe(dynamic v) {
       if (v is num) return v.toDouble();
       if (v is String) {
         final s = v.trim();
-        // dukung format seperti "12.3 cm" / "12,3" / "-"
         final normalized = s.replaceAll(',', '.');
         final match = RegExp(r'[-+]?\d*\.?\d+').firstMatch(normalized);
         if (match != null) {
-          return double.tryParse(match.group(0)!) ?? 0;
+          return double.tryParse(match.group(0)!) ?? 0.0;
         }
-        return double.tryParse(normalized) ?? 0;
+        return double.tryParse(normalized) ?? 0.0;
       }
-      return 0;
+      return 0.0;
     }
 
+    // ===========================
+    // 💧 EVAPORASI
+    // ✅ Firebase: evaporasi_mm → prioritas pertama
+    // ===========================
     final evaporasiVal = toDoubleSafe(
       json['evaporasi_mm'] ??
           json['evaporasi'] ??
           json['evaporasiMm'] ??
           json['evaporation_mm'] ??
           json['evap_mm'] ??
-          json['evaporasi_mm_'] ??
-          json['evaporasi_mm '] ??
           json['evaporasi_value'] ??
-          json['evaporasi_mm_k'] ??
           json['evaporasi_k'],
     );
 
-    /// =========================
-    /// SUHU
-    /// =========================
-    final suhuParsed = toDoubleSafe(
-      json['suhu'] ??
-          json['suhu_air'] ??
+    // ===========================
+    // 🌡️ SUHU
+    // ✅ Firebase: suhu_air → prioritas pertama
+    // ===========================
+    final suhuRaw = toDoubleSafe(
+      json['suhu_air'] ??      // ✅ field utama di Firebase
+          json['suhu'] ??
           json['suhuAir'] ??
           json['temp'] ??
           json['temperature'],
     );
+    // Filter nilai tidak masuk akal (sensor error)
+    final suhuVal = (suhuRaw < -50 || suhuRaw > 100) ? 0.0 : suhuRaw;
 
-    // Filter nilai rusak
-    final suhuVal = (suhuParsed < -50 || suhuParsed > 100) ? 0.0 : suhuParsed;
-    toDoubleSafe(
-      json['suhu'] ??
-          json['suhu_air'] ??
-          json['suhuAir'] ??
-          json['temp'] ??
-          json['temperature'],
-    );
-
-    // Banyak kemungkinan penamaan field tinggi air.
-    // Pakai beberapa alias agar tidak default 0.
+    // ===========================
+    // 💦 TINGGI AIR
+    // ✅ Firebase: tinggi_air_cm → prioritas pertama
+    // ===========================
     final tinggiVal = toDoubleSafe(
-      json['tinggi_air_cm'] ??
+      json['tinggi_air_cm'] ??  // ✅ field utama di Firebase
           json['tinggi_air'] ??
           json['tinggiAir'] ??
           json['tinggiAir_cm'] ??
-          json['tinggi_air_cm_'] ??
-          json['tinggi_air_cm '] ??
           json['water_level'] ??
           json['waterLevel'] ??
           json['tinggi_air_m'] ??
           json['tinggiAir_m'],
     );
 
-    // Default timestamp: fallback now (kalau field waktu tidak ada).
-    // Catatan: untuk Firebase seharusnya timestamp dikirim konsisten (ms atau ISO string).
+    // ===========================
+    // 🕐 TIMESTAMP
+    // ✅ Firebase: datetime "2026-05-14 01:25:25" → prioritas pertama
+    // ===========================
     DateTime timestamp = DateTime.now();
 
-    // dukung beberapa kemungkinan penamaan timestamp
-    final rawTimestamp = json['timestamp'] ?? json['time'] ?? json['datetime'];
+    // Urutan prioritas sesuai field yang ada di Firebase
+    final rawTimestamp =
+        json['datetime'] ??    // ✅ field utama di Firebase
+        json['timestamp'] ??
+        json['time'];
 
     if (rawTimestamp != null) {
-      if (rawTimestamp is int) {
+      if (rawTimestamp is String) {
+        final s = rawTimestamp.trim();
+        // Coba parse sebagai integer unix ms/s
+        final unixMs = int.tryParse(s);
+        if (unixMs != null) {
+          timestamp = unixMs < 1000000000000
+              ? DateTime.fromMillisecondsSinceEpoch(unixMs * 1000)
+              : DateTime.fromMillisecondsSinceEpoch(unixMs);
+        } else {
+          // ✅ Format Firebase: "2026-05-14 01:25:25"
+          // DateTime.tryParse butuh ISO format → ganti spasi dengan T
+          final iso = s.contains('T') ? s : s.replaceFirst(' ', 'T');
+          timestamp = DateTime.tryParse(iso) ?? DateTime.now();
+        }
+      } else if (rawTimestamp is int) {
         timestamp = DateTime.fromMillisecondsSinceEpoch(rawTimestamp);
       } else if (rawTimestamp is double) {
         timestamp = DateTime.fromMillisecondsSinceEpoch(rawTimestamp.toInt());
-      } else if (rawTimestamp is String) {
-        final s = rawTimestamp.trim();
-        // jika string berupa angka (ms/seconds)
-        final unixMs = int.tryParse(s);
-        if (unixMs != null) {
-          // heuristik: kalau nilainya terlalu kecil kemungkinan seconds
-          if (unixMs < 1000000000000) {
-            timestamp = DateTime.fromMillisecondsSinceEpoch(unixMs * 1000);
-          } else {
-            timestamp = DateTime.fromMillisecondsSinceEpoch(unixMs);
-          }
-        } else {
-          final parsed = DateTime.tryParse(s);
-          if (parsed != null) {
-            timestamp = parsed;
-          }
-        }
       }
     } else {
-      // legacy fallback dari field terpisah
-      final datetimeStr = json['datetime'] as String?;
-      if (datetimeStr != null) {
-        final parsed = DateTime.tryParse(datetimeStr);
-        if (parsed != null) timestamp = parsed;
-      }
-
+      // Legacy fallback: field 'waktu' format "HH:mm:ss"
       final waktuStr = json['waktu'] as String?;
-      if (waktuStr != null && datetimeStr == null) {
+      if (waktuStr != null) {
         final parts = waktuStr.split(':');
         if (parts.length >= 2) {
           final jam = int.tryParse(parts[0]) ?? 0;
           final menit = int.tryParse(parts[1]) ?? 0;
-          final detik = parts.length >= 3 ? (int.tryParse(parts[2]) ?? 0) : 0;
+          final detik =
+              parts.length >= 3 ? (int.tryParse(parts[2]) ?? 0) : 0;
           final now = DateTime.now();
-          timestamp = DateTime(now.year, now.month, now.day, jam, menit, detik);
+          timestamp =
+              DateTime(now.year, now.month, now.day, jam, menit, detik);
         }
       }
     }
