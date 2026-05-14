@@ -34,13 +34,14 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
     emit(state.copyWith(isLoading: true));
 
     // Ambil history yang akan dipakai untuk list + agregasi grafik.
-    final history = await _repository.getSensorHistory(
-      'Monitoring/History',
-      (json) => Evaporasi.fromJson(json),
-    );
+    final history = List<Evaporasi>.from(
+      await _repository.getSensorHistory(
+        'Monitoring/History',
+        (json) => Evaporasi.fromJson(json),
+      ),
+    )..sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
-    final listData = List<Evaporasi>.from(history)
-      ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+    final listData = List<Evaporasi>.from(history);
 
     final dailyGraph = TimeSeriesMapper.toDaily(
       data: history,

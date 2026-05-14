@@ -17,6 +17,12 @@ class EvaporasiChartWidget extends StatelessWidget {
 
   double _safeValue(double value) {
     if (value.isNaN || value.isInfinite) return 0.0;
+
+    // anti spike
+    if (value > 1000 || value < -1000) {
+      return 0.0;
+    }
+
     return value < 0 ? 0.0 : value;
   }
 
@@ -117,14 +123,7 @@ class EvaporasiChartWidget extends StatelessWidget {
 
     final evapSpotsAll = _evapSpots();
 
-    // Deduplicate X=hour agar garis tidak kelihatan dobel/acak.
-    final Map<int, double> evapByX = {};
-    for (final s in evapSpotsAll) {
-      evapByX[s.x.toInt()] = s.y;
-    }
-
-    final dedupEvapSpots = evapByX.entries.toList()
-      ..sort((a, b) => a.key.compareTo(b.key));
+    final dedupEvapSpots = evapSpotsAll;
 
     final Map<int, double> tempByX = {};
     for (final entry in dailyTemperatures.asMap().entries) {
@@ -143,8 +142,7 @@ class EvaporasiChartWidget extends StatelessWidget {
       return FlSpot(x, y);
     }).toList();
 
-    final evapSpots =
-        dedupEvapSpots.map((e) => FlSpot(e.key.toDouble(), e.value)).toList();
+    final evapSpots = dedupEvapSpots;
 
     if (evapSpots.isEmpty && tempSpots.isEmpty) {
       return const SizedBox.shrink();

@@ -94,36 +94,70 @@ class Evaporasi {
 
     final tinggiFiltered = (tinggiVal < 0 || tinggiVal > 100) ? 0.0 : tinggiVal;
 
-    // Default timestamp: fallback now (kalau field waktu tidak ada).
-    // Catatan: untuk Firebase seharusnya timestamp dikirim konsisten (ms atau ISO string).
-    DateTime timestamp = DateTime.fromMillisecondsSinceEpoch(0);
+    DateTime parseTimestamp(dynamic rawTimestamp) {
+      try {
+        // UNIX INT
+        if (rawTimestamp is int) {
+          if (rawTimestamp < 1000000000000) {
+            return DateTime.fromMillisecondsSinceEpoch(
+              rawTimestamp * 1000,
+            ).toLocal();
+          }
 
-    // dukung beberapa kemungkinan penamaan timestamp
+          return DateTime.fromMillisecondsSinceEpoch(rawTimestamp).toLocal();
+        }
+
+        // DOUBLE
+        if (rawTimestamp is double) {
+          final value = rawTimestamp.toInt();
+
+          if (value < 1000000000000) {
+            return DateTime.fromMillisecondsSinceEpoch(value * 1000).toLocal();
+          }
+
+          return DateTime.fromMillisecondsSinceEpoch(value).toLocal();
+        }
+
+        // STRING
+        if (rawTimestamp is String) {
+          String s = rawTimestamp.trim();
+
+          // UNIX STRING
+          final unixValue = int.tryParse(s);
+
+          if (unixValue != null) {
+            if (unixValue < 1000000000000) {
+              return DateTime.fromMillisecondsSinceEpoch(
+                unixValue * 1000,
+              ).toLocal();
+            }
+
+            return DateTime.fromMillisecondsSinceEpoch(unixValue).toLocal();
+          }
+
+          // FIX FORMAT FIREBASE
+          // 2026-05-14 16:07:23
+          if (s.contains(' ') && !s.contains('T')) {
+            s = s.replaceFirst(' ', 'T');
+          }
+
+          final parsed = DateTime.tryParse(s);
+
+          if (parsed != null) {
+            return parsed.toLocal();
+          }
+        }
+      } catch (_) {}
+
+      return DateTime.fromMillisecondsSinceEpoch(0);
+    }
+
+    // Default timestamp: fallback nilai kosong agar tidak pakai waktu lokal sekarang.
+    DateTime timestamp = DateTime.fromMillisecondsSinceEpoch(0);
     final rawTimestamp = json['timestamp'] ?? json['time'] ?? json['datetime'];
 
     if (rawTimestamp != null) {
-      if (rawTimestamp is int) {
-        timestamp = DateTime.fromMillisecondsSinceEpoch(rawTimestamp);
-      } else if (rawTimestamp is double) {
-        timestamp = DateTime.fromMillisecondsSinceEpoch(rawTimestamp.toInt());
-      } else if (rawTimestamp is String) {
-        final s = rawTimestamp.trim();
-        // jika string berupa angka (ms/seconds)
-        final unixMs = int.tryParse(s);
-        if (unixMs != null) {
-          // heuristik: kalau nilainya terlalu kecil kemungkinan seconds
-          if (unixMs < 1000000000000) {
-            timestamp = DateTime.fromMillisecondsSinceEpoch(unixMs * 1000);
-          } else {
-            timestamp = DateTime.fromMillisecondsSinceEpoch(unixMs);
-          }
-        } else {
-          final parsed = DateTime.tryParse(s);
-          if (parsed != null) {
-            timestamp = parsed.toLocal();
-          }
-        }
-      }
+      timestamp = parseTimestamp(rawTimestamp);
     } else {
       // legacy fallback dari field terpisah
       final datetimeStr = json['datetime'] as String?;
