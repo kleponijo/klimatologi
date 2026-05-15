@@ -1,10 +1,11 @@
 import 'dart:async';
+
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:monitoring_repository/monitoring_repository.dart';
 
-import '../../../../core/utils/time_series_mapper.dart';
 import '../../../../blocs/notification_bloc/notification_bloc.dart';
+import '../../../../core/utils/time_series_mapper.dart';
 
 part 'evaporasi_event.dart';
 part 'evaporasi_state.dart';
@@ -33,13 +34,15 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
   ) async {
     emit(state.copyWith(isLoading: true));
 
-    final history = await _repository.getSensorHistory(
-      'Monitoring/History',
-      (json) => Evaporasi.fromJson(json),
-    );
-
-    final listData = List<Evaporasi>.from(history)
+    final history = List<Evaporasi>.from(
+      await _repository.getSensorHistory(
+        'Monitoring/History',
+        (json) => Evaporasi.fromJson(json),
+      ),
+    )
       ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+
+    final listData = List<Evaporasi>.from(history);
 
     final dailyGraph = TimeSeriesMapper.toDaily(
       data: history,
@@ -80,11 +83,13 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
     final lastValue = history.isNotEmpty ? history.last.evaporasi : 0.0;
     final lastWaterLevel = history.isNotEmpty ? history.last.tinggiAir : 0.0;
     final lastTemperature = history.isNotEmpty ? history.last.suhu : 0.0;
+
     final (status, rain) = _computeWeatherStatus(lastValue);
     _emitEvaporasiAlert(status, rain, lastValue);
 
     emit(state.copyWith(
       history: history,
+      listData: listData,
       currentValue: lastValue,
       waterLevel: lastWaterLevel,
       temperature: lastTemperature,
@@ -97,33 +102,53 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
       chartLabels: _buildChartLabels(period: 'Hari Ini'),
       weatherStatus: status,
       willRain: rain,
-      listData: listData,
+      currentData: history.isNotEmpty ? history.last : null,
+      viewMode: EvaporasiViewMode.period,
+      selectedDate: null,
       isLoading: false,
     ));
 
     await _subscription?.cancel();
     _subscription = _repository
-        .getSensorStream('Monitoring', (json) => Evaporasi.fromJson(json))
+        .getSensorStream('Monitoring/History', _latestHistoryEntry)
         .listen((data) => add(_EvaporasiRealtimeUpdated(data)));
+  }
+
+  Evaporasi _latestHistoryEntry(Map<dynamic, dynamic> json) {
+    if (json.isEmpty) return Evaporasi.empty;
+
+    final entries = json.values
+        .whereType<Map<dynamic, dynamic>>()
+        .map((item) => Evaporasi.fromJson(item))
+        .toList();
+
+    if (entries.isEmpty) return Evaporasi.empty;
+
+    entries.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+    return entries.last;
   }
 
   void _onRealtimeUpdated(
     _EvaporasiRealtimeUpdated event,
     Emitter<EvaporasiState> emit,
   ) {
-    final previous =
-        state.history.isNotEmpty ? state.history.last.timestamp : null;
+    final updatedHistory = List<Evaporasi>.from(state.history);
 
-    final updatedHistory = List<Evaporasi>.from(state.history)..add(event.data);
+    final duplicateIndex = updatedHistory.indexWhere(
+      (item) => item.timestamp.toUtc() == event.data.timestamp.toUtc(),
+    );
 
-    final isDuplicate =
-        previous != null && event.data.timestamp.toUtc() == previous.toUtc();
+    if (duplicateIndex >= 0) {
+      updatedHistory[duplicateIndex] = event.data;
+    } else {
+      updatedHistory.add(event.data);
+    }
 
-    final updated =
-        isDuplicate ? state.dailyValues : List<double>.from(state.dailyValues);
-    final updatedTemp = isDuplicate
-        ? state.dailyTemperatures
-        : List<double>.from(state.dailyTemperatures);
+    updatedHistory.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+
+    // Update bucket untuk tampilan chart harian (index hour)
+    final updated = List<double>.from(state.dailyValues);
+    final updatedTemp = List<double>.from(state.dailyTemperatures);
 
     final eventTime = event.data.timestamp;
     final now = DateTime.now();
@@ -132,6 +157,7 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
         eventTime.toUtc().month == now.toUtc().month &&
         eventTime.toUtc().day == now.toUtc().day;
 
+    final isDuplicate = duplicateIndex >= 0;
     if (isSameDayUtc && !isDuplicate) {
       final index = eventTime.hour;
       if (index >= 0 && index < updated.length) {
@@ -153,6 +179,7 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
       dailyTemperatures: updatedTemp,
       weatherStatus: status,
       willRain: rain,
+      currentData: event.data,
     ));
   }
 
@@ -207,11 +234,8 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
       dailyTemperatures: updatedTemp,
       chartLabels: _buildChartLabels(period: event.period),
       viewMode: EvaporasiViewMode.period,
-      // ✅ FIX: reset selectedDate saat kembali ke mode period
       clearSelectedDate: true,
       isLoading: false,
-      listData: state.listData,
-      history: state.history,
     ));
   }
 
@@ -241,14 +265,11 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
       targetDate: event.date,
     );
 
-    // ✅ FIX: update chartLabels untuk custom date (24 jam label)
     emit(state.copyWith(
       dailyValues: updated,
       dailyTemperatures: updatedTemp,
       chartLabels: _buildChartLabels(period: 'Tanggal Khusus'),
       isLoading: false,
-      listData: state.listData,
-      history: state.history,
     ));
   }
 
@@ -327,3 +348,4 @@ class _EvaporasiRealtimeUpdated extends EvaporasiEvent {
   @override
   List<Object> get props => [data];
 }
+

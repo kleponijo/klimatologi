@@ -19,9 +19,6 @@ class Evaporasi {
   );
 
   factory Evaporasi.fromJson(Map<dynamic, dynamic> json) {
-    // ===========================
-    // 🔧 HELPER: parse angka aman
-    // ===========================
     double toDoubleSafe(dynamic v) {
       if (v is num) return v.toDouble();
       if (v is String) {
@@ -36,10 +33,7 @@ class Evaporasi {
       return 0.0;
     }
 
-    // ===========================
-    // 💧 EVAPORASI
-    // ✅ Firebase: evaporasi_mm → prioritas pertama
-    // ===========================
+    // Evaporasi (mm)
     final evaporasiVal = toDoubleSafe(
       json['evaporasi_mm'] ??
           json['evaporasi'] ??
@@ -50,26 +44,19 @@ class Evaporasi {
           json['evaporasi_k'],
     );
 
-    // ===========================
-    // 🌡️ SUHU
-    // ✅ Firebase: suhu_air → prioritas pertama
-    // ===========================
+    // Suhu (°C)
     final suhuRaw = toDoubleSafe(
-      json['suhu_air'] ??      // ✅ field utama di Firebase
+      json['suhu_air'] ??
           json['suhu'] ??
           json['suhuAir'] ??
           json['temp'] ??
           json['temperature'],
     );
-    // Filter nilai tidak masuk akal (sensor error)
     final suhuVal = (suhuRaw < -50 || suhuRaw > 100) ? 0.0 : suhuRaw;
 
-    // ===========================
-    // 💦 TINGGI AIR
-    // ✅ Firebase: tinggi_air_cm → prioritas pertama
-    // ===========================
+    // Tinggi air
     final tinggiVal = toDoubleSafe(
-      json['tinggi_air_cm'] ??  // ✅ field utama di Firebase
+      json['tinggi_air_cm'] ??
           json['tinggi_air'] ??
           json['tinggiAir'] ??
           json['tinggiAir_cm'] ??
@@ -79,40 +66,67 @@ class Evaporasi {
           json['tinggiAir_m'],
     );
 
-    // ===========================
-    // 🕐 TIMESTAMP
-    // ✅ Firebase: datetime "2026-05-14 01:25:25" → prioritas pertama
-    // ===========================
-    DateTime timestamp = DateTime.now();
+    // Filter data invalid
+    final evaporasiFiltered = (evaporasiVal < 0 || evaporasiVal > 50)
+        ? 0.0
+        : evaporasiVal;
+    final tinggiFiltered = (tinggiVal < 0 || tinggiVal > 100) ? 0.0 : tinggiVal;
 
-    // Urutan prioritas sesuai field yang ada di Firebase
+    DateTime parseTimestamp(dynamic rawTimestamp) {
+      try {
+        if (rawTimestamp is int) {
+          // If seconds, convert to ms.
+          if (rawTimestamp < 1000000000000) {
+            return DateTime.fromMillisecondsSinceEpoch(rawTimestamp * 1000)
+                .toLocal();
+          }
+          return DateTime.fromMillisecondsSinceEpoch(rawTimestamp).toLocal();
+        }
+
+        if (rawTimestamp is double) {
+          final value = rawTimestamp.toInt();
+          if (value < 1000000000000) {
+            return DateTime.fromMillisecondsSinceEpoch(value * 1000)
+                .toLocal();
+          }
+          return DateTime.fromMillisecondsSinceEpoch(value).toLocal();
+        }
+
+        if (rawTimestamp is String) {
+          String s = rawTimestamp.trim();
+
+          // UNIX string
+          final unixValue = int.tryParse(s);
+          if (unixValue != null) {
+            if (unixValue < 1000000000000) {
+              return DateTime.fromMillisecondsSinceEpoch(unixValue * 1000)
+                  .toLocal();
+            }
+            return DateTime.fromMillisecondsSinceEpoch(unixValue).toLocal();
+          }
+
+          // Firebase sometimes uses "YYYY-MM-DD HH:mm:ss" (needs ISO 'T')
+          if (s.contains(' ') && !s.contains('T')) {
+            s = s.replaceFirst(' ', 'T');
+          }
+
+          final parsed = DateTime.tryParse(s);
+          if (parsed != null) return parsed.toLocal();
+        }
+      } catch (_) {}
+
+      return DateTime.fromMillisecondsSinceEpoch(0);
+    }
+
+    DateTime timestamp = DateTime.fromMillisecondsSinceEpoch(0);
+
     final rawTimestamp =
-        json['datetime'] ??    // ✅ field utama di Firebase
-        json['timestamp'] ??
-        json['time'];
+        json['timestamp'] ?? json['time'] ?? json['datetime'];
 
     if (rawTimestamp != null) {
-      if (rawTimestamp is String) {
-        final s = rawTimestamp.trim();
-        // Coba parse sebagai integer unix ms/s
-        final unixMs = int.tryParse(s);
-        if (unixMs != null) {
-          timestamp = unixMs < 1000000000000
-              ? DateTime.fromMillisecondsSinceEpoch(unixMs * 1000)
-              : DateTime.fromMillisecondsSinceEpoch(unixMs);
-        } else {
-          // ✅ Format Firebase: "2026-05-14 01:25:25"
-          // DateTime.tryParse butuh ISO format → ganti spasi dengan T
-          final iso = s.contains('T') ? s : s.replaceFirst(' ', 'T');
-          timestamp = DateTime.tryParse(iso) ?? DateTime.now();
-        }
-      } else if (rawTimestamp is int) {
-        timestamp = DateTime.fromMillisecondsSinceEpoch(rawTimestamp);
-      } else if (rawTimestamp is double) {
-        timestamp = DateTime.fromMillisecondsSinceEpoch(rawTimestamp.toInt());
-      }
+      timestamp = parseTimestamp(rawTimestamp);
     } else {
-      // Legacy fallback: field 'waktu' format "HH:mm:ss"
+      // legacy fallback: "waktu" format "HH:mm:ss"
       final waktuStr = json['waktu'] as String?;
       if (waktuStr != null) {
         final parts = waktuStr.split(':');
@@ -122,17 +136,17 @@ class Evaporasi {
           final detik =
               parts.length >= 3 ? (int.tryParse(parts[2]) ?? 0) : 0;
           final now = DateTime.now();
-          timestamp =
-              DateTime(now.year, now.month, now.day, jam, menit, detik);
+          timestamp = DateTime(now.year, now.month, now.day, jam, menit, detik);
         }
       }
     }
 
     return Evaporasi(
-      evaporasi: evaporasiVal,
+      evaporasi: evaporasiFiltered,
       suhu: suhuVal,
-      tinggiAir: tinggiVal,
+      tinggiAir: tinggiFiltered,
       timestamp: timestamp,
     );
   }
 }
+

@@ -17,8 +17,11 @@ class EvaporasiChartWidget extends StatelessWidget {
 
   double _safeValue(double value) {
     if (value.isNaN || value.isInfinite) return 0.0;
-    if (value < 0) return 0.0;
-    return value;
+
+    // anti spike
+    if (value > 1000 || value < -1000) return 0.0;
+
+    return value < 0 ? 0.0 : value;
   }
 
   double _tempToEvapScale({
@@ -30,6 +33,7 @@ class EvaporasiChartWidget extends StatelessWidget {
   }) {
     final tempRange = (tempMax - tempMin);
     if (tempRange.abs() < 1e-9) return evapMin;
+
     final normalized = (temp - tempMin) / tempRange;
     return evapMin + normalized * (evapMax - evapMin);
   }
@@ -43,16 +47,15 @@ class EvaporasiChartWidget extends StatelessWidget {
   }) {
     final evapRange = (evapMax - evapMin);
     if (evapRange.abs() < 1e-9) return tempMin;
+
     final normalized = (yEvap - evapMin) / evapRange;
     return tempMin + normalized * (tempMax - tempMin);
   }
 
-  /// ✅ FIX: Interval label X-axis disesuaikan per period agar tidak tumpang tindih
   double _xLabelInterval() {
-    if (period == 'Minggu Ini') return 1; // 7 label → semua tampil
-    if (period == 'Bulan Ini') return 5;  // ~31 label → tiap 5 hari
-    // Hari Ini / Tanggal Khusus → 24 jam, tampilkan tiap 3 jam
-    return 3;
+    if (period == 'Minggu Ini') return 1; // 7 label
+    if (period == 'Bulan Ini') return 5; // ~31 label tiap 5 hari
+    return 3; // 24 jam tiap 3 jam
   }
 
   String _getBottomLabel(int index) {
@@ -60,6 +63,34 @@ class EvaporasiChartWidget extends StatelessWidget {
       return '';
     }
     return chartLabels[index];
+  }
+
+  double _maxOf(List<double> values) {
+    if (values.isEmpty) return 0.0;
+    double max = values.first;
+    for (final v in values) {
+      if (v > max) max = v;
+    }
+    return max;
+  }
+
+  double _minOf(List<double> values) {
+    if (values.isEmpty) return 0.0;
+    double min = values.first;
+    for (final v in values) {
+      if (v < min) min = v;
+    }
+    return min;
+  }
+
+  List<FlSpot> _buildEvapSpots(double evapMin, double evapMax) {
+    if (dailyValues.isEmpty) return const [];
+
+    return dailyValues.asMap().entries.map((e) {
+      final x = e.key.toDouble();
+      final y = _safeValue(e.value).clamp(evapMin, evapMax);
+      return FlSpot(x, y);
+    }).toList();
   }
 
   @override
@@ -84,36 +115,23 @@ class EvaporasiChartWidget extends StatelessWidget {
     }
 
     const evapMin = 0.0;
-    const evapMax = 20.0;
-    const tempMin = 0.0;
-    const tempMax = 40.0; // ✅ FIX: naikkan batas suhu ke 40°C agar lebih realistis
 
-    // Evaporasi spots
-    final evapSpotsAll = dailyValues.asMap().entries.map((e) {
-      return FlSpot(e.key.toDouble(), _safeValue(e.value));
-    }).toList();
+    final evapMaxRaw = _maxOf(dailyValues);
+    final tempMinRaw = _minOf(dailyTemperatures);
+    final tempMaxRaw = _maxOf(dailyTemperatures);
 
-    final Map<int, double> evapByX = {};
-    for (final s in evapSpotsAll) {
-      evapByX[s.x.toInt()] = s.y;
-    }
+    final tempMin = tempMinRaw;
+    final tempMax = tempMaxRaw == tempMinRaw ? tempMinRaw + 1 : tempMaxRaw;
 
-    final dedupEvapSpots = evapByX.entries.toList()
-      ..sort((a, b) => a.key.compareTo(b.key));
+    // Evaporasi: batasi maksimum supaya tetap masuk akal
+    final evapMax = evapMaxRaw < 1e-9 ? 20.0 : (evapMaxRaw > 50 ? 50.0 : evapMaxRaw);
 
-    final evapSpots = dedupEvapSpots
-        .map((e) => FlSpot(e.key.toDouble(), e.value.clamp(evapMin, evapMax)))
-        .toList();
+    final evapSpots = _buildEvapSpots(evapMin, evapMax);
 
-    // Suhu spots — diproyeksikan ke skala evaporasi
-    final tempByX = <int, double>{};
-    for (final entry in dailyTemperatures.asMap().entries) {
-      tempByX[entry.key] = _safeValue(entry.value);
-    }
-
-    final tempSpots = tempByX.entries.map((entry) {
+    // Suhu diproyeksikan ke skala evaporasi
+    final tempSpots = dailyTemperatures.asMap().entries.map((entry) {
       final x = entry.key.toDouble();
-      final temp = entry.value;
+      final temp = _safeValue(entry.value);
       final y = _tempToEvapScale(
         temp: temp,
         evapMin: evapMin,
@@ -125,6 +143,7 @@ class EvaporasiChartWidget extends StatelessWidget {
     }).toList();
 
     double getRightTitle(double y) {
+      if (tempSpots.isEmpty) return tempMin;
       return _evapScaleToTemp(
         yEvap: y,
         evapMin: evapMin,
@@ -134,16 +153,17 @@ class EvaporasiChartWidget extends StatelessWidget {
       );
     }
 
-    final xInterval = _xLabelInterval();
+    final xInterval = _xLabelInterval().toInt().clamp(1, 1000);
 
     final chart = LineChart(
       LineChartData(
         minY: evapMin,
         maxY: evapMax,
-        // ✅ FIX: padding kiri/kanan agar garis tidak terpotong di tepi
         minX: -0.5,
-        maxX: (chartLabels.isNotEmpty ? chartLabels.length - 1 : 23).toDouble() + 0.5,
-        clipData: const FlClipData.all(), // ✅ FIX: clip agar garis tidak keluar area chart
+        maxX: (chartLabels.isNotEmpty ? chartLabels.length - 1 : 23)
+                .toDouble() +
+            0.5,
+        clipData: const FlClipData.all(),
         gridData: FlGridData(
           show: true,
           drawVerticalLine: false,
@@ -159,14 +179,16 @@ class EvaporasiChartWidget extends StatelessWidget {
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
-              reservedSize: 36, // ✅ FIX: tambah ruang bawah agar label tidak nutup chart
-              interval: xInterval, // ✅ FIX: interval dinamis per periode
+              reservedSize: 36,
+              interval: xInterval.toDouble(),
               getTitlesWidget: (value, meta) {
                 final index = value.toInt();
-                // ✅ FIX: hanya render label di indeks yang valid & tepat interval
                 if (value != value.roundToDouble()) return const SizedBox();
-                if (index < 0 || index >= chartLabels.length) return const SizedBox();
-                if (index % xInterval.toInt() != 0) return const SizedBox();
+                if (index < 0 || index >= chartLabels.length) {
+                  return const SizedBox();
+                }
+                if (index % xInterval != 0) return const SizedBox();
+
                 return Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Text(
@@ -231,7 +253,7 @@ class EvaporasiChartWidget extends StatelessWidget {
             getTooltipItems: (touchedSpots) {
               if (touchedSpots.isEmpty) return const <LineTooltipItem>[];
 
-              final List<LineTooltipItem> items = [];
+              final items = <LineTooltipItem>[];
               for (int i = 0; i < touchedSpots.length; i++) {
                 final spot = touchedSpots[i];
                 final y = _safeValue(spot.y).clamp(evapMin, evapMax);
@@ -249,6 +271,7 @@ class EvaporasiChartWidget extends StatelessWidget {
                     tempMin: tempMin,
                     tempMax: tempMax,
                   );
+
                   items.add(LineTooltipItem(
                     'Suhu: ${tempOnly.toStringAsFixed(1)} °C',
                     const TextStyle(color: Colors.white, fontSize: 12),
@@ -288,7 +311,7 @@ class EvaporasiChartWidget extends StatelessWidget {
     );
 
     return Container(
-      height: 400, // ✅ FIX: tambah tinggi container agar label bawah tidak terpotong
+      height: 400,
       padding: const EdgeInsets.fromLTRB(8, 12, 8, 4),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -303,7 +326,6 @@ class EvaporasiChartWidget extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Legend
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
@@ -352,7 +374,6 @@ class EvaporasiChartWidget extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          // ✅ FIX: Expanded + ClipRRect memastikan chart mengisi sisa ruang tanpa overflow
           Expanded(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(16),
@@ -364,3 +385,4 @@ class EvaporasiChartWidget extends StatelessWidget {
     );
   }
 }
+

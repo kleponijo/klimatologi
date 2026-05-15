@@ -294,6 +294,7 @@ class _EvaporasiScreenState extends State<EvaporasiScreen> {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
 
+
     // ✅ Filter list sesuai mode & periode yang aktif
     List filteredData;
 
@@ -509,3 +510,4 @@ class _EvaporasiScreenState extends State<EvaporasiScreen> {
     }
   }
 }
+

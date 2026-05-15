@@ -13,11 +13,11 @@ dependencies:
   cupertino_icons: ^1.0.8
   dio: ^5.9.2
   equatable: ^2.0.5
+  excel: ^4.0.6
   firebase_auth: ^6.1.3
   firebase_core: ^4.3.0
   firebase_database: ^12.1.3
   fl_chart: ^1.1.1
-  table_calendar: ^3.1.2
   flutter:
     sdk: flutter
   flutter_bloc: ^8.1.0
@@ -26,9 +26,12 @@ dependencies:
   intl: ^0.20.2
   monitoring_repository:
     path: packages/monitoring_repository
+  path_provider: ^2.1.5
   pdf: ^3.11.1
   printing: ^5.13.1
   rxdart: ^0.27.7
+  share_plus: ^13.1.0
+  table_calendar: ^3.1.2
   user_repository:
     path: packages/user_repository
 
