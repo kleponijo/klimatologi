@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:klimatologiot/blocs/authentication_bloc/authentication_bloc.dart';
-
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:klimatologiot/screens/auth/views/welcome_screen.dart';
 import 'package:klimatologiot/screens/home/views/home_screen.dart';
 
@@ -13,6 +13,15 @@ class MyAppView extends StatelessWidget {
     return MaterialApp(
         title: 'Klimatologi',
         debugShowCheckedModeBanner: false,
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [
+          Locale('id', 'ID'),
+          Locale('en'),
+        ],
         theme: ThemeData(
           colorScheme: ColorScheme.light(
               surface: Colors.grey.shade100,

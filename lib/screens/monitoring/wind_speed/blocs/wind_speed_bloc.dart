@@ -19,38 +19,32 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
   final NotificationBloc _notificationBloc;
   StreamSubscription<MyWindSpeed>? _subscription;
 
-  WindSpeedBloc(
-      {required MonitoringRepository repository,
-      required NotificationBloc notificationBloc})
-      : _repository = repository,
+  WindSpeedBloc({
+    required MonitoringRepository repository,
+    required NotificationBloc notificationBloc,
+  })  : _repository = repository,
         _notificationBloc = notificationBloc,
         super(const WindSpeedState()) {
-    /// 🔥 START MONITORING
     on<WatchWindSpeedStarted>(_onStarted, transformer: restartable());
-
-    /// 🔥 REALTIME UPDATE
     on<_WindSpeedRealtimeUpdated>(_onRealtimeUpdated);
-
-    /// 🔥 CHANGE PERIOD
     on<WindSpeedPeriodChanged>(_onPeriodChanged);
+    on<WindSpeedDateFilterChanged>(_onDateFilterChanged); // ← baru
   }
 
-  /// =========================
-  /// 🚀 START
-  /// =========================
+  // ════════════════════════════════════════════════════════════
+  //  START
+  // ════════════════════════════════════════════════════════════
   Future<void> _onStarted(
     WatchWindSpeedStarted event,
     Emitter<WindSpeedState> emit,
   ) async {
     emit(state.copyWith(isLoading: true));
 
-    /// 1. Ambil history SEKALI
     final history = await _repository.getSensorHistory(
       'anemometer/history',
       (json) => MyWindSpeed.fromJson(json),
     );
 
-    // ✅ Ini saja yang benar
     final dailyGraph = TimeSeriesMapper.smooth(
       TimeSeriesMapper.toDaily(
         data: history,
@@ -58,7 +52,6 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
         getValue: (e) => e.speed,
       ),
     );
-
     final weekly = TimeSeriesMapper.smooth(
       TimeSeriesMapper.toWeekly(
         data: history,
@@ -66,7 +59,6 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
         getValue: (e) => e.speed,
       ),
     );
-
     final monthly = TimeSeriesMapper.smooth(
       TimeSeriesMapper.toMonthly(
         data: history,
@@ -75,25 +67,22 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
       ),
     );
 
-    // Cek kondisi awal dari history
     if (history.isNotEmpty) {
       _emitWindAlert(history.last.speed);
     }
 
     emit(state.copyWith(
       history: history,
+      filteredHistory: history, // awal = semua data
       dailySpeeds: dailyGraph,
       weeklySpeeds: weekly,
       monthlySpeeds: monthly,
       isLoading: false,
-      alertLevel: history.isNotEmpty // ← tambah ini
-          ? _getAlertLevel(history.last.speed)
-          : "Normal",
+      alertLevel:
+          history.isNotEmpty ? _getAlertLevel(history.last.speed) : 'Normal',
     ));
 
-    /// 3. Start realtime stream (manual subscription)
     await _subscription?.cancel();
-
     _subscription = _repository
         .getSensorStream(
       'anemometer/realtime',
@@ -104,9 +93,9 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
     });
   }
 
-  /// =========================
-  /// ⚡ REALTIME UPDATE
-  /// =========================
+  // ════════════════════════════════════════════════════════════
+  //  REALTIME UPDATE
+  // ════════════════════════════════════════════════════════════
   void _onRealtimeUpdated(
     _WindSpeedRealtimeUpdated event,
     Emitter<WindSpeedState> emit,
@@ -117,13 +106,11 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
 
     if (index < updated.length) {
       final lastValue = updated[index];
-
-      /// 🔥 ANTI SPIKE + SMOOTHING
       if (lastValue != 0) {
         if ((newValue - lastValue).abs() > 15) {
-          newValue = lastValue; // buang spike
+          newValue = lastValue;
         } else {
-          newValue = (lastValue + newValue) / 2; // smoothing
+          newValue = (lastValue + newValue) / 2;
         }
       }
       updated[index] = newValue.clamp(0, 100);
@@ -138,26 +125,24 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
     ));
   }
 
-  /// =========================
-  /// 📊 CHANGE PERIOD
-  /// =========================
+  // ════════════════════════════════════════════════════════════
+  //  PERIOD CHANGED
+  // ════════════════════════════════════════════════════════════
   Future<void> _onPeriodChanged(
     WindSpeedPeriodChanged event,
     Emitter<WindSpeedState> emit,
   ) async {
     emit(state.copyWith(selectedPeriod: event.period));
-
     final history = state.history;
 
     List<double> raw;
-
-    if (event.period == "Minggu Ini") {
+    if (event.period == 'Minggu Ini') {
       raw = TimeSeriesMapper.toWeekly(
         data: history,
         getTime: (e) => e.timestamp,
         getValue: (e) => e.speed,
       );
-    } else if (event.period == "Bulan Ini") {
+    } else if (event.period == 'Bulan Ini') {
       raw = TimeSeriesMapper.toMonthly(
         data: history,
         getTime: (e) => e.timestamp,
@@ -171,35 +156,60 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
       );
     }
 
-    /// 🔥 baru di-smooth
     final updatedGraph = TimeSeriesMapper.smooth(raw);
 
     emit(state.copyWith(
       dailySpeeds:
-          event.period == "Hari Ini" ? updatedGraph : state.dailySpeeds,
+          event.period == 'Hari Ini' ? updatedGraph : state.dailySpeeds,
       weeklySpeeds:
-          event.period == "Minggu Ini" ? updatedGraph : state.weeklySpeeds,
+          event.period == 'Minggu Ini' ? updatedGraph : state.weeklySpeeds,
       monthlySpeeds:
-          event.period == "Bulan Ini" ? updatedGraph : state.monthlySpeeds,
+          event.period == 'Bulan Ini' ? updatedGraph : state.monthlySpeeds,
       isLoading: false,
     ));
   }
 
-  @override
-  Future<void> close() async {
-    await _subscription?.cancel();
-    return super.close();
+  // ════════════════════════════════════════════════════════════
+  //  DATE FILTER CHANGED  ← baru
+  // ════════════════════════════════════════════════════════════
+  void _onDateFilterChanged(
+    WindSpeedDateFilterChanged event,
+    Emitter<WindSpeedState> emit,
+  ) {
+    final date = event.date;
+    final allHistory = state.history;
+
+    if (date == null) {
+      // Reset: tampilkan semua
+      emit(state.copyWith(
+        filteredHistory: allHistory,
+        clearSelectedDate: true,
+      ));
+      return;
+    }
+
+    // Filter data yang tanggalnya sama dengan [date]
+    final filtered = allHistory.where((item) {
+      return item.timestamp.year == date.year &&
+          item.timestamp.month == date.month &&
+          item.timestamp.day == date.day;
+    }).toList();
+
+    emit(state.copyWith(
+      filteredHistory: filtered,
+      selectedDate: date,
+    ));
   }
 
+  // ════════════════════════════════════════════════════════════
+  //  HELPERS
+  // ════════════════════════════════════════════════════════════
   String _getAlertLevel(double speed) {
-    if (speed >= _kWindDanger) return "Bahaya";
-    if (speed >= _kWindWarning) return "Waspada";
-    return "Normal";
+    if (speed >= _kWindDanger) return 'Bahaya';
+    if (speed >= _kWindWarning) return 'Waspada';
+    return 'Normal';
   }
 
-// =========================
-  // HELPER: kirim alert ke NotificationBloc
-  // =========================
   void _emitWindAlert(double speed) {
     final AlertSeverity severity;
     final String message;
@@ -211,7 +221,7 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
       severity = AlertSeverity.warning;
       message = 'Kecepatan angin ${speed.toStringAsFixed(1)} m/s — waspada';
     } else {
-      severity = AlertSeverity.info; // normal → bersihkan alert
+      severity = AlertSeverity.info;
       message = '';
     }
 
@@ -225,16 +235,19 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
       ),
     ));
   }
+
+  @override
+  Future<void> close() async {
+    await _subscription?.cancel();
+    return super.close();
+  }
 }
 
-/// =========================
-/// 🔒 INTERNAL EVENT (PRIVATE)
-/// =========================
+/// Internal event — tidak diekspos ke luar
 class _WindSpeedRealtimeUpdated extends WindSpeedEvent {
   final MyWindSpeed data;
-
   const _WindSpeedRealtimeUpdated(this.data);
 
   @override
-  List<Object> get props => [data];
+  List<Object?> get props => [data];
 }

@@ -1,57 +1,73 @@
 part of 'wind_speed_bloc.dart';
 
 class WindSpeedState extends Equatable {
+  final bool isLoading;
   final double currentSpeed;
+  final String alertLevel;
   final String selectedPeriod;
+
+  // ── Graf ─────────────────────────────────────────────────────
   final List<double> dailySpeeds;
   final List<double> weeklySpeeds;
   final List<double> monthlySpeeds;
-  final bool isLoading;
-  final List<MyWindSpeed> history;
-  final String alertLevel; // "Normal" | "Waspada" | "Bahaya"
+
+  // ── History ──────────────────────────────────────────────────
+  final List<MyWindSpeed> history; // semua data mentah
+  final List<MyWindSpeed> filteredHistory; // setelah difilter tanggal
+  final DateTime? selectedDate; // null = tampilkan semua
 
   const WindSpeedState({
+    this.isLoading = false,
     this.currentSpeed = 0.0,
-    this.selectedPeriod = "Hari Ini",
+    this.alertLevel = 'Normal',
+    this.selectedPeriod = 'Hari Ini',
     this.dailySpeeds = const [],
-    this.isLoading = true,
-    this.history = const [],
-    this.monthlySpeeds = const [],
     this.weeklySpeeds = const [],
-    this.alertLevel = "Normal",
+    this.monthlySpeeds = const [],
+    this.history = const [],
+    this.filteredHistory = const [],
+    this.selectedDate,
   });
 
   WindSpeedState copyWith({
+    bool? isLoading,
     double? currentSpeed,
+    String? alertLevel,
     String? selectedPeriod,
     List<double>? dailySpeeds,
     List<double>? weeklySpeeds,
     List<double>? monthlySpeeds,
-    bool? isLoading,
     List<MyWindSpeed>? history,
-    String? alertLevel,
+    List<MyWindSpeed>? filteredHistory,
+    DateTime? selectedDate,
+    bool clearSelectedDate = false,
   }) {
     return WindSpeedState(
+      isLoading: isLoading ?? this.isLoading,
       currentSpeed: currentSpeed ?? this.currentSpeed,
+      alertLevel: alertLevel ?? this.alertLevel,
       selectedPeriod: selectedPeriod ?? this.selectedPeriod,
       dailySpeeds: dailySpeeds ?? this.dailySpeeds,
       weeklySpeeds: weeklySpeeds ?? this.weeklySpeeds,
       monthlySpeeds: monthlySpeeds ?? this.monthlySpeeds,
-      isLoading: isLoading ?? this.isLoading,
       history: history ?? this.history,
-      alertLevel: alertLevel ?? this.alertLevel,
+      filteredHistory: filteredHistory ?? this.filteredHistory,
+      selectedDate:
+          clearSelectedDate ? null : (selectedDate ?? this.selectedDate),
     );
   }
 
   @override
-  List<Object> get props => [
+  List<Object?> get props => [
+        isLoading,
         currentSpeed,
+        alertLevel,
         selectedPeriod,
         dailySpeeds,
         weeklySpeeds,
         monthlySpeeds,
-        isLoading,
         history,
-        alertLevel,
+        filteredHistory,
+        selectedDate,
       ];
 }
