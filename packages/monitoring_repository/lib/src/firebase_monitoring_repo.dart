@@ -52,16 +52,18 @@ class FirebaseMonitoringRepo implements MonitoringRepository {
         final Map<dynamic, dynamic> data = snapshot.value as Map;
 
         final list = data.values.map((item) {
-          print(item);
           return mapper(item as Map<dynamic, dynamic>);
         }).toList();
 
-        // ✅ Sort by timestamp — Firebase push tidak jamin urutan
+        // ✅ Sort by timestamp — Firebase push tidak selalu menghasilkan urutan kronologis.
         list.sort((a, b) {
-          if (a is MyWindSpeed && b is MyWindSpeed) {
-            return a.timestamp.compareTo(b.timestamp);
+          try {
+            final aTimestamp = (a as dynamic).timestamp as DateTime;
+            final bTimestamp = (b as dynamic).timestamp as DateTime;
+            return aTimestamp.compareTo(bTimestamp);
+          } catch (_) {
+            return 0;
           }
-          return 0;
         });
 
         return list;

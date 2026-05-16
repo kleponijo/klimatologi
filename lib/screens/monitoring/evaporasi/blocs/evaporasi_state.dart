@@ -3,34 +3,27 @@ part of 'evaporasi_bloc.dart';
 enum EvaporasiViewMode { period, customDate }
 
 class EvaporasiState extends Equatable {
-  final double currentValue; // nilai evaporasi realtime
-  final double temperature; // suhu (opsional dari firebase)
-  final double waterLevel; // tinggi air
+  final double currentValue;
+  final double temperature;
+  final double waterLevel;
   final String selectedPeriod;
-  final DateTime? selectedDate; // tanggal spesifik untuk custom date
-  final EvaporasiViewMode viewMode; // period vs custom date
+  final DateTime? selectedDate;
+  final EvaporasiViewMode viewMode;
 
-  final List<double> dailyValues; // untuk grafik evaporasi (default)
+  final List<double> dailyValues;
   final List<double> weeklyValues;
   final List<double> monthlyValues;
 
-  final List<double> dailyTemperatures; // untuk grafik suhu
+  final List<double> dailyTemperatures;
   final List<double> weeklyTemperatures;
   final List<double> monthlyTemperatures;
 
-  /// Label X-axis sesuai agregasi period
-  /// Contoh: Hari Ini => ["00:00","01:00",...]
-  /// Minggu Ini => ["Sen","Sel",...]
-  /// Bulan Ini => ["1","2",...]
   final List<String> chartLabels;
-
-  /// Data untuk list (timestamp asli dari firebase)
   final List<Evaporasi> listData;
-
   final List<Evaporasi> history;
   final String weatherStatus;
   final bool willRain;
-
+  final Evaporasi? currentData; // data realtime terbaru
   final bool isLoading;
 
   const EvaporasiState({
@@ -51,15 +44,18 @@ class EvaporasiState extends Equatable {
     this.history = const [],
     this.weatherStatus = 'Baik',
     this.willRain = false,
+    this.currentData,
     this.isLoading = true,
   });
 
+  // ✅ FIX: Tambah clearSelectedDate flag agar selectedDate bisa di-null-kan
   EvaporasiState copyWith({
     double? currentValue,
     double? temperature,
     double? waterLevel,
     String? selectedPeriod,
     DateTime? selectedDate,
+    bool clearSelectedDate = false, // ✅ tambahan flag reset
     EvaporasiViewMode? viewMode,
     List<double>? dailyValues,
     List<double>? weeklyValues,
@@ -72,6 +68,7 @@ class EvaporasiState extends Equatable {
     List<Evaporasi>? history,
     String? weatherStatus,
     bool? willRain,
+    Evaporasi? currentData,
     bool? isLoading,
   }) {
     return EvaporasiState(
@@ -79,7 +76,9 @@ class EvaporasiState extends Equatable {
       temperature: temperature ?? this.temperature,
       waterLevel: waterLevel ?? this.waterLevel,
       selectedPeriod: selectedPeriod ?? this.selectedPeriod,
-      selectedDate: selectedDate ?? this.selectedDate,
+      // ✅ FIX: jika clearSelectedDate=true, set null; jika selectedDate diberikan, pakai itu;
+      //         jika tidak, pertahankan yang lama
+      selectedDate: clearSelectedDate ? null : (selectedDate ?? this.selectedDate),
       viewMode: viewMode ?? this.viewMode,
       dailyValues: dailyValues ?? this.dailyValues,
       weeklyValues: weeklyValues ?? this.weeklyValues,
@@ -92,6 +91,7 @@ class EvaporasiState extends Equatable {
       history: history ?? this.history,
       weatherStatus: weatherStatus ?? this.weatherStatus,
       willRain: willRain ?? this.willRain,
+      currentData: currentData ?? this.currentData,
       isLoading: isLoading ?? this.isLoading,
     );
   }
@@ -115,7 +115,7 @@ class EvaporasiState extends Equatable {
         history,
         weatherStatus,
         willRain,
+        currentData,
         isLoading,
       ];
 }
-

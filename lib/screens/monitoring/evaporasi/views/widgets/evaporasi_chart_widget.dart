@@ -1,11 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
-const _tooltipBgColor = Colors.black87;
-
-
 class EvaporasiChartWidget extends StatelessWidget {
-
   final List<double> dailyValues;
   final List<double> dailyTemperatures;
   final String period;
@@ -21,32 +17,13 @@ class EvaporasiChartWidget extends StatelessWidget {
 
   double _safeValue(double value) {
     if (value.isNaN || value.isInfinite) return 0.0;
+
+    // anti spike
+    if (value > 1000 || value < -1000) return 0.0;
+
     return value < 0 ? 0.0 : value;
   }
 
-  double _minOf(List<double> values) {
-    if (values.isEmpty) return 0.0;
-    return values.map(_safeValue).reduce((a, b) => a < b ? a : b);
-  }
-
-  double _maxOf(List<double> values) {
-    if (values.isEmpty) return 0.0;
-    return values.map(_safeValue).reduce((a, b) => a > b ? a : b);
-  }
-
-  double _clampDouble(double v, double minV, double maxV) {
-    if (v.isNaN || v.isInfinite) return minV;
-    return v.clamp(minV, maxV);
-  }
-
-  List<FlSpot> _evapSpots() {
-    return dailyValues.asMap().entries.map((entry) {
-      return FlSpot(entry.key.toDouble(), _safeValue(entry.value));
-    }).toList();
-  }
-
-  /// Mapping suhu (°C) -> posisi Y internal agar bisa ditampilkan dalam chart
-  /// yang sama dengan skala evaporasi (mm).
   double _tempToEvapScale({
     required double temp,
     required double evapMin,
@@ -54,16 +31,13 @@ class EvaporasiChartWidget extends StatelessWidget {
     required double tempMin,
     required double tempMax,
   }) {
-    // Hindari pembagian nol
     final tempRange = (tempMax - tempMin);
     if (tempRange.abs() < 1e-9) return evapMin;
 
-    final normalized = (temp - tempMin) / tempRange; // 0..1 (secara ideal)
-    final scaled = evapMin + normalized * (evapMax - evapMin);
-    return scaled;
+    final normalized = (temp - tempMin) / tempRange;
+    return evapMin + normalized * (evapMax - evapMin);
   }
 
-  /// Reverse mapping Y internal (skala evaporasi) -> suhu asli (°C)
   double _evapScaleToTemp({
     required double yEvap,
     required double evapMin,
@@ -78,11 +52,45 @@ class EvaporasiChartWidget extends StatelessWidget {
     return tempMin + normalized * (tempMax - tempMin);
   }
 
+  double _xLabelInterval() {
+    if (period == 'Minggu Ini') return 1; // 7 label
+    if (period == 'Bulan Ini') return 5; // ~31 label tiap 5 hari
+    return 3; // 24 jam tiap 3 jam
+  }
+
   String _getBottomLabel(int index) {
     if (chartLabels.isEmpty || index < 0 || index >= chartLabels.length) {
-      return index.toString();
+      return '';
     }
     return chartLabels[index];
+  }
+
+  double _maxOf(List<double> values) {
+    if (values.isEmpty) return 0.0;
+    double max = values.first;
+    for (final v in values) {
+      if (v > max) max = v;
+    }
+    return max;
+  }
+
+  double _minOf(List<double> values) {
+    if (values.isEmpty) return 0.0;
+    double min = values.first;
+    for (final v in values) {
+      if (v < min) min = v;
+    }
+    return min;
+  }
+
+  List<FlSpot> _buildEvapSpots(double evapMin, double evapMax) {
+    if (dailyValues.isEmpty) return const [];
+
+    return dailyValues.asMap().entries.map((e) {
+      final x = e.key.toDouble();
+      final y = _safeValue(e.value).clamp(evapMin, evapMax);
+      return FlSpot(x, y);
+    }).toList();
   }
 
   @override
@@ -106,39 +114,24 @@ class EvaporasiChartWidget extends StatelessWidget {
       );
     }
 
-    // Hitung range masing-masing agar axis kanan (°C) masuk akal.
-    final evapMinRaw = _minOf(dailyValues);
+    const evapMin = 0.0;
+
     final evapMaxRaw = _maxOf(dailyValues);
     final tempMinRaw = _minOf(dailyTemperatures);
     final tempMaxRaw = _maxOf(dailyTemperatures);
 
-    // Evaporasi mm biasanya >= 0, kita pakai min 0 agar estetik.
-    final evapMin = 0.0;
-    final evapMax = _clampDouble(evapMaxRaw * 1.3, 10.0, 100.0);
-
-    // Suhu bisa saja 0 jika data kosong; tetap aman.
     final tempMin = tempMinRaw;
     final tempMax = tempMaxRaw == tempMinRaw ? tempMinRaw + 1 : tempMaxRaw;
 
-    final evapSpotsAll = _evapSpots();
+    // Evaporasi: batasi maksimum supaya tetap masuk akal
+    final evapMax = evapMaxRaw < 1e-9 ? 20.0 : (evapMaxRaw > 50 ? 50.0 : evapMaxRaw);
 
-    // Deduplicate X=hour agar garis tidak kelihatan dobel/acak.
-    final Map<int, double> evapByX = {};
-    for (final s in evapSpotsAll) {
-      evapByX[s.x.toInt()] = s.y;
-    }
+    final evapSpots = _buildEvapSpots(evapMin, evapMax);
 
-    final dedupEvapSpots = evapByX.entries
-        .toList()
-        ..sort((a, b) => a.key.compareTo(b.key));
-
-    final Map<int, double> tempByX = {};
-    for (final entry in dailyTemperatures.asMap().entries) {
-      tempByX[entry.key] = _safeValue(entry.value);
-    }
-    final tempSpots = tempByX.entries.map((entry) {
+    // Suhu diproyeksikan ke skala evaporasi
+    final tempSpots = dailyTemperatures.asMap().entries.map((entry) {
       final x = entry.key.toDouble();
-      final temp = entry.value;
+      final temp = _safeValue(entry.value);
       final y = _tempToEvapScale(
         temp: temp,
         evapMin: evapMin,
@@ -146,18 +139,11 @@ class EvaporasiChartWidget extends StatelessWidget {
         tempMin: tempMin,
         tempMax: tempMax,
       );
-      return FlSpot(x, y);
+      return FlSpot(x, y.clamp(evapMin, evapMax));
     }).toList();
 
-    final evapSpots = dedupEvapSpots
-        .map((e) => FlSpot(e.key.toDouble(), e.value))
-        .toList();
-
-    if (evapSpots.isEmpty && tempSpots.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    double _getRightTitle(double y) {
+    double getRightTitle(double y) {
+      if (tempSpots.isEmpty) return tempMin;
       return _evapScaleToTemp(
         yEvap: y,
         evapMin: evapMin,
@@ -167,55 +153,91 @@ class EvaporasiChartWidget extends StatelessWidget {
       );
     }
 
+    final xInterval = _xLabelInterval().toInt().clamp(1, 1000);
 
     final chart = LineChart(
       LineChartData(
         minY: evapMin,
         maxY: evapMax,
-        gridData: FlGridData(show: false),
+        minX: -0.5,
+        maxX: (chartLabels.isNotEmpty ? chartLabels.length - 1 : 23)
+                .toDouble() +
+            0.5,
+        clipData: const FlClipData.all(),
+        gridData: FlGridData(
+          show: true,
+          drawVerticalLine: false,
+          horizontalInterval: (evapMax - evapMin) / 4,
+          getDrawingHorizontalLine: (value) => FlLine(
+            color: Colors.grey.shade200,
+            strokeWidth: 1,
+          ),
+        ),
         borderData: FlBorderData(show: false),
+        extraLinesData: const ExtraLinesData(horizontalLines: []),
         titlesData: FlTitlesData(
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
-              reservedSize: 32,
-              interval: 1,
+              reservedSize: 36,
+              interval: xInterval.toDouble(),
               getTitlesWidget: (value, meta) {
                 final index = value.toInt();
+                if (value != value.roundToDouble()) return const SizedBox();
+                if (index < 0 || index >= chartLabels.length) {
+                  return const SizedBox();
+                }
+                if (index % xInterval != 0) return const SizedBox();
+
                 return Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Text(
                     _getBottomLabel(index),
-                    style: const TextStyle(color: Colors.grey, fontSize: 10),
+                    style: const TextStyle(color: Colors.grey, fontSize: 9),
                   ),
                 );
               },
             ),
           ),
           leftTitles: AxisTitles(
+            axisNameWidget: const Text(
+              'mm',
+              style: TextStyle(color: Colors.blueGrey, fontSize: 10),
+            ),
+            axisNameSize: 16,
             sideTitles: SideTitles(
               showTitles: true,
-              reservedSize: 40,
+              reservedSize: 36,
               interval: (evapMax - evapMin) / 4,
               getTitlesWidget: (value, meta) {
-                final v = value;
                 return Text(
-                  '${v.toStringAsFixed(0)}',
-                  style: const TextStyle(color: Colors.blueGrey, fontSize: 10),
+                  value.toStringAsFixed(0),
+                  style: const TextStyle(
+                    color: Colors.blueGrey,
+                    fontSize: 10,
+                  ),
                 );
               },
             ),
           ),
           rightTitles: AxisTitles(
+            axisNameWidget: const Text(
+              '°C',
+              style: TextStyle(color: Colors.brown, fontSize: 10),
+            ),
+            axisNameSize: 16,
             sideTitles: SideTitles(
               showTitles: true,
-              reservedSize: 40,
+              reservedSize: 36,
               interval: (evapMax - evapMin) / 4,
               getTitlesWidget: (value, meta) {
-                final t = _getRightTitle(value);
+                final t = getRightTitle(value);
                 return Text(
-                  '${t.toStringAsFixed(0)}',
-                  style: const TextStyle(color: Colors.brown, fontSize: 10),
+                  t.toStringAsFixed(0),
+                  style: const TextStyle(
+                    color: Colors.brown,
+                    fontSize: 10,
+                  ),
                 );
               },
             ),
@@ -227,24 +249,36 @@ class EvaporasiChartWidget extends StatelessWidget {
         lineTouchData: LineTouchData(
           handleBuiltInTouches: true,
           touchTooltipData: LineTouchTooltipData(
-            getTooltipItems: (spots) {
+            tooltipPadding: const EdgeInsets.all(8),
+            getTooltipItems: (touchedSpots) {
+              if (touchedSpots.isEmpty) return const <LineTooltipItem>[];
 
+              final items = <LineTooltipItem>[];
+              for (int i = 0; i < touchedSpots.length; i++) {
+                final spot = touchedSpots[i];
+                final y = _safeValue(spot.y).clamp(evapMin, evapMax);
 
-              return spots.map((spot) {
-                // fl_chart tidak mengekspos warna ke tooltip spot pada tipe LineBarSpot
-                // jadi kita tampilkan dua informasi sekaligus untuk memudahkan dosen.
-                final temp = _evapScaleToTemp(
-                  yEvap: spot.y,
-                  evapMin: evapMin,
-                  evapMax: evapMax,
-                  tempMin: tempMin,
-                  tempMax: tempMax,
-                );
-                return LineTooltipItem(
-                  'Evap: ${spot.y.toStringAsFixed(1)} mm\nSuhu: ${temp.toStringAsFixed(1)} °C',
-                  const TextStyle(color: Colors.white, fontSize: 12),
-                );
-              }).toList();
+                if (i == 0) {
+                  items.add(LineTooltipItem(
+                    'Evap: ${y.toStringAsFixed(1)} mm',
+                    const TextStyle(color: Colors.white, fontSize: 12),
+                  ));
+                } else {
+                  final tempOnly = _evapScaleToTemp(
+                    yEvap: y,
+                    evapMin: evapMin,
+                    evapMax: evapMax,
+                    tempMin: tempMin,
+                    tempMax: tempMax,
+                  );
+
+                  items.add(LineTooltipItem(
+                    'Suhu: ${tempOnly.toStringAsFixed(1)} °C',
+                    const TextStyle(color: Colors.white, fontSize: 12),
+                  ));
+                }
+              }
+              return items;
             },
           ),
         ),
@@ -253,36 +287,32 @@ class EvaporasiChartWidget extends StatelessWidget {
             LineChartBarData(
               spots: evapSpots,
               isCurved: true,
+              curveSmoothness: 0.3,
               color: Colors.blue.shade700,
-              barWidth: 3,
+              barWidth: 2.5,
               dotData: FlDotData(show: false),
               belowBarData: BarAreaData(
                 show: true,
-                gradient: LinearGradient(
-                  colors: [
-                    Colors.blue.withAlpha(64),
-                    Colors.blue.withAlpha(13),
-                  ],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
+                color: Colors.blue.shade100.withOpacity(0.3),
               ),
             ),
           if (tempSpots.isNotEmpty)
             LineChartBarData(
               spots: tempSpots,
               isCurved: true,
+              curveSmoothness: 0.3,
               color: Colors.orange.shade700,
-              barWidth: 3,
+              barWidth: 2.5,
               dotData: FlDotData(show: false),
+              belowBarData: BarAreaData(show: false),
             ),
         ],
       ),
     );
 
     return Container(
-      height: 340,
-      padding: const EdgeInsets.all(12),
+      height: 400,
+      padding: const EdgeInsets.fromLTRB(8, 12, 8, 4),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(25),
@@ -296,22 +326,49 @@ class EvaporasiChartWidget extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Legend
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               Row(
                 children: [
-                  Container(width: 10, height: 10, decoration: BoxDecoration(color: Colors.blue.shade700, shape: BoxShape.circle)),
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade700,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
                   const SizedBox(width: 6),
-                  const Text('Evaporasi (mm)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.blueGrey)),
+                  const Text(
+                    'Evaporasi (mm)',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.blueGrey,
+                    ),
+                  ),
                 ],
               ),
               Row(
                 children: [
-                  Container(width: 10, height: 10, decoration: BoxDecoration(color: Colors.orange.shade700, shape: BoxShape.circle)),
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade700,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
                   const SizedBox(width: 6),
-                  const Text('Suhu (°C)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.brown)),
+                  const Text(
+                    'Suhu (°C)',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.brown,
+                    ),
+                  ),
                 ],
               ),
             ],
@@ -319,7 +376,7 @@ class EvaporasiChartWidget extends StatelessWidget {
           const SizedBox(height: 8),
           Expanded(
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(25),
+              borderRadius: BorderRadius.circular(16),
               child: chart,
             ),
           ),

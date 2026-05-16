@@ -16,15 +16,17 @@ class TimeSeriesMapper {
       final time = getTime(item);
 
       if (_isSameDay(time, now)) {
-        final hour = time.hour;
-        sums[hour] += getValue(item);
-        counts[hour]++;
+        final hour = time.toLocal().hour; // ✅ FIX: pastikan pakai local hour
+        if (hour >= 0 && hour < 24) {
+          sums[hour] += getValue(item);
+          counts[hour]++;
+        }
       }
     }
 
     return List.generate(24, (i) {
       if (counts[i] == 0) return 0;
-      return sums[i] / counts[i]; // 🔥 average, bukan overwrite
+      return sums[i] / counts[i];
     });
   }
 
@@ -46,12 +48,14 @@ class TimeSeriesMapper {
         DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day);
 
     for (final item in data) {
-      final time = getTime(item);
+      final time = getTime(item).toLocal(); // ✅ FIX: konversi ke local
 
-      if (time.isAfter(startOfWeek)) {
+      if (!time.isBefore(startOfWeek)) {
         final index = time.weekday - 1;
-        sums[index] += getValue(item);
-        counts[index]++;
+        if (index >= 0 && index < 7) {
+          sums[index] += getValue(item);
+          counts[index]++;
+        }
       }
     }
 
@@ -76,12 +80,14 @@ class TimeSeriesMapper {
     final counts = List<int>.filled(daysInMonth, 0);
 
     for (final item in data) {
-      final time = getTime(item);
+      final time = getTime(item).toLocal(); // ✅ FIX: konversi ke local
 
       if (time.month == now.month && time.year == now.year) {
         final index = time.day - 1;
-        sums[index] += getValue(item);
-        counts[index]++;
+        if (index >= 0 && index < daysInMonth) {
+          sums[index] += getValue(item);
+          counts[index]++;
+        }
       }
     }
 
@@ -91,7 +97,7 @@ class TimeSeriesMapper {
     });
   }
 
-/// =========================
+  /// =========================
   /// 📅 SPECIFIC DATE (24 JAM - TANGGAL KHUSUS)
   /// =========================
   static List<double> toSpecificDate<T>({
@@ -107,9 +113,11 @@ class TimeSeriesMapper {
       final time = getTime(item);
 
       if (_isSameDay(time, targetDate)) {
-        final hour = time.hour;
-        sums[hour] += getValue(item);
-        counts[hour]++;
+        final hour = time.toLocal().hour; // ✅ FIX: pastikan pakai local hour
+        if (hour >= 0 && hour < 24) {
+          sums[hour] += getValue(item);
+          counts[hour]++;
+        }
       }
     }
 
@@ -120,21 +128,23 @@ class TimeSeriesMapper {
   }
 
   /// =========================
-  /// 🧠 HELPER
+  /// 🧠 HELPER — Bandingkan tanggal secara LOCAL (bukan UTC)
+  /// ✅ FIX: Firebase datetime "2026-05-14 01:25:25" di-parse sebagai local time,
+  /// jadi perbandingan harus pakai local time juga agar tidak mismatch timezone
   /// =========================
-  /// Sinkronisasi tanggal untuk menghindari mismatch akibat timezone (UTC vs local).
-  /// Kita bandingkan berdasarkan UTC.
   static bool _isSameDay(DateTime a, DateTime b) {
-    final au = a.toUtc();
-    final bu = b.toUtc();
-    return au.year == bu.year && au.month == bu.month && au.day == bu.day;
+    final al = a.toLocal();
+    final bl = b.toLocal();
+    return al.year == bl.year && al.month == bl.month && al.day == bl.day;
   }
 
-
+  /// =========================
+  /// 📈 SMOOTH (moving average 3 titik)
+  /// =========================
   static List<double> smooth(List<double> data) {
     if (data.length < 3) return data;
 
-    List<double> result = [];
+    final List<double> result = [];
 
     for (int i = 0; i < data.length; i++) {
       if (i == 0 || i == data.length - 1) {

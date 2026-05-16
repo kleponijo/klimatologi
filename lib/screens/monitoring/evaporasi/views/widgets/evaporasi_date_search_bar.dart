@@ -21,6 +21,9 @@ class _EvaporasiDateSearchBarState extends State<EvaporasiDateSearchBar> {
   void initState() {
     super.initState();
     _controller = TextEditingController(text: widget.initialQuery);
+    _controller.addListener(() {
+      setState(() {});
+    });
   }
 
   @override
@@ -39,7 +42,10 @@ class _EvaporasiDateSearchBarState extends State<EvaporasiDateSearchBar> {
         suffixIcon: _controller.text.isNotEmpty
             ? IconButton(
                 icon: const Icon(Icons.clear),
-                onPressed: () => setState(() => _controller.clear()),
+                onPressed: () {
+                  _controller.clear();
+                  widget.onQueryChanged('');
+                },
               )
             : null,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -47,7 +53,6 @@ class _EvaporasiDateSearchBarState extends State<EvaporasiDateSearchBar> {
       ),
       onChanged: (v) {
         widget.onQueryChanged(v);
-        setState(() {});
       },
     );
   }

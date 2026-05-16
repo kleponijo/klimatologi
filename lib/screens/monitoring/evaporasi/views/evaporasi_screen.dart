@@ -101,8 +101,10 @@ class _EvaporasiScreenState extends State<EvaporasiScreen> {
                   },
                 ),
                 const SizedBox(height: 20),
-                // List data (mengikuti chart: period vs custom date)
-                _evaporasiList(state),
+                // ✅ FIX: Gunakan BlocBuilder agar list reaktif terhadap perubahan state
+                BlocBuilder<EvaporasiBloc, EvaporasiState>(
+                  builder: (context, state) => _evaporasiList(state),
+                ),
                 const SizedBox(height: 10),
                 ExportPdfButton(
                   onExport: () => PdfExportService.evaporasi(
@@ -121,9 +123,9 @@ class _EvaporasiScreenState extends State<EvaporasiScreen> {
     );
   }
 
-  /// =========================
-  /// 🔥 MAIN CARD (EVAPORASI)
-  /// =========================
+  // =========================
+  // 🔥 MAIN CARD (EVAPORASI)
+  // =========================
   Widget _mainCard(EvaporasiState state) {
     return Container(
       width: double.infinity,
@@ -155,9 +157,9 @@ class _EvaporasiScreenState extends State<EvaporasiScreen> {
     );
   }
 
-  /// =========================
-  /// 📊 INFO KECIL (SUHU & AIR)
-  /// =========================
+  // =========================
+  // 📊 INFO KECIL (SUHU & AIR)
+  // =========================
   Widget _infoRow(EvaporasiState state) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -203,9 +205,9 @@ class _EvaporasiScreenState extends State<EvaporasiScreen> {
     );
   }
 
-  /// =========================
-  /// 📈 STATUS CARD
-  /// =========================
+  // =========================
+  // 📈 STATUS CARD
+  // =========================
   Widget _statusCard(EvaporasiState state) {
     Color statusColor;
     IconData statusIcon;
@@ -226,7 +228,6 @@ class _EvaporasiScreenState extends State<EvaporasiScreen> {
         break;
     }
 
-    // Teks peringatan khusus evaporasi (normal/sedang/tinggi)
     final String warningText;
     if (state.weatherStatus == 'Baik') {
       warningText = 'Normal — evaporasi stabil, risiko dampak rendah.';
@@ -286,21 +287,85 @@ class _EvaporasiScreenState extends State<EvaporasiScreen> {
     );
   }
 
-  /// =========================
-  /// 🧾 LIST DATA EVAPORASI
-  /// =========================
+  // =========================
+  // 🧾 LIST DATA EVAPORASI — ✅ FIXED FILTER
+  // =========================
   Widget _evaporasiList(EvaporasiState state) {
-    final data = state.viewMode == EvaporasiViewMode.customDate &&
-            state.selectedDate != null
-        ? state.history
-            .where((e) =>
-                e.timestamp.year == state.selectedDate!.year &&
-                e.timestamp.month == state.selectedDate!.month &&
-                e.timestamp.day == state.selectedDate!.day)
-            .toList()
-        : state.history;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
 
-    if (data.isEmpty) {
+
+    // ✅ Filter list sesuai mode & periode yang aktif
+    List filteredData;
+
+    if (state.viewMode == EvaporasiViewMode.customDate &&
+        state.selectedDate != null) {
+      // Mode custom date: tampilkan hanya data di tanggal yang dipilih
+      final sel = DateTime(
+        state.selectedDate!.year,
+        state.selectedDate!.month,
+        state.selectedDate!.day,
+      );
+      filteredData = state.history
+          .where((e) {
+            final d =
+                DateTime(e.timestamp.year, e.timestamp.month, e.timestamp.day);
+            return d == sel;
+          })
+          .toList()
+          .reversed
+          .toList();
+    } else if (state.selectedPeriod == 'Hari Ini') {
+      // Mode Hari Ini: hanya data hari ini
+      filteredData = state.history
+          .where((e) {
+            final d =
+                DateTime(e.timestamp.year, e.timestamp.month, e.timestamp.day);
+            return d == today;
+          })
+          .toList()
+          .reversed
+          .toList();
+    } else if (state.selectedPeriod == 'Minggu Ini') {
+      // Mode Minggu Ini: 7 hari ke belakang dari hari ini
+      final weekStart = today.subtract(const Duration(days: 6));
+      filteredData = state.history
+          .where((e) {
+            final d =
+                DateTime(e.timestamp.year, e.timestamp.month, e.timestamp.day);
+            return !d.isBefore(weekStart) && !d.isAfter(today);
+          })
+          .toList()
+          .reversed
+          .toList();
+    } else if (state.selectedPeriod == 'Bulan Ini') {
+      // Mode Bulan Ini: hanya data bulan & tahun yang sama
+      filteredData = state.history
+          .where((e) =>
+              e.timestamp.year == now.year && e.timestamp.month == now.month)
+          .toList()
+          .reversed
+          .toList();
+    } else {
+      filteredData = state.history.reversed.toList();
+    }
+
+    // ✅ Header label sesuai mode
+    final String listTitle;
+    if (state.viewMode == EvaporasiViewMode.customDate &&
+        state.selectedDate != null) {
+      listTitle = 'Data ${_formatDateInfo(state.selectedDate!)}';
+    } else if (state.selectedPeriod == 'Hari Ini') {
+      listTitle = 'Data Hari Ini';
+    } else if (state.selectedPeriod == 'Minggu Ini') {
+      listTitle = 'Data Minggu Ini';
+    } else if (state.selectedPeriod == 'Bulan Ini') {
+      listTitle = 'Data Bulan Ini';
+    } else {
+      listTitle = 'List Data Evaporasi';
+    }
+
+    if (filteredData.isEmpty) {
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.all(16),
@@ -308,9 +373,20 @@ class _EvaporasiScreenState extends State<EvaporasiScreen> {
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
         ),
-        child: const Text(
-          'Belum ada data evaporasi',
-          style: TextStyle(color: Colors.grey),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              listTitle,
+              style:
+                  const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Belum ada data untuk periode ini',
+              style: TextStyle(color: Colors.grey),
+            ),
+          ],
         ),
       );
     }
@@ -325,17 +401,17 @@ class _EvaporasiScreenState extends State<EvaporasiScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'List Data Evaporasi',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+          Text(
+            listTitle,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
           SizedBox(
             height: 280,
             child: ListView.separated(
-              itemCount: data.length,
+              itemCount: filteredData.length,
               itemBuilder: (context, index) {
-                final e = data[index];
+                final e = filteredData[index];
                 final dateLabel =
                     '${DateFormat('dd MMM yyyy', 'id_ID').format(e.timestamp)} • ${DateFormat('HH:mm:ss', 'id_ID').format(e.timestamp)}';
 
@@ -407,9 +483,6 @@ class _EvaporasiScreenState extends State<EvaporasiScreen> {
     );
   }
 
-  /// =========================
-  /// 📅 FORMAT DATE INFO (for custom date display)
-  /// =========================
   String _statusTextForHistory(double evaporasi) {
     if (evaporasi <= 5.0) return 'Status: Normal';
     if (evaporasi <= 10.0) return 'Status: Sedang';
@@ -423,9 +496,7 @@ class _EvaporasiScreenState extends State<EvaporasiScreen> {
   }
 
   String _formatDateInfo(DateTime date) {
-
     final now = DateTime.now();
-
     final today = DateTime(now.year, now.month, now.day);
     final yesterday = today.subtract(const Duration(days: 1));
     final selected = DateTime(date.year, date.month, date.day);
