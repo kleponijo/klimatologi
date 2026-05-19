@@ -71,7 +71,10 @@ class _DashboardChartsState extends State<DashboardCharts> {
 
   void _onPeriodChanged(String p) {
     setState(() => _period = p);
+    final now = DateTime.now();
+
     context.read<WindSpeedBloc>().add(WindSpeedPeriodChanged(p));
+<<<<<<< Updated upstream
     final now = DateTime.now();
     DateTime startDate;
     DateTime endDate = now;
@@ -91,7 +94,31 @@ class _DashboardChartsState extends State<DashboardCharts> {
     context.read<EvaporasiBloc>().add(
       EvaporasiDateRangeChanged(startDate: startDate, endDate: endDate),
     );
+=======
+    context.read<EvaporasiBloc>().add(
+          EvaporasiDateRangeChanged(
+            startDate: _evaporasiStartOfPeriod(p, now),
+            endDate: _evaporasiEndOfPeriod(now),
+          ),
+        );
+>>>>>>> Stashed changes
     // AtmosphericBloc tidak punya period (hanya realtime)
+  }
+
+  DateTime _evaporasiStartOfPeriod(String period, DateTime now) {
+    final today = DateTime(now.year, now.month, now.day);
+    if (period == "Minggu Ini") {
+      final monday = today.subtract(Duration(days: today.weekday - 1));
+      return monday;
+    }
+    if (period == "Bulan Ini") {
+      return DateTime(today.year, today.month, 1);
+    }
+    return today;
+  }
+
+  DateTime _evaporasiEndOfPeriod(DateTime now) {
+    return DateTime(now.year, now.month, now.day);
   }
 
   @override
