@@ -46,6 +46,7 @@ class SensorGrid extends StatelessWidget {
                     ? '—'
                     : state.currentValue.toStringAsFixed(1),
                 unit: 'mm',
+                status: state.currentData?.status,
                 isLoading: state.isLoading,
               ),
             ),
@@ -79,6 +80,7 @@ class SensorCard extends StatelessWidget {
   final String label;
   final String value;
   final String unit;
+  final String? status;
   final bool isLoading;
 
   const SensorCard({
@@ -90,6 +92,7 @@ class SensorCard extends StatelessWidget {
     required this.label,
     required this.value,
     required this.unit,
+    this.status,
     this.isLoading = false,
   });
 
@@ -162,6 +165,32 @@ class SensorCard extends StatelessWidget {
                       ),
                     ],
                   ),
+            if (status != null && !isLoading) ...[
+              const SizedBox(height: 5),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: (status == 'Tinggi'
+                          ? Colors.red.shade50
+                          : (status == 'Rendah' ? Colors.blue.shade50 : Colors.green.shade50)),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      status!,
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                        color: (status == 'Tinggi'
+                            ? Colors.red.shade600
+                            : (status == 'Rendah' ? Colors.blue.shade600 : Colors.green.shade600)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 4),
             // Label
             Text(

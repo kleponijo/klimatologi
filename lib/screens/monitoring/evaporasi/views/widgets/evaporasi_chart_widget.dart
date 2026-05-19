@@ -86,11 +86,13 @@ class EvaporasiChartWidget extends StatelessWidget {
   List<FlSpot> _buildEvapSpots(double evapMin, double evapMax) {
     if (dailyValues.isEmpty) return const [];
 
-    return dailyValues.asMap().entries.map((e) {
-      final x = e.key.toDouble();
-      final y = _safeValue(e.value).clamp(evapMin, evapMax);
-      return FlSpot(x, y);
-    }).toList();
+    return dailyValues.asMap().entries
+        .where((e) => e.value >= 0) // Hanya tampilkan data yang ada / valid
+        .map((e) {
+          final x = e.key.toDouble();
+          final y = _safeValue(e.value).clamp(evapMin, evapMax);
+          return FlSpot(x, y);
+        }).toList();
   }
 
   @override
@@ -120,27 +122,32 @@ class EvaporasiChartWidget extends StatelessWidget {
     final tempMinRaw = _minOf(dailyTemperatures);
     final tempMaxRaw = _maxOf(dailyTemperatures);
 
-    final tempMin = tempMinRaw;
-    final tempMax = tempMaxRaw == tempMinRaw ? tempMinRaw + 1 : tempMaxRaw;
+    // ── FIXED COORD SYSTEM SUHU MALFUNCTION ──
+    // Jika data suhu flat 0 atau sangat rendah, kita kunci range visualnya dari 0 sampai 40 derajat Celsius
+    final tempMin = tempMaxRaw < 2.0 ? 0.0 : tempMinRaw;
+    final tempMax = tempMaxRaw < 2.0 ? 40.0 : (tempMaxRaw == tempMinRaw ? tempMinRaw + 1 : tempMaxRaw);
 
-    // Evaporasi: batasi maksimum supaya tetap masuk akal
-    final evapMax = evapMaxRaw < 1e-9 ? 20.0 : (evapMaxRaw > 50 ? 50.0 : evapMaxRaw);
+    // Evaporasi: Berikan buffer / ruang kosong (+ 20%) di bagian atas grafik agar tidak terpotong rata
+    final double evapMaxBase = evapMaxRaw < 1e-9 ? 20.0 : (evapMaxRaw > 50 ? 50.0 : evapMaxRaw);
+    final evapMax = evapMaxBase * 1.2; // Tambahan padding atas 20%
 
     final evapSpots = _buildEvapSpots(evapMin, evapMax);
 
     // Suhu diproyeksikan ke skala evaporasi
-    final tempSpots = dailyTemperatures.asMap().entries.map((entry) {
-      final x = entry.key.toDouble();
-      final temp = _safeValue(entry.value);
-      final y = _tempToEvapScale(
-        temp: temp,
-        evapMin: evapMin,
-        evapMax: evapMax,
-        tempMin: tempMin,
-        tempMax: tempMax,
-      );
-      return FlSpot(x, y.clamp(evapMin, evapMax));
-    }).toList();
+    final tempSpots = dailyTemperatures.asMap().entries
+        .where((entry) => entry.value >= 0) // Hanya tampilkan data yang ada / valid
+        .map((entry) {
+          final x = entry.key.toDouble();
+          final temp = _safeValue(entry.value);
+          final y = _tempToEvapScale(
+            temp: temp,
+            evapMin: evapMin,
+            evapMax: evapMax,
+            tempMin: tempMin,
+            tempMax: tempMax,
+          );
+          return FlSpot(x, y.clamp(evapMin, evapMax));
+        }).toList();
 
     double getRightTitle(double y) {
       if (tempSpots.isEmpty) return tempMin;
@@ -163,7 +170,8 @@ class EvaporasiChartWidget extends StatelessWidget {
         maxX: (chartLabels.isNotEmpty ? chartLabels.length - 1 : 23)
                 .toDouble() +
             0.5,
-        clipData: const FlClipData.all(),
+        // Diubah ke clipData false agar lengkungan ujung titik teratas tidak ter-crop kaku
+        clipData: const FlClipData.none(),
         gridData: FlGridData(
           show: true,
           drawVerticalLine: false,
@@ -232,8 +240,10 @@ class EvaporasiChartWidget extends StatelessWidget {
               interval: (evapMax - evapMin) / 4,
               getTitlesWidget: (value, meta) {
                 final t = getRightTitle(value);
+                // Menampilkan label dengan 1 angka desimal jika nilainya kecil, 
+                // atau bulat murni jika data menggunakan fallback sistem (0-40)
                 return Text(
-                  t.toStringAsFixed(0),
+                  t > 5 ? t.toStringAsFixed(0) : t.toStringAsFixed(1),
                   style: const TextStyle(
                     color: Colors.brown,
                     fontSize: 10,
@@ -249,36 +259,48 @@ class EvaporasiChartWidget extends StatelessWidget {
         lineTouchData: LineTouchData(
           handleBuiltInTouches: true,
           touchTooltipData: LineTouchTooltipData(
-            tooltipPadding: const EdgeInsets.all(8),
+            tooltipPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            showOnTopOfTheChartBoxArea: true,
+            fitInsideHorizontally: true,
+            fitInsideVertically: true,
             getTooltipItems: (touchedSpots) {
               if (touchedSpots.isEmpty) return const <LineTooltipItem>[];
 
-              final items = <LineTooltipItem>[];
-              for (int i = 0; i < touchedSpots.length; i++) {
-                final spot = touchedSpots[i];
-                final y = _safeValue(spot.y).clamp(evapMin, evapMax);
+              // Ambil spot pertama yang disentuh untuk mencari index X
+              final firstSpot = touchedSpots.first;
+              final idx = firstSpot.x.round();
 
-                if (i == 0) {
-                  items.add(LineTooltipItem(
-                    'Evap: ${y.toStringAsFixed(1)} mm',
-                    const TextStyle(color: Colors.white, fontSize: 12),
-                  ));
-                } else {
-                  final tempOnly = _evapScaleToTemp(
-                    yEvap: y,
-                    evapMin: evapMin,
-                    evapMax: evapMax,
-                    tempMin: tempMin,
-                    tempMax: tempMax,
-                  );
-
-                  items.add(LineTooltipItem(
-                    'Suhu: ${tempOnly.toStringAsFixed(1)} °C',
-                    const TextStyle(color: Colors.white, fontSize: 12),
-                  ));
-                }
+              // Validasi batas index
+              if (idx < 0 || idx >= dailyValues.length) {
+                return const <LineTooltipItem>[];
               }
-              return items;
+
+              // Ambil data evaporasi dan suhu langsung dari array data berdasarkan index X
+              final evapVal = dailyValues[idx];
+              final tempVal = idx < dailyTemperatures.length ? dailyTemperatures[idx] : 0.0;
+
+              final tooltipText = 'Evap: ${evapVal.toStringAsFixed(1)} mm\n'
+                                  'Suhu: ${tempVal.toStringAsFixed(1)} °C';
+
+              return touchedSpots.asMap().entries.map((entry) {
+                final index = entry.key;
+                if (index == 0) {
+                  return LineTooltipItem(
+                    tooltipText,
+                    const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      height: 1.4,
+                    ),
+                  );
+                } else {
+                  return const LineTooltipItem(
+                    '',
+                    TextStyle(color: Colors.transparent, fontSize: 0),
+                  );
+                }
+              }).toList();
             },
           ),
         ),
@@ -322,8 +344,6 @@ class EvaporasiChartWidget extends StatelessWidget {
         children: [
           const Text(
             '',
-            // NOTE: placeholder; judul seragam dengan AtmosphericScreen.
-            // Jika ingin judul Evaporasi, ganti sesuai kebutuhan.
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
@@ -331,7 +351,11 @@ class EvaporasiChartWidget extends StatelessWidget {
             height: 220,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(16),
-              child: chart,
+              // Mengubah ClipBehavior ke none agar garis di titik maksimum visual luar aman tidak ter-crop
+              child: Padding(
+                padding: const EdgeInsets.only(top: 10, right: 4),
+                child: chart,
+              ),
             ),
           ),
           const SizedBox(height: 12),
@@ -379,4 +403,3 @@ class EvaporasiChartWidget extends StatelessWidget {
     );
   }
 }
-

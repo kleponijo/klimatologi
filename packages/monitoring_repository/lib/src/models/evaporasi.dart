@@ -4,12 +4,16 @@ class Evaporasi {
   final double evaporasi;
   final double suhu;
   final double tinggiAir;
+  final double acuanPagi;
+  final String status;
   final DateTime timestamp;
 
   Evaporasi({
     required this.evaporasi,
     required this.suhu,
     required this.tinggiAir,
+    required this.acuanPagi,
+    required this.status,
     required this.timestamp,
   });
 
@@ -17,6 +21,8 @@ class Evaporasi {
     evaporasi: 0.0,
     suhu: 0.0,
     tinggiAir: 0.0,
+    acuanPagi: 0.0,
+    status: "Normal",
     timestamp: DateTime.fromMillisecondsSinceEpoch(0),
   );
 
@@ -56,7 +62,7 @@ class Evaporasi {
           json['temp'] ??
           json['temperature'],
     );
-    final suhuVal = (suhuRaw < -50 || suhuRaw > 100) ? 0.0 : suhuRaw;
+    final suhuVal = (suhuRaw < -50 || suhuRaw > 100) ? -1.0 : suhuRaw;
 
     // ── Tinggi Air (cm) ──────────────────────────────────
     final tinggiVal = toDoubleSafe(
@@ -75,6 +81,14 @@ class Evaporasi {
         (evaporasiVal < 0 || evaporasiVal > 50) ? 0.0 : evaporasiVal;
     final tinggiFiltered =
         (tinggiVal < 0 || tinggiVal > 100) ? 0.0 : tinggiVal;
+
+    // ── Acuan Pagi (cm) ──────────────────────────────────
+    final acuanPagiVal = toDoubleSafe(
+      json['acuan_pagi_cm'] ?? json['acuan_pagi'] ?? 0.0,
+    );
+
+    // ── Status ───────────────────────────────────────────
+    final statusVal = json['status']?.toString() ?? "Normal";
 
     // ── Parse Timestamp ──────────────────────────────────
     // FIX: Tambahkan offset +07:00 (WIB) jika string tidak punya info timezone,
@@ -157,6 +171,8 @@ class Evaporasi {
       evaporasi: evaporasiFiltered,
       suhu: suhuVal,
       tinggiAir: tinggiFiltered,
+      acuanPagi: acuanPagiVal,
+      status: statusVal,
       timestamp: timestamp,
     );
   }

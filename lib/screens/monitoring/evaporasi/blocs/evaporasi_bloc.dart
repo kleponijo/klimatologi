@@ -44,7 +44,6 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
         (json) => Evaporasi.fromJson(json),
       ),
     )..sort((a, b) => a.timestamp.compareTo(b.timestamp));
-
     final now = DateTime.now();
 
     // Default: tampilkan hari ini (per jam)
@@ -88,10 +87,9 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
     await _subscription?.cancel();
     _subscription = _repository
         .getSensorStream(
-          'Monitoring',
+          'Monitoring/realtime',
           (json) {
-            final f = Map<dynamic, dynamic>.from(json)..remove('History');
-            return Evaporasi.fromJson(f);
+            return Evaporasi.fromJson(json);
           },
         )
         .listen((data) => add(_EvaporasiRealtimeUpdated(data)));
@@ -104,8 +102,6 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
     _EvaporasiRealtimeUpdated event,
     Emitter<EvaporasiState> emit,
   ) {
-    if (event.data.timestamp.millisecondsSinceEpoch == 0) return;
-
     final updatedHistory = List<Evaporasi>.from(state.history);
     final dupIdx = updatedHistory.indexWhere(
       (e) => e.timestamp.toUtc() == event.data.timestamp.toUtc(),
@@ -117,26 +113,45 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
     }
     updatedHistory.sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
-    // Update chart jika sedang tampil hari ini per jam
-    List<double> updatedChart = state.chartValues;
-    List<double> updatedTemp  = state.chartTemperatures;
+    // Regenerasikan data chart secara dinamis agar selalu sinkron dengan data real-time
+    List<double> updatedChart;
+    List<double> updatedTemp;
+    List<String> updatedLabels = state.chartLabels;
 
-    if (state.isSingleDay) {
-      final eventTime = event.data.timestamp.toLocal();
-      final now = DateTime.now();
-      final isToday = eventTime.year == now.year &&
-          eventTime.month == now.month &&
-          eventTime.day == now.day;
+    final isSingle = _isSameDay(state.startDate, state.endDate);
 
-      if (isToday && dupIdx < 0) {
-        updatedChart = List<double>.from(state.chartValues);
-        updatedTemp  = List<double>.from(state.chartTemperatures);
-        final hour = eventTime.hour;
-        if (hour >= 0 && hour < 24) {
-          updatedChart[hour] = event.data.evaporasi;
-          updatedTemp[hour]  = event.data.suhu;
-        }
-      }
+    if (isSingle) {
+      updatedChart = TimeSeriesMapper.toSpecificDate(
+        data: updatedHistory,
+        getTime: (e) => e.timestamp,
+        getValue: (e) => e.evaporasi,
+        targetDate: state.startDate,
+      );
+      updatedTemp = TimeSeriesMapper.toSpecificDate(
+        data: updatedHistory,
+        getTime: (e) => e.timestamp,
+        getValue: (e) => e.suhu,
+        targetDate: state.startDate,
+      );
+      updatedLabels = List.generate(24, (i) => '${i.toString().padLeft(2, '0')}:00');
+    } else {
+      final evapResult = TimeSeriesMapper.toDateRange(
+        data: updatedHistory,
+        getTime: (e) => e.timestamp,
+        getValue: (e) => e.evaporasi,
+        startDate: state.startDate,
+        endDate: state.endDate,
+      );
+      final tempResult = TimeSeriesMapper.toDateRange(
+        data: updatedHistory,
+        getTime: (e) => e.timestamp,
+        getValue: (e) => e.suhu,
+        startDate: state.startDate,
+        endDate: state.endDate,
+      );
+      updatedChart = evapResult.values;
+      updatedTemp  = tempResult.values;
+      updatedLabels = evapResult.labels;
     }
 
     final (status, willRain) = _computeStatus(event.data.evaporasi);
@@ -155,6 +170,7 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
       waterLevel: event.data.tinggiAir,
       chartValues: updatedChart,
       chartTemperatures: updatedTemp,
+      chartLabels: updatedLabels,
       weatherStatus: status,
       willRain: willRain,
       currentData: event.data,

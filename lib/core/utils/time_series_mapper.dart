@@ -51,21 +51,24 @@ class TimeSeriesMapper {
     required double Function(T) getValue,
   }) {
     final now = DateTime.now();
-    final sums = List<double>.filled(24, 0.0);
-    final counts = List<int>.filled(24, 0);
+    final values = List<double>.filled(24, -1.0);
+    final latestTimes = List<DateTime?>.filled(24, null);
+
     for (final item in data) {
       final time = getTime(item);
       if (_isSameDay(time, now)) {
-        final hour = time.toLocal().hour;
+        final localTime = time.toLocal();
+        final hour = localTime.hour;
         if (hour >= 0 && hour < 24) {
-          sums[hour] += getValue(item);
-          counts[hour]++;
+          final existingTime = latestTimes[hour];
+          if (existingTime == null || localTime.isAfter(existingTime)) {
+            values[hour] = getValue(item);
+            latestTimes[hour] = localTime;
+          }
         }
       }
     }
-    final raw = List<double>.generate(24, (i) =>
-        counts[i] == 0 ? -1.0 : sums[i] / counts[i]);
-    return _interpolate(_filterSpike(raw));
+    return _interpolate(_filterSpike(values));
   }
 
   // ============================================================
@@ -132,21 +135,24 @@ class TimeSeriesMapper {
     required double Function(T) getValue,
     required DateTime targetDate,
   }) {
-    final sums = List<double>.filled(24, 0.0);
-    final counts = List<int>.filled(24, 0);
+    final values = List<double>.filled(24, -1.0);
+    final latestTimes = List<DateTime?>.filled(24, null);
+
     for (final item in data) {
       final time = getTime(item);
       if (_isSameDay(time, targetDate)) {
-        final hour = time.toLocal().hour;
+        final localTime = time.toLocal();
+        final hour = localTime.hour;
         if (hour >= 0 && hour < 24) {
-          sums[hour] += getValue(item);
-          counts[hour]++;
+          final existingTime = latestTimes[hour];
+          if (existingTime == null || localTime.isAfter(existingTime)) {
+            values[hour] = getValue(item);
+            latestTimes[hour] = localTime;
+          }
         }
       }
     }
-    final raw = List<double>.generate(24, (i) =>
-        counts[i] == 0 ? -1.0 : sums[i] / counts[i]);
-    return _interpolate(_filterSpike(raw));
+    return _interpolate(_filterSpike(values));
   }
 
   // ============================================================

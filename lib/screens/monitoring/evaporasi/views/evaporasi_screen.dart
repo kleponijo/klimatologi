@@ -165,23 +165,46 @@ class _EvaporasiScreenState extends State<EvaporasiScreen> {
   }
 
   Widget _infoRow(EvaporasiState state) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        _miniCard('Suhu Air',
-            '${state.temperature.toStringAsFixed(1)} °C',
-            Icons.thermostat, Colors.orange),
-        _miniCard('Tinggi Air',
-            '${state.waterLevel.toStringAsFixed(1)} cm',
-            Icons.water, Colors.blue),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cardWidth = (constraints.maxWidth - 12) / 2;
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            _miniCard(
+              cardWidth,
+              'Suhu Air',
+              state.temperature < 0
+                  ? '- °C'
+                  : '${state.temperature.toStringAsFixed(1)} °C',
+              Icons.thermostat,
+              Colors.orange,
+            ),
+            _miniCard(
+              cardWidth,
+              'Tinggi Air',
+              '${state.waterLevel.toStringAsFixed(1)} cm',
+              Icons.water,
+              Colors.blue,
+            ),
+            _miniCard(
+              cardWidth,
+              'Acuan Air Pagi',
+              '${(state.currentData?.acuanPagi ?? 0.0).toStringAsFixed(1)} cm',
+              Icons.wb_sunny_outlined,
+              Colors.amber.shade700,
+            ),
+          ],
+        );
+      },
     );
   }
 
   Widget _miniCard(
-      String title, String value, IconData icon, Color color) {
+      double width, String title, String value, IconData icon, Color color) {
     return Container(
-      width: 160,
+      width: width,
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -191,15 +214,26 @@ class _EvaporasiScreenState extends State<EvaporasiScreen> {
         children: [
           Icon(icon, color: color),
           const SizedBox(width: 10),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(fontSize: 11, color: Colors.grey),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  value,
                   style: const TextStyle(
-                      fontSize: 12, color: Colors.grey)),
-              Text(value,
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
-            ],
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
         ],
       ),

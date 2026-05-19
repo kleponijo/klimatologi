@@ -72,7 +72,25 @@ class _DashboardChartsState extends State<DashboardCharts> {
   void _onPeriodChanged(String p) {
     setState(() => _period = p);
     context.read<WindSpeedBloc>().add(WindSpeedPeriodChanged(p));
-    context.read<EvaporasiBloc>().add(EvaporasiPeriodChanged(p));
+    final now = DateTime.now();
+    DateTime startDate;
+    DateTime endDate = now;
+
+    switch (p) {
+      case "Minggu Ini":
+        startDate = now.subtract(Duration(days: now.weekday - 1));
+        break;
+      case "Bulan Ini":
+        startDate = DateTime(now.year, now.month, 1);
+        break;
+      default:
+        startDate = now;
+        break;
+    }
+
+    context.read<EvaporasiBloc>().add(
+      EvaporasiDateRangeChanged(startDate: startDate, endDate: endDate),
+    );
     // AtmosphericBloc tidak punya period (hanya realtime)
   }
 
@@ -132,11 +150,6 @@ class _DashboardChartsState extends State<DashboardCharts> {
               // 2. Evaporasi
               BlocBuilder<EvaporasiBloc, EvaporasiState>(
                 builder: (context, state) {
-                  final data = switch (_period) {
-                    "Minggu Ini" => state.dailyValues, // weekly jika ada
-                    "Bulan Ini" => state.dailyValues,
-                    _ => state.dailyValues,
-                  };
                   return _SensorChartCard(
                     title: 'Evaporasi',
                     unit: 'mm',
@@ -144,7 +157,7 @@ class _DashboardChartsState extends State<DashboardCharts> {
                     bgColor: Colors.teal.shade50,
                     icon: Icons.water_drop_outlined,
                     currentValue: state.currentValue,
-                    data: data,
+                    data: state.chartValues,
                     period: _period,
                     isLoading: state.isLoading,
                   );
