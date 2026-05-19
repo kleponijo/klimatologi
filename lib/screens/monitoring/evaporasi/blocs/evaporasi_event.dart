@@ -1,41 +1,38 @@
+// lib/screens/monitoring/evaporasi/blocs/evaporasi_event.dart
 part of 'evaporasi_bloc.dart';
 
 abstract class EvaporasiEvent extends Equatable {
   const EvaporasiEvent();
 
   @override
-  List<Object> get props => [];
+  List<Object?> get props => [];
 }
 
-/// 🚀 START MONITORING
+/// Mulai monitoring
 class WatchEvaporasiStarted extends EvaporasiEvent {}
 
-/// 📊 GANTI PERIODE (Harian / Mingguan / Bulanan)
-class EvaporasiPeriodChanged extends EvaporasiEvent {
-  final String period;
+/// Pilih rentang tanggal untuk grafik
+/// startDate == endDate → tampilkan per jam (1 hari)
+/// startDate != endDate → tampilkan per hari (range)
+class EvaporasiDateRangeChanged extends EvaporasiEvent {
+  final DateTime startDate;
+  final DateTime endDate;
 
-  const EvaporasiPeriodChanged(this.period);
+  const EvaporasiDateRangeChanged({
+    required this.startDate,
+    required this.endDate,
+  });
 
   @override
-  List<Object> get props => [period];
+  List<Object?> get props => [startDate, endDate];
 }
 
-/// 📅 PILIH TANGGAL KHUSUS (Custom Date Picker)
-class EvaporasiDateSelected extends EvaporasiEvent {
-  final DateTime date;
-
-  const EvaporasiDateSelected(this.date);
-
-  @override
-  List<Object> get props => [date];
-}
-
-/// 🔄 KEMBALI KE MODE PERIOD
-class EvaporasiViewModeChanged extends EvaporasiEvent {
-  final EvaporasiViewMode mode;
-
-  const EvaporasiViewModeChanged(this.mode);
+/// Filter list history berdasarkan tanggal
+/// Kirim date = null untuk reset
+class EvaporasiDateFilterChanged extends EvaporasiEvent {
+  final DateTime? date;
+  const EvaporasiDateFilterChanged(this.date);
 
   @override
-  List<Object> get props => [mode];
+  List<Object?> get props => [date];
 }

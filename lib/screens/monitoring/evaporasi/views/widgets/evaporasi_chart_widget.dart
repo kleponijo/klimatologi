@@ -311,21 +311,30 @@ class EvaporasiChartWidget extends StatelessWidget {
     );
 
     return Container(
-      height: 400,
-      padding: const EdgeInsets.fromLTRB(8, 12, 8, 4),
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(25),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(13),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          )
-        ],
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const Text(
+            '',
+            // NOTE: placeholder; judul seragam dengan AtmosphericScreen.
+            // Jika ingin judul Evaporasi, ganti sesuai kebutuhan.
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 220,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: chart,
+            ),
+          ),
+          const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
@@ -334,19 +343,15 @@ class EvaporasiChartWidget extends StatelessWidget {
                   Container(
                     width: 10,
                     height: 10,
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade700,
+                    decoration: const BoxDecoration(
+                      color: Colors.blue,
                       shape: BoxShape.circle,
                     ),
                   ),
                   const SizedBox(width: 6),
                   const Text(
                     'Evaporasi (mm)',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.blueGrey,
-                    ),
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
@@ -355,30 +360,19 @@ class EvaporasiChartWidget extends StatelessWidget {
                   Container(
                     width: 10,
                     height: 10,
-                    decoration: BoxDecoration(
-                      color: Colors.orange.shade700,
+                    decoration: const BoxDecoration(
+                      color: Colors.orange,
                       shape: BoxShape.circle,
                     ),
                   ),
                   const SizedBox(width: 6),
                   const Text(
                     'Suhu (°C)',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.brown,
-                    ),
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
             ],
-          ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: chart,
-            ),
           ),
         ],
       ),

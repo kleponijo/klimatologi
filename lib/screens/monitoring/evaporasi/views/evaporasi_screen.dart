@@ -1,3 +1,5 @@
+// lib/screens/monitoring/evaporasi/views/evaporasi_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
@@ -5,8 +7,9 @@ import 'package:intl/intl.dart';
 import '../blocs/evaporasi_bloc.dart';
 import '../../shared/utils/pdf/pdf_export_service.dart';
 import '../../shared/widgets/export_pdf_button.dart';
-import 'widgets/evaporasi_period_selector.dart';
 import 'widgets/evaporasi_chart_widget.dart';
+import 'widgets/evaporasi_range_selector.dart';
+import 'widgets/evaporasi_history_list.dart';
 
 class EvaporasiScreen extends StatefulWidget {
   const EvaporasiScreen({super.key});
@@ -22,7 +25,7 @@ class _EvaporasiScreenState extends State<EvaporasiScreen> {
       backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
         title: const Text(
-          "Evaporasi",
+          'Evaporasi',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
@@ -48,64 +51,70 @@ class _EvaporasiScreenState extends State<EvaporasiScreen> {
           return SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // ── Main Card ───────────────────────────────
                 _mainCard(state),
-                const SizedBox(height: 25),
-                _infoRow(state),
-                const SizedBox(height: 25),
-                _statusCard(state),
-                const SizedBox(height: 25),
-                const Text(
-                  "Tren Evaporasi & Suhu",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 15),
-                // Period selector with date picker
-                Builder(
-                  builder: (context) {
-                    final state = context.watch<EvaporasiBloc>().state;
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (state.viewMode == EvaporasiViewMode.customDate &&
-                            state.selectedDate != null)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: Text(
-                              "📅 ${_formatDateInfo(state.selectedDate!)}",
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.blue.shade700,
-                              ),
-                            ),
-                          ),
-                        const EvaporasiPeriodSelector(),
-                      ],
-                    );
-                  },
-                ),
-                const SizedBox(height: 15),
-                // Chart
-                Builder(
-                  builder: (context) {
-                    final state = context.watch<EvaporasiBloc>().state;
-                    return EvaporasiChartWidget(
-                      dailyValues: state.dailyValues,
-                      dailyTemperatures: state.dailyTemperatures,
-                      period: state.viewMode == EvaporasiViewMode.customDate
-                          ? "Tanggal Khusus"
-                          : state.selectedPeriod,
-                      chartLabels: state.chartLabels,
-                    );
-                  },
-                ),
                 const SizedBox(height: 20),
-                // ✅ FIX: Gunakan BlocBuilder agar list reaktif terhadap perubahan state
-                BlocBuilder<EvaporasiBloc, EvaporasiState>(
-                  builder: (context, state) => _evaporasiList(state),
+
+                // ── Info Row ────────────────────────────────
+                _infoRow(state),
+                const SizedBox(height: 20),
+
+                // ── Status Card ─────────────────────────────
+                _statusCard(state),
+                const SizedBox(height: 20),
+
+                // ── Range Selector ──────────────────────────
+                const Text(
+                  'Tren Evaporasi & Suhu',
+                  style: TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 10),
+                const EvaporasiRangeSelector(),
+                const SizedBox(height: 12),
+
+                // ── Chart ───────────────────────────────────
+                BlocBuilder<EvaporasiBloc, EvaporasiState>(
+                  builder: (context, s) => EvaporasiChartWidget(
+                    dailyValues: s.chartValues,
+                    dailyTemperatures: s.chartTemperatures,
+                    period: s.isSingleDay ? 'Hari Ini' : 'Range',
+                    chartLabels: s.chartLabels,
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // ── Riwayat Data ────────────────────────────
+                BlocBuilder<EvaporasiBloc, EvaporasiState>(
+                  builder: (context, s) => EvaporasiHistoryList(
+                    history: s.filteredHistory,
+                    selectedDate: s.selectedDateFilter,
+                    onPickDate: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: DateTime.now(),
+                        firstDate: DateTime(2024),
+                        lastDate: DateTime.now(),
+                        locale: const Locale('id', 'ID'),
+                      );
+                      if (picked != null && context.mounted) {
+                        context.read<EvaporasiBloc>().add(
+                              EvaporasiDateFilterChanged(picked),
+                            );
+                      }
+                    },
+                    onClearDate: () {
+                      context.read<EvaporasiBloc>().add(
+                            const EvaporasiDateFilterChanged(null),
+                          );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 10),
+
+                // ── Export PDF ──────────────────────────────
                 ExportPdfButton(
                   onExport: () => PdfExportService.evaporasi(
                     evaporasi: state.currentValue,
@@ -115,6 +124,7 @@ class _EvaporasiScreenState extends State<EvaporasiScreen> {
                     historyData: historyMaps.isNotEmpty ? historyMaps : null,
                   ),
                 ),
+                const SizedBox(height: 20),
               ],
             ),
           );
@@ -123,9 +133,6 @@ class _EvaporasiScreenState extends State<EvaporasiScreen> {
     );
   }
 
-  // =========================
-  // 🔥 MAIN CARD (EVAPORASI)
-  // =========================
   Widget _mainCard(EvaporasiState state) {
     return Container(
       width: double.infinity,
@@ -141,7 +148,7 @@ class _EvaporasiScreenState extends State<EvaporasiScreen> {
           const Icon(Icons.water_drop, color: Colors.white, size: 45),
           const SizedBox(height: 10),
           Text(
-            state.currentValue.toStringAsFixed(1),
+            state.currentValue.toStringAsFixed(2),
             style: const TextStyle(
               fontSize: 70,
               fontWeight: FontWeight.bold,
@@ -149,7 +156,7 @@ class _EvaporasiScreenState extends State<EvaporasiScreen> {
             ),
           ),
           const Text(
-            "mm",
+            'mm',
             style: TextStyle(color: Colors.white70, fontSize: 18),
           ),
         ],
@@ -157,30 +164,22 @@ class _EvaporasiScreenState extends State<EvaporasiScreen> {
     );
   }
 
-  // =========================
-  // 📊 INFO KECIL (SUHU & AIR)
-  // =========================
   Widget _infoRow(EvaporasiState state) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        _miniCard(
-          "Suhu",
-          "${state.temperature.toStringAsFixed(1)} °C",
-          Icons.thermostat,
-          Colors.orange,
-        ),
-        _miniCard(
-          "Tinggi Air",
-          "${state.waterLevel.toStringAsFixed(1)} cm",
-          Icons.water,
-          Colors.blue,
-        ),
+        _miniCard('Suhu Air',
+            '${state.temperature.toStringAsFixed(1)} °C',
+            Icons.thermostat, Colors.orange),
+        _miniCard('Tinggi Air',
+            '${state.waterLevel.toStringAsFixed(1)} cm',
+            Icons.water, Colors.blue),
       ],
     );
   }
 
-  Widget _miniCard(String title, String value, IconData icon, Color color) {
+  Widget _miniCard(
+      String title, String value, IconData icon, Color color) {
     return Container(
       width: 160,
       padding: const EdgeInsets.all(15),
@@ -196,46 +195,41 @@ class _EvaporasiScreenState extends State<EvaporasiScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(title,
-                  style: const TextStyle(fontSize: 12, color: Colors.grey)),
-              Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  style: const TextStyle(
+                      fontSize: 12, color: Colors.grey)),
+              Text(value,
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
             ],
-          )
+          ),
         ],
       ),
     );
   }
 
-  // =========================
-  // 📈 STATUS CARD
-  // =========================
   Widget _statusCard(EvaporasiState state) {
     Color statusColor;
     IconData statusIcon;
+    String warningText;
 
     switch (state.weatherStatus) {
-      case "Sedang":
+      case 'Normal':
         statusColor = Colors.orange;
         statusIcon = Icons.warning_amber_rounded;
+        warningText =
+            'Sedang — evaporasi dalam batas normal, pantau kondisi.';
         break;
-      case "Buruk":
+      case 'Tinggi':
         statusColor = Colors.red;
         statusIcon = Icons.error_outline;
+        warningText =
+            'Tinggi — evaporasi signifikan, berpotensi memengaruhi kondisi lingkungan.';
         break;
-      case "Baik":
+      case 'Rendah':
       default:
         statusColor = Colors.green;
         statusIcon = Icons.check_circle_outline;
+        warningText = 'Rendah — evaporasi stabil, risiko dampak rendah.';
         break;
-    }
-
-    final String warningText;
-    if (state.weatherStatus == 'Baik') {
-      warningText = 'Normal — evaporasi stabil, risiko dampak rendah.';
-    } else if (state.weatherStatus == 'Sedang') {
-      warningText = 'Sedang — evaporasi mulai tinggi, pantau kondisi cuaca.';
-    } else {
-      warningText =
-          'Tinggi — evaporasi signifikan, berpotensi memengaruhi kondisi lingkungan.';
     }
 
     return Container(
@@ -253,32 +247,25 @@ class _EvaporasiScreenState extends State<EvaporasiScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  "Status Cuaca",
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                const Text('Status Evaporasi',
+                    style:
+                        TextStyle(fontSize: 12, color: Colors.grey)),
+                const SizedBox(height: 4),
+                Text(
+                  state.weatherStatus,
+                  style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: statusColor),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  state.weatherStatus == 'Baik'
-                      ? 'Normal'
-                      : state.weatherStatus == 'Sedang'
-                          ? 'Sedang'
-                          : 'Tinggi',
+                  warningText,
                   style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: statusColor,
-                  ),
-                ),
-                if (state.willRain)
-                  Text(
-                    warningText,
-                    style: const TextStyle(
                       fontSize: 12,
-                      color: Colors.red,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
+                      color: statusColor.withValues(alpha: 0.8),
+                      fontWeight: FontWeight.w500),
+                ),
               ],
             ),
           ),
@@ -286,228 +273,4 @@ class _EvaporasiScreenState extends State<EvaporasiScreen> {
       ),
     );
   }
-
-  // =========================
-  // 🧾 LIST DATA EVAPORASI — ✅ FIXED FILTER
-  // =========================
-  Widget _evaporasiList(EvaporasiState state) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-
-
-    // ✅ Filter list sesuai mode & periode yang aktif
-    List filteredData;
-
-    if (state.viewMode == EvaporasiViewMode.customDate &&
-        state.selectedDate != null) {
-      // Mode custom date: tampilkan hanya data di tanggal yang dipilih
-      final sel = DateTime(
-        state.selectedDate!.year,
-        state.selectedDate!.month,
-        state.selectedDate!.day,
-      );
-      filteredData = state.history
-          .where((e) {
-            final d =
-                DateTime(e.timestamp.year, e.timestamp.month, e.timestamp.day);
-            return d == sel;
-          })
-          .toList()
-          .reversed
-          .toList();
-    } else if (state.selectedPeriod == 'Hari Ini') {
-      // Mode Hari Ini: hanya data hari ini
-      filteredData = state.history
-          .where((e) {
-            final d =
-                DateTime(e.timestamp.year, e.timestamp.month, e.timestamp.day);
-            return d == today;
-          })
-          .toList()
-          .reversed
-          .toList();
-    } else if (state.selectedPeriod == 'Minggu Ini') {
-      // Mode Minggu Ini: 7 hari ke belakang dari hari ini
-      final weekStart = today.subtract(const Duration(days: 6));
-      filteredData = state.history
-          .where((e) {
-            final d =
-                DateTime(e.timestamp.year, e.timestamp.month, e.timestamp.day);
-            return !d.isBefore(weekStart) && !d.isAfter(today);
-          })
-          .toList()
-          .reversed
-          .toList();
-    } else if (state.selectedPeriod == 'Bulan Ini') {
-      // Mode Bulan Ini: hanya data bulan & tahun yang sama
-      filteredData = state.history
-          .where((e) =>
-              e.timestamp.year == now.year && e.timestamp.month == now.month)
-          .toList()
-          .reversed
-          .toList();
-    } else {
-      filteredData = state.history.reversed.toList();
-    }
-
-    // ✅ Header label sesuai mode
-    final String listTitle;
-    if (state.viewMode == EvaporasiViewMode.customDate &&
-        state.selectedDate != null) {
-      listTitle = 'Data ${_formatDateInfo(state.selectedDate!)}';
-    } else if (state.selectedPeriod == 'Hari Ini') {
-      listTitle = 'Data Hari Ini';
-    } else if (state.selectedPeriod == 'Minggu Ini') {
-      listTitle = 'Data Minggu Ini';
-    } else if (state.selectedPeriod == 'Bulan Ini') {
-      listTitle = 'Data Bulan Ini';
-    } else {
-      listTitle = 'List Data Evaporasi';
-    }
-
-    if (filteredData.isEmpty) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              listTitle,
-              style:
-                  const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Belum ada data untuk periode ini',
-              style: TextStyle(color: Colors.grey),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            listTitle,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 280,
-            child: ListView.separated(
-              itemCount: filteredData.length,
-              itemBuilder: (context, index) {
-                final e = filteredData[index];
-                final dateLabel =
-                    '${DateFormat('dd MMM yyyy', 'id_ID').format(e.timestamp)} • ${DateFormat('HH:mm:ss', 'id_ID').format(e.timestamp)}';
-
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          dateLabel,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.black87,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            '${e.evaporasi.toStringAsFixed(1)} mm',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.blue,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Tinggi Air: ${e.tinggiAir.toStringAsFixed(1)} cm',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.blue.shade700,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Suhu: ${e.suhu.toStringAsFixed(1)} °C',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.orange.shade700,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _statusTextForHistory(e.evaporasi),
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: _statusColorForHistory(e.evaporasi),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                );
-              },
-              separatorBuilder: (_, __) => const Divider(height: 1),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _statusTextForHistory(double evaporasi) {
-    if (evaporasi <= 5.0) return 'Status: Normal';
-    if (evaporasi <= 10.0) return 'Status: Sedang';
-    return 'Status: Tinggi';
-  }
-
-  Color _statusColorForHistory(double evaporasi) {
-    if (evaporasi <= 5.0) return Colors.green;
-    if (evaporasi <= 10.0) return Colors.orange;
-    return Colors.red;
-  }
-
-  String _formatDateInfo(DateTime date) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final yesterday = today.subtract(const Duration(days: 1));
-    final selected = DateTime(date.year, date.month, date.day);
-
-    if (selected == today) {
-      return "Hari Ini";
-    } else if (selected == yesterday) {
-      return "Kemarin";
-    } else {
-      return DateFormat('EEEE, d MMMM yyyy', 'id_ID').format(date);
-    }
-  }
 }
-

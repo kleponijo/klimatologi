@@ -1,71 +1,64 @@
+// lib/screens/monitoring/evaporasi/blocs/evaporasi_state.dart
 part of 'evaporasi_bloc.dart';
-
-enum EvaporasiViewMode { period, customDate }
 
 class EvaporasiState extends Equatable {
   final double currentValue;
   final double temperature;
   final double waterLevel;
-  final String selectedPeriod;
-  final DateTime? selectedDate;
-  final EvaporasiViewMode viewMode;
 
-  final List<double> dailyValues;
-  final List<double> weeklyValues;
-  final List<double> monthlyValues;
+  // Rentang tanggal aktif untuk grafik
+  final DateTime startDate;
+  final DateTime endDate;
 
-  final List<double> dailyTemperatures;
-  final List<double> weeklyTemperatures;
-  final List<double> monthlyTemperatures;
-
+  // Data grafik
+  final List<double> chartValues;
+  final List<double> chartTemperatures;
   final List<String> chartLabels;
-  final List<Evaporasi> listData;
+
+  // Data list
   final List<Evaporasi> history;
+  final List<Evaporasi> filteredHistory;
+
+  // Filter list
+  final DateTime? selectedDateFilter;
+
   final String weatherStatus;
   final bool willRain;
-  final Evaporasi? currentData; // data realtime terbaru
+  final Evaporasi? currentData;
   final bool isLoading;
 
-  const EvaporasiState({
+  EvaporasiState({
     this.currentValue = 0.0,
     this.temperature = 0.0,
     this.waterLevel = 0.0,
-    this.selectedPeriod = 'Hari Ini',
-    this.selectedDate,
-    this.viewMode = EvaporasiViewMode.period,
-    this.dailyValues = const [],
-    this.weeklyValues = const [],
-    this.monthlyValues = const [],
-    this.dailyTemperatures = const [],
-    this.weeklyTemperatures = const [],
-    this.monthlyTemperatures = const [],
+    DateTime? startDate,
+    DateTime? endDate,
+    this.chartValues = const [],
+    this.chartTemperatures = const [],
     this.chartLabels = const [],
-    this.listData = const [],
     this.history = const [],
-    this.weatherStatus = 'Baik',
+    this.filteredHistory = const [],
+    this.selectedDateFilter,
+    this.weatherStatus = 'Rendah',
     this.willRain = false,
     this.currentData,
     this.isLoading = true,
-  });
+  })  : startDate = startDate ?? DateTime.now(),
+        endDate = endDate ?? DateTime.now();
 
-  // ✅ FIX: Tambah clearSelectedDate flag agar selectedDate bisa di-null-kan
   EvaporasiState copyWith({
     double? currentValue,
     double? temperature,
     double? waterLevel,
-    String? selectedPeriod,
-    DateTime? selectedDate,
-    bool clearSelectedDate = false, // ✅ tambahan flag reset
-    EvaporasiViewMode? viewMode,
-    List<double>? dailyValues,
-    List<double>? weeklyValues,
-    List<double>? monthlyValues,
-    List<double>? dailyTemperatures,
-    List<double>? weeklyTemperatures,
-    List<double>? monthlyTemperatures,
+    DateTime? startDate,
+    DateTime? endDate,
+    List<double>? chartValues,
+    List<double>? chartTemperatures,
     List<String>? chartLabels,
-    List<Evaporasi>? listData,
     List<Evaporasi>? history,
+    List<Evaporasi>? filteredHistory,
+    DateTime? selectedDateFilter,
+    bool clearSelectedDateFilter = false,
     String? weatherStatus,
     bool? willRain,
     Evaporasi? currentData,
@@ -75,20 +68,16 @@ class EvaporasiState extends Equatable {
       currentValue: currentValue ?? this.currentValue,
       temperature: temperature ?? this.temperature,
       waterLevel: waterLevel ?? this.waterLevel,
-      selectedPeriod: selectedPeriod ?? this.selectedPeriod,
-      // ✅ FIX: jika clearSelectedDate=true, set null; jika selectedDate diberikan, pakai itu;
-      //         jika tidak, pertahankan yang lama
-      selectedDate: clearSelectedDate ? null : (selectedDate ?? this.selectedDate),
-      viewMode: viewMode ?? this.viewMode,
-      dailyValues: dailyValues ?? this.dailyValues,
-      weeklyValues: weeklyValues ?? this.weeklyValues,
-      monthlyValues: monthlyValues ?? this.monthlyValues,
-      dailyTemperatures: dailyTemperatures ?? this.dailyTemperatures,
-      weeklyTemperatures: weeklyTemperatures ?? this.weeklyTemperatures,
-      monthlyTemperatures: monthlyTemperatures ?? this.monthlyTemperatures,
+      startDate: startDate ?? this.startDate,
+      endDate: endDate ?? this.endDate,
+      chartValues: chartValues ?? this.chartValues,
+      chartTemperatures: chartTemperatures ?? this.chartTemperatures,
       chartLabels: chartLabels ?? this.chartLabels,
-      listData: listData ?? this.listData,
       history: history ?? this.history,
+      filteredHistory: filteredHistory ?? this.filteredHistory,
+      selectedDateFilter: clearSelectedDateFilter
+          ? null
+          : (selectedDateFilter ?? this.selectedDateFilter),
       weatherStatus: weatherStatus ?? this.weatherStatus,
       willRain: willRain ?? this.willRain,
       currentData: currentData ?? this.currentData,
@@ -96,26 +85,19 @@ class EvaporasiState extends Equatable {
     );
   }
 
+  // 1 hari = tampil per jam, > 1 hari = tampil per hari
+  bool get isSingleDay {
+    final s = DateTime(startDate.year, startDate.month, startDate.day);
+    final e = DateTime(endDate.year, endDate.month, endDate.day);
+    return s == e;
+  }
+
   @override
   List<Object?> get props => [
-        currentValue,
-        temperature,
-        waterLevel,
-        selectedPeriod,
-        selectedDate,
-        viewMode,
-        dailyValues,
-        weeklyValues,
-        monthlyValues,
-        dailyTemperatures,
-        weeklyTemperatures,
-        monthlyTemperatures,
-        chartLabels,
-        listData,
-        history,
-        weatherStatus,
-        willRain,
-        currentData,
-        isLoading,
+        currentValue, temperature, waterLevel,
+        startDate, endDate,
+        chartValues, chartTemperatures, chartLabels,
+        history, filteredHistory, selectedDateFilter,
+        weatherStatus, willRain, currentData, isLoading,
       ];
 }

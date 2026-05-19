@@ -1,3 +1,5 @@
+// packages/monitoring_repository/lib/src/models/evaporasi.dart
+
 class Evaporasi {
   final double evaporasi;
   final double suhu;
@@ -33,7 +35,7 @@ class Evaporasi {
       return 0.0;
     }
 
-    // Evaporasi (mm)
+    // ── Evaporasi (mm) ───────────────────────────────────
     final evaporasiVal = toDoubleSafe(
       json['evaporasi_mm'] ??
           json['evaporasi'] ??
@@ -44,9 +46,11 @@ class Evaporasi {
           json['evaporasi_k'],
     );
 
-    // Suhu (°C)
+    // ── Suhu (°C) ────────────────────────────────────────
+    // FIX: tambah 'suhu_air_c' sesuai field yang dikirim ESP32
     final suhuRaw = toDoubleSafe(
-      json['suhu_air'] ??
+      json['suhu_air_c'] ??     // ← ESP32 kirim field ini
+          json['suhu_air'] ??
           json['suhu'] ??
           json['suhuAir'] ??
           json['temp'] ??
@@ -54,7 +58,7 @@ class Evaporasi {
     );
     final suhuVal = (suhuRaw < -50 || suhuRaw > 100) ? 0.0 : suhuRaw;
 
-    // Tinggi air
+    // ── Tinggi Air (cm) ──────────────────────────────────
     final tinggiVal = toDoubleSafe(
       json['tinggi_air_cm'] ??
           json['tinggi_air'] ??
@@ -66,16 +70,18 @@ class Evaporasi {
           json['tinggiAir_m'],
     );
 
-    // Filter data invalid
-    final evaporasiFiltered = (evaporasiVal < 0 || evaporasiVal > 50)
-        ? 0.0
-        : evaporasiVal;
-    final tinggiFiltered = (tinggiVal < 0 || tinggiVal > 100) ? 0.0 : tinggiVal;
+    // ── Sanity check ─────────────────────────────────────
+    final evaporasiFiltered =
+        (evaporasiVal < 0 || evaporasiVal > 50) ? 0.0 : evaporasiVal;
+    final tinggiFiltered =
+        (tinggiVal < 0 || tinggiVal > 100) ? 0.0 : tinggiVal;
 
+    // ── Parse Timestamp ──────────────────────────────────
+    // FIX: Tambahkan offset +07:00 (WIB) jika string tidak punya info timezone,
+    //      agar tidak terjadi mismatch 7 jam antara Firebase dan Flutter.
     DateTime parseTimestamp(dynamic rawTimestamp) {
       try {
         if (rawTimestamp is int) {
-          // If seconds, convert to ms.
           if (rawTimestamp < 1000000000000) {
             return DateTime.fromMillisecondsSinceEpoch(rawTimestamp * 1000)
                 .toLocal();
@@ -86,8 +92,7 @@ class Evaporasi {
         if (rawTimestamp is double) {
           final value = rawTimestamp.toInt();
           if (value < 1000000000000) {
-            return DateTime.fromMillisecondsSinceEpoch(value * 1000)
-                .toLocal();
+            return DateTime.fromMillisecondsSinceEpoch(value * 1000).toLocal();
           }
           return DateTime.fromMillisecondsSinceEpoch(value).toLocal();
         }
@@ -105,9 +110,15 @@ class Evaporasi {
             return DateTime.fromMillisecondsSinceEpoch(unixValue).toLocal();
           }
 
-          // Firebase sometimes uses "YYYY-MM-DD HH:mm:ss" (needs ISO 'T')
+          // Format "YYYY-MM-DD HH:mm:ss" → tambah 'T' agar bisa diparsing
           if (s.contains(' ') && !s.contains('T')) {
             s = s.replaceFirst(' ', 'T');
+          }
+
+          // FIX: Jika tidak ada info timezone, anggap WIB (UTC+7)
+          // agar jam di chart tidak mismatch 7 jam
+          if (!s.contains('+') && !s.contains('Z') && !s.contains('-', 10)) {
+            s = '${s}+07:00';
           }
 
           final parsed = DateTime.tryParse(s);
@@ -126,7 +137,7 @@ class Evaporasi {
     if (rawTimestamp != null) {
       timestamp = parseTimestamp(rawTimestamp);
     } else {
-      // legacy fallback: "waktu" format "HH:mm:ss"
+      // Legacy fallback: field "waktu" format "HH:mm:ss"
       final waktuStr = json['waktu'] as String?;
       if (waktuStr != null) {
         final parts = waktuStr.split(':');
@@ -136,7 +147,8 @@ class Evaporasi {
           final detik =
               parts.length >= 3 ? (int.tryParse(parts[2]) ?? 0) : 0;
           final now = DateTime.now();
-          timestamp = DateTime(now.year, now.month, now.day, jam, menit, detik);
+          timestamp =
+              DateTime(now.year, now.month, now.day, jam, menit, detik);
         }
       }
     }
@@ -149,4 +161,3 @@ class Evaporasi {
     );
   }
 }
-

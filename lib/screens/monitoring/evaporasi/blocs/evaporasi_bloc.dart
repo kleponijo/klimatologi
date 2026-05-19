@@ -1,3 +1,5 @@
+// lib/screens/monitoring/evaporasi/blocs/evaporasi_bloc.dart
+
 import 'dart:async';
 
 import 'package:bloc/bloc.dart';
@@ -20,14 +22,16 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
     required NotificationBloc notificationBloc,
   })  : _repository = repository,
         _notificationBloc = notificationBloc,
-        super(const EvaporasiState()) {
+        super(EvaporasiState()) {
     on<WatchEvaporasiStarted>(_onStarted);
     on<_EvaporasiRealtimeUpdated>(_onRealtimeUpdated);
-    on<EvaporasiPeriodChanged>(_onPeriodChanged);
-    on<EvaporasiDateSelected>(_onDateSelected);
-    on<EvaporasiViewModeChanged>(_onViewModeChanged);
+    on<EvaporasiDateRangeChanged>(_onDateRangeChanged);
+    on<EvaporasiDateFilterChanged>(_onDateFilterChanged);
   }
 
+  // ════════════════════════════════════════════════════════════
+  //  START
+  // ════════════════════════════════════════════════════════════
   Future<void> _onStarted(
     WatchEvaporasiStarted event,
     Emitter<EvaporasiState> emit,
@@ -39,249 +43,247 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
         'Monitoring/History',
         (json) => Evaporasi.fromJson(json),
       ),
-    )
-      ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+    )..sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
-    final listData = List<Evaporasi>.from(history);
+    final now = DateTime.now();
 
-    final dailyGraph = TimeSeriesMapper.toDaily(
+    // Default: tampilkan hari ini (per jam)
+    final dailyEvap = TimeSeriesMapper.toDaily(
       data: history,
       getTime: (e) => e.timestamp,
       getValue: (e) => e.evaporasi,
     );
-
-    final dailyTempGraph = TimeSeriesMapper.toDaily(
+    final dailyTemp = TimeSeriesMapper.toDaily(
       data: history,
       getTime: (e) => e.timestamp,
       getValue: (e) => e.suhu,
     );
-
-    final weeklyGraph = TimeSeriesMapper.toWeekly(
-      data: history,
-      getTime: (e) => e.timestamp,
-      getValue: (e) => e.evaporasi,
-    );
-
-    final monthlyGraph = TimeSeriesMapper.toMonthly(
-      data: history,
-      getTime: (e) => e.timestamp,
-      getValue: (e) => e.evaporasi,
-    );
-
-    final weeklyTemp = TimeSeriesMapper.toWeekly(
-      data: history,
-      getTime: (e) => e.timestamp,
-      getValue: (e) => e.suhu,
-    );
-
-    final monthlyTemp = TimeSeriesMapper.toMonthly(
-      data: history,
-      getTime: (e) => e.timestamp,
-      getValue: (e) => e.suhu,
-    );
+    final labels = List.generate(
+        24, (i) => '${i.toString().padLeft(2, '0')}:00');
 
     final lastValue = history.isNotEmpty ? history.last.evaporasi : 0.0;
-    final lastWaterLevel = history.isNotEmpty ? history.last.tinggiAir : 0.0;
-    final lastTemperature = history.isNotEmpty ? history.last.suhu : 0.0;
+    final lastWater = history.isNotEmpty ? history.last.tinggiAir : 0.0;
+    final lastTemp  = history.isNotEmpty ? history.last.suhu : 0.0;
 
-    final (status, rain) = _computeWeatherStatus(lastValue);
-    _emitEvaporasiAlert(status, rain, lastValue);
+    final (status, willRain) = _computeStatus(lastValue);
+    _emitAlert(status, willRain, lastValue);
 
     emit(state.copyWith(
       history: history,
-      listData: listData,
+      filteredHistory: history,
       currentValue: lastValue,
-      waterLevel: lastWaterLevel,
-      temperature: lastTemperature,
-      dailyValues: dailyGraph,
-      dailyTemperatures: dailyTempGraph,
-      weeklyValues: weeklyGraph,
-      monthlyValues: monthlyGraph,
-      weeklyTemperatures: weeklyTemp,
-      monthlyTemperatures: monthlyTemp,
-      chartLabels: _buildChartLabels(period: 'Hari Ini'),
+      waterLevel: lastWater,
+      temperature: lastTemp,
+      startDate: DateTime(now.year, now.month, now.day),
+      endDate: DateTime(now.year, now.month, now.day),
+      chartValues: dailyEvap,
+      chartTemperatures: dailyTemp,
+      chartLabels: labels,
       weatherStatus: status,
-      willRain: rain,
+      willRain: willRain,
       currentData: history.isNotEmpty ? history.last : null,
-      viewMode: EvaporasiViewMode.period,
-      selectedDate: null,
       isLoading: false,
     ));
 
     await _subscription?.cancel();
     _subscription = _repository
-        .getSensorStream('Monitoring/History', _latestHistoryEntry)
+        .getSensorStream(
+          'Monitoring',
+          (json) {
+            final f = Map<dynamic, dynamic>.from(json)..remove('History');
+            return Evaporasi.fromJson(f);
+          },
+        )
         .listen((data) => add(_EvaporasiRealtimeUpdated(data)));
   }
 
-  Evaporasi _latestHistoryEntry(Map<dynamic, dynamic> json) {
-    if (json.isEmpty) return Evaporasi.empty;
-
-    final entries = json.values
-        .whereType<Map<dynamic, dynamic>>()
-        .map((item) => Evaporasi.fromJson(item))
-        .toList();
-
-    if (entries.isEmpty) return Evaporasi.empty;
-
-    entries.sort((a, b) => a.timestamp.compareTo(b.timestamp));
-    return entries.last;
-  }
-
+  // ════════════════════════════════════════════════════════════
+  //  REALTIME UPDATE
+  // ════════════════════════════════════════════════════════════
   void _onRealtimeUpdated(
     _EvaporasiRealtimeUpdated event,
     Emitter<EvaporasiState> emit,
   ) {
+    if (event.data.timestamp.millisecondsSinceEpoch == 0) return;
+
     final updatedHistory = List<Evaporasi>.from(state.history);
-
-    final duplicateIndex = updatedHistory.indexWhere(
-      (item) => item.timestamp.toUtc() == event.data.timestamp.toUtc(),
+    final dupIdx = updatedHistory.indexWhere(
+      (e) => e.timestamp.toUtc() == event.data.timestamp.toUtc(),
     );
-
-    if (duplicateIndex >= 0) {
-      updatedHistory[duplicateIndex] = event.data;
+    if (dupIdx >= 0) {
+      updatedHistory[dupIdx] = event.data;
     } else {
       updatedHistory.add(event.data);
     }
-
     updatedHistory.sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
-    // Update bucket untuk tampilan chart harian (index hour)
-    final updated = List<double>.from(state.dailyValues);
-    final updatedTemp = List<double>.from(state.dailyTemperatures);
+    // Update chart jika sedang tampil hari ini per jam
+    List<double> updatedChart = state.chartValues;
+    List<double> updatedTemp  = state.chartTemperatures;
 
-    final eventTime = event.data.timestamp;
-    final now = DateTime.now();
+    if (state.isSingleDay) {
+      final eventTime = event.data.timestamp.toLocal();
+      final now = DateTime.now();
+      final isToday = eventTime.year == now.year &&
+          eventTime.month == now.month &&
+          eventTime.day == now.day;
 
-    final isSameDayUtc = eventTime.toUtc().year == now.toUtc().year &&
-        eventTime.toUtc().month == now.toUtc().month &&
-        eventTime.toUtc().day == now.toUtc().day;
-
-    final isDuplicate = duplicateIndex >= 0;
-    if (isSameDayUtc && !isDuplicate) {
-      final index = eventTime.hour;
-      if (index >= 0 && index < updated.length) {
-        updated[index] = event.data.evaporasi;
-        updatedTemp[index] = event.data.suhu;
+      if (isToday && dupIdx < 0) {
+        updatedChart = List<double>.from(state.chartValues);
+        updatedTemp  = List<double>.from(state.chartTemperatures);
+        final hour = eventTime.hour;
+        if (hour >= 0 && hour < 24) {
+          updatedChart[hour] = event.data.evaporasi;
+          updatedTemp[hour]  = event.data.suhu;
+        }
       }
     }
 
-    final (status, rain) = _computeWeatherStatus(event.data.evaporasi);
-    _emitEvaporasiAlert(status, rain, event.data.evaporasi);
+    final (status, willRain) = _computeStatus(event.data.evaporasi);
+    _emitAlert(status, willRain, event.data.evaporasi);
 
     emit(state.copyWith(
       history: updatedHistory,
-      listData: updatedHistory,
+      filteredHistory: state.selectedDateFilter != null
+          ? updatedHistory.where((e) =>
+              e.timestamp.year == state.selectedDateFilter!.year &&
+              e.timestamp.month == state.selectedDateFilter!.month &&
+              e.timestamp.day == state.selectedDateFilter!.day).toList()
+          : updatedHistory,
       currentValue: event.data.evaporasi,
       temperature: event.data.suhu,
       waterLevel: event.data.tinggiAir,
-      dailyValues: updated,
-      dailyTemperatures: updatedTemp,
+      chartValues: updatedChart,
+      chartTemperatures: updatedTemp,
       weatherStatus: status,
-      willRain: rain,
+      willRain: willRain,
       currentData: event.data,
     ));
   }
 
-  Future<void> _onPeriodChanged(
-    EvaporasiPeriodChanged event,
+  // ════════════════════════════════════════════════════════════
+  //  DATE RANGE CHANGED
+  // ════════════════════════════════════════════════════════════
+  Future<void> _onDateRangeChanged(
+    EvaporasiDateRangeChanged event,
     Emitter<EvaporasiState> emit,
   ) async {
-    emit(state.copyWith(isLoading: true, selectedPeriod: event.period));
+    emit(state.copyWith(isLoading: true));
 
     final history = state.history;
+    final start = event.startDate;
+    final end   = event.endDate;
 
-    List<double> updated;
-    List<double> updatedTemp;
+    final isSingle = _isSameDay(start, end);
 
-    if (event.period == 'Minggu Ini') {
-      updated = TimeSeriesMapper.toWeekly(
+    List<double> values;
+    List<double> temps;
+    List<String> labels;
+
+    if (isSingle) {
+      // 1 hari → per jam
+      values = TimeSeriesMapper.toSpecificDate(
         data: history,
         getTime: (e) => e.timestamp,
         getValue: (e) => e.evaporasi,
+        targetDate: start,
       );
-      updatedTemp = TimeSeriesMapper.toWeekly(
+      temps = TimeSeriesMapper.toSpecificDate(
         data: history,
         getTime: (e) => e.timestamp,
         getValue: (e) => e.suhu,
+        targetDate: start,
       );
-    } else if (event.period == 'Bulan Ini') {
-      updated = TimeSeriesMapper.toMonthly(
-        data: history,
-        getTime: (e) => e.timestamp,
-        getValue: (e) => e.evaporasi,
-      );
-      updatedTemp = TimeSeriesMapper.toMonthly(
-        data: history,
-        getTime: (e) => e.timestamp,
-        getValue: (e) => e.suhu,
-      );
+      labels = List.generate(24, (i) => '${i.toString().padLeft(2, '0')}:00');
     } else {
-      updated = TimeSeriesMapper.toDaily(
+      // Range → per hari
+      final evapResult = TimeSeriesMapper.toDateRange(
         data: history,
         getTime: (e) => e.timestamp,
         getValue: (e) => e.evaporasi,
+        startDate: start,
+        endDate: end,
       );
-      updatedTemp = TimeSeriesMapper.toDaily(
+      final tempResult = TimeSeriesMapper.toDateRange(
         data: history,
         getTime: (e) => e.timestamp,
         getValue: (e) => e.suhu,
+        startDate: start,
+        endDate: end,
       );
+      values = evapResult.values;
+      temps  = tempResult.values;
+      labels = evapResult.labels;
     }
 
     emit(state.copyWith(
-      dailyValues: updated,
-      dailyTemperatures: updatedTemp,
-      chartLabels: _buildChartLabels(period: event.period),
-      viewMode: EvaporasiViewMode.period,
-      clearSelectedDate: true,
+      startDate: start,
+      endDate: end,
+      chartValues: values,
+      chartTemperatures: temps,
+      chartLabels: labels,
       isLoading: false,
     ));
   }
 
-  Future<void> _onDateSelected(
-    EvaporasiDateSelected event,
+  // ════════════════════════════════════════════════════════════
+  //  DATE FILTER (LIST)
+  // ════════════════════════════════════════════════════════════
+  void _onDateFilterChanged(
+    EvaporasiDateFilterChanged event,
     Emitter<EvaporasiState> emit,
-  ) async {
-    emit(state.copyWith(
-      isLoading: true,
-      selectedDate: event.date,
-      viewMode: EvaporasiViewMode.customDate,
-    ));
-
-    final history = state.history;
-
-    final updated = TimeSeriesMapper.toSpecificDate(
-      data: history,
-      getTime: (e) => e.timestamp,
-      getValue: (e) => e.evaporasi,
-      targetDate: event.date,
-    );
-
-    final updatedTemp = TimeSeriesMapper.toSpecificDate(
-      data: history,
-      getTime: (e) => e.timestamp,
-      getValue: (e) => e.suhu,
-      targetDate: event.date,
-    );
+  ) {
+    final date = event.date;
+    if (date == null) {
+      emit(state.copyWith(
+        filteredHistory: state.history,
+        clearSelectedDateFilter: true,
+      ));
+      return;
+    }
+    final filtered = state.history.where((item) =>
+        item.timestamp.year == date.year &&
+        item.timestamp.month == date.month &&
+        item.timestamp.day == date.day).toList();
 
     emit(state.copyWith(
-      dailyValues: updated,
-      dailyTemperatures: updatedTemp,
-      chartLabels: _buildChartLabels(period: 'Tanggal Khusus'),
-      isLoading: false,
+      filteredHistory: filtered,
+      selectedDateFilter: date,
     ));
   }
 
-  Future<void> _onViewModeChanged(
-    EvaporasiViewModeChanged event,
-    Emitter<EvaporasiState> emit,
-  ) async {
-    if (event.mode == EvaporasiViewMode.period) {
-      add(EvaporasiPeriodChanged(state.selectedPeriod));
+  // ════════════════════════════════════════════════════════════
+  //  HELPERS
+  // ════════════════════════════════════════════════════════════
+  static bool _isSameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  static (String, bool) _computeStatus(double v) {
+    if (v > 10.0) return ('Tinggi', true);
+    if (v >= 2.0) return ('Normal', false);
+    return ('Rendah', false);
+  }
+
+  void _emitAlert(String status, bool willRain, double value) {
+    final AlertSeverity severity;
+    final String message;
+    if (status == 'Tinggi') {
+      severity = AlertSeverity.danger;
+      message = 'Evaporasi ${value.toStringAsFixed(1)} mm — TINGGI';
+    } else if (status == 'Normal') {
+      severity = AlertSeverity.warning;
+      message = 'Evaporasi ${value.toStringAsFixed(1)} mm — Normal';
     } else {
-      emit(state.copyWith(viewMode: event.mode));
+      severity = AlertSeverity.info;
+      message = '';
     }
+    _notificationBloc.add(SensorAlertAdded(SensorAlert(
+      sensorId: 'evaporasi',
+      sensorName: 'Evaporasi',
+      message: message,
+      severity: severity,
+      timestamp: DateTime.now(),
+    )));
   }
 
   @override
@@ -289,63 +291,12 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
     await _subscription?.cancel();
     return super.close();
   }
-
-  static (String status, bool willRain) _computeWeatherStatus(double value) {
-    if (value <= 5.0) return ('Baik', false);
-    if (value <= 10.0) return ('Sedang', true);
-    return ('Buruk', true);
-  }
-
-  void _emitEvaporasiAlert(String status, bool willRain, double value) {
-    final AlertSeverity severity;
-    final String message;
-
-    if (status == 'Buruk') {
-      severity = AlertSeverity.danger;
-      message =
-          'Evaporasi ${value.toStringAsFixed(1)} mm — status BURUK, potensi hujan tinggi';
-    } else if (status == 'Sedang') {
-      severity = AlertSeverity.warning;
-      message =
-          'Evaporasi ${value.toStringAsFixed(1)} mm — status sedang, potensi hujan';
-    } else {
-      severity = AlertSeverity.info;
-      message = '';
-    }
-
-    _notificationBloc.add(SensorAlertAdded(
-      SensorAlert(
-        sensorId: 'evaporasi',
-        sensorName: 'Evaporasi',
-        message: message,
-        severity: severity,
-        timestamp: DateTime.now(),
-      ),
-    ));
-  }
-
-  List<String> _buildChartLabels({required String period}) {
-    if (period == 'Minggu Ini') {
-      return const ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
-    }
-
-    final now = DateTime.now();
-    if (period == 'Bulan Ini') {
-      final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
-      return List.generate(daysInMonth, (i) => '${i + 1}');
-    }
-
-    // Hari Ini / Tanggal Khusus => 24 jam
-    return List.generate(24, (i) => '${i.toString().padLeft(2, '0')}:00');
-  }
 }
 
 class _EvaporasiRealtimeUpdated extends EvaporasiEvent {
   final Evaporasi data;
-
   const _EvaporasiRealtimeUpdated(this.data);
 
   @override
-  List<Object> get props => [data];
+  List<Object?> get props => [data];
 }
-
