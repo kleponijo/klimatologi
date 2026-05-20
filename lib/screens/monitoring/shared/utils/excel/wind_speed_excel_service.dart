@@ -13,9 +13,11 @@ import 'package:excel/excel.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:intl/intl.dart';
 import 'package:monitoring_repository/monitoring_repository.dart';
-import 'dart:io';
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
+
+// Import kondisional: web pakai dart:html, mobile pakai io + share_plus
+import 'excel_saver_stub.dart'
+    if (dart.library.html) 'excel_saver_web.dart'
+    if (dart.library.io) 'excel_saver_mobile.dart';
 
 class WindSpeedExcelService {
   // ── Format helper ──────────────────────────────────────────
@@ -40,11 +42,8 @@ class WindSpeedExcelService {
     DateTime? filterDate,
   }) async {
     final excel = Excel.createExcel();
-
-    // Hapus sheet default 'Sheet1'
     excel.delete('Sheet1');
 
-    // ── Buat dua sheet ──────────────────────────────────────
     _buildSummarySheet(
         excel, currentSpeed, alertLevel, period, history, filterDate);
     _buildHistorySheet(excel, history, filterDate);
@@ -52,21 +51,9 @@ class WindSpeedExcelService {
     // ── Simpan file ─────────────────────────────────────────
     final bytes = excel.save();
     if (bytes == null) throw Exception('Gagal membuat file Excel');
-
-    final dir = await getTemporaryDirectory();
     final name = 'wind_speed_${_fileFmt.format(DateTime.now())}.xlsx';
-    final file = File('${dir.path}/$name');
-    await file.writeAsBytes(bytes, flush: true);
 
-    // ── Bagikan via share sheet ─────────────────────────────
-    await Share.shareXFiles(
-      [
-        XFile(file.path,
-            mimeType:
-                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-      ],
-      subject: 'Data Kecepatan Angin – ${_headerFmt.format(DateTime.now())}',
-    );
+    await saveAndShareExcel(Uint8List.fromList(bytes), name);
   }
 
   // ════════════════════════════════════════════════════════════
