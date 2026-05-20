@@ -12,6 +12,7 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   await initializeDateFormatting('id_ID', null);
+  await Future.delayed(const Duration(seconds: 2));
   runApp(MyApp(
     FirebaseUserRepo(),
     FirebaseMonitoringRepo(),
