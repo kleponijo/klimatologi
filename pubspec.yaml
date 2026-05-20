@@ -44,12 +44,12 @@ dev_dependencies:
   flutter_native_splash: ^2.4.4
 
 flutter_native_splash:
-  color: '#FFFFFF'
+  color: '#D3D3D3'
   image: images/logo_klimatologi.png
 
   android_12:
     image: images/logo_klimatologi.png
-    color: '#FFFFFF'
+    color: '#D3D3D3'
 
   web: true
 
