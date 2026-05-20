@@ -14,7 +14,6 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:intl/intl.dart';
 import 'package:monitoring_repository/monitoring_repository.dart';
 
-// Import kondisional: web pakai dart:html, mobile pakai io + share_plus
 import 'excel_saver_stub.dart'
     if (dart.library.html) 'excel_saver_web.dart'
     if (dart.library.io) 'excel_saver_mobile.dart';
@@ -39,21 +38,23 @@ class WindSpeedExcelService {
     required String alertLevel,
     required String period,
     required List<MyWindSpeed> history,
-    DateTime? filterDate,
+    required String fileName, // ← nama custom dari user
+    DateTime? dateFrom, // ← filter dari tanggal
+    DateTime? dateTo, // ← filter sampai tanggal
   }) async {
     final excel = Excel.createExcel();
     excel.delete('Sheet1');
 
     _buildSummarySheet(
-        excel, currentSpeed, alertLevel, period, history, filterDate);
-    _buildHistorySheet(excel, history, filterDate);
+        excel, currentSpeed, alertLevel, period, history, dateFrom, dateTo);
+    _buildHistorySheet(excel, history, dateFrom, dateTo);
 
     // ── Simpan file ─────────────────────────────────────────
     final bytes = excel.save();
     if (bytes == null) throw Exception('Gagal membuat file Excel');
-    final name = 'wind_speed_${_fileFmt.format(DateTime.now())}.xlsx';
 
-    await saveAndShareExcel(Uint8List.fromList(bytes), name);
+    final safeName = fileName.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
+    await saveAndShareExcel(Uint8List.fromList(bytes), '$safeName.xlsx');
   }
 
   // ════════════════════════════════════════════════════════════
@@ -65,7 +66,8 @@ class WindSpeedExcelService {
     String alertLevel,
     String period,
     List<MyWindSpeed> history,
-    DateTime? filterDate,
+    DateTime? dateFrom,
+    DateTime? dateTo,
   ) {
     final sheet = excel['Ringkasan'];
 
@@ -87,12 +89,16 @@ class WindSpeedExcelService {
         bold: true, bgColor: _colorSubHead, fontColor: _colorWhite);
     _setCell(sheet, 2, 1, period, bgColor: _colorNormal);
 
-    if (filterDate != null) {
+    if (dateFrom != null && dateTo != null) {
       _setCell(sheet, 3, 0, 'Filter tanggal',
           bold: true, bgColor: _colorSubHead, fontColor: _colorWhite);
       _setCell(
-          sheet, 3, 1, DateFormat('dd MMMM yyyy', 'id_ID').format(filterDate),
-          bgColor: _colorNormal);
+        sheet,
+        3,
+        1,
+        '${DateFormat('dd MMMM yyyy', 'id_ID').format(dateFrom)}  →  ${DateFormat('dd MMMM yyyy', 'id_ID').format(dateTo)}',
+        bgColor: _colorNormal,
+      );
     }
 
     // -- Kecepatan saat ini --
@@ -146,7 +152,8 @@ class WindSpeedExcelService {
   static void _buildHistorySheet(
     Excel excel,
     List<MyWindSpeed> history,
-    DateTime? filterDate,
+    DateTime? dateFrom,
+    DateTime? dateTo,
   ) {
     final sheet = excel['Data History'];
 
@@ -167,14 +174,15 @@ class WindSpeedExcelService {
           centered: true);
     }
 
-    // -- Filter jika ada tanggal dipilih --
-    final data = filterDate != null
-        ? history
-            .where((e) =>
-                e.timestamp.year == filterDate.year &&
-                e.timestamp.month == filterDate.month &&
-                e.timestamp.day == filterDate.day)
-            .toList()
+    // Filter berdasarkan rentang tanggal (inklusif kedua ujung)
+    final data = (dateFrom != null && dateTo != null)
+        ? history.where((e) {
+            final d =
+                DateTime(e.timestamp.year, e.timestamp.month, e.timestamp.day);
+            final from = DateTime(dateFrom.year, dateFrom.month, dateFrom.day);
+            final to = DateTime(dateTo.year, dateTo.month, dateTo.day);
+            return !d.isBefore(from) && !d.isAfter(to);
+          }).toList()
         : history;
 
     // -- Isi baris data --
