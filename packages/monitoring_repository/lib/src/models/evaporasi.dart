@@ -42,15 +42,19 @@ class Evaporasi {
     }
 
     // ── Evaporasi (mm) ───────────────────────────────────
-    final evaporasiVal = toDoubleSafe(
-      json['evaporasi_mm'] ??
-          json['evaporasi'] ??
-          json['evaporasiMm'] ??
-          json['evaporation_mm'] ??
-          json['evap_mm'] ??
-          json['evaporasi_value'] ??
-          json['evaporasi_k'],
+    // Dibalik: Mengambil dari field tinggi_air karena ditukar
+    final evaporasiRaw = toDoubleSafe(
+      json['tinggi_air_cm'] ??
+          json['tinggi_air'] ??
+          json['tinggiAir'] ??
+          json['tinggiAir_cm'] ??
+          json['water_level'] ??
+          json['waterLevel'] ??
+          json['tinggi_air_m'] ??
+          json['tinggiAir_m'],
     );
+    // Konversi cm ke mm dengan mengalikan 10
+    final evaporasiVal = evaporasiRaw * 10.0;
 
     // ── Suhu (°C) ────────────────────────────────────────
     // FIX: tambah 'suhu_air_c' sesuai field yang dikirim ESP32
@@ -65,16 +69,18 @@ class Evaporasi {
     final suhuVal = (suhuRaw < -50 || suhuRaw > 100) ? -1.0 : suhuRaw;
 
     // ── Tinggi Air (cm) ──────────────────────────────────
-    final tinggiVal = toDoubleSafe(
-      json['tinggi_air_cm'] ??
-          json['tinggi_air'] ??
-          json['tinggiAir'] ??
-          json['tinggiAir_cm'] ??
-          json['water_level'] ??
-          json['waterLevel'] ??
-          json['tinggi_air_m'] ??
-          json['tinggiAir_m'],
+    // Dibalik: Mengambil dari field evaporasi karena ditukar
+    final tinggiRaw = toDoubleSafe(
+      json['evaporasi_mm'] ??
+          json['evaporasi'] ??
+          json['evaporasiMm'] ??
+          json['evaporation_mm'] ??
+          json['evap_mm'] ??
+          json['evaporasi_value'] ??
+          json['evaporasi_k'],
     );
+    // Konversi mm ke cm dengan membagi 10 (misal 241.78 mm -> 24.18 cm)
+    final tinggiVal = tinggiRaw / 10.0;
 
     // ── Sanity check ─────────────────────────────────────
     final evaporasiFiltered =
