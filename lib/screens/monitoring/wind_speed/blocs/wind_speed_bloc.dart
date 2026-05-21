@@ -41,7 +41,7 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
     emit(state.copyWith(isLoading: true));
 
     final history = await _repository.getSensorHistory(
-      'anemometer/history',
+      'anemometer/esp_percobaan/history',
       (json) => MyWindSpeed.fromJson(json),
     );
 
@@ -85,7 +85,7 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
     await _subscription?.cancel();
     _subscription = _repository
         .getSensorStream(
-      'anemometer/realtime',
+      'anemometer/esp_percobaan/realtime',
       (json) => MyWindSpeed.fromJson(json),
     )
         .listen((data) {

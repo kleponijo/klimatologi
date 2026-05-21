@@ -32,16 +32,16 @@ dependencies:
   printing: ^5.13.1
   rxdart: ^0.27.7
   share_plus: ^13.1.0
+  shared_preferences: ^2.5.5
   table_calendar: ^3.1.2
   user_repository:
     path: packages/user_repository
 
 dev_dependencies:
-  flutter_test:
-    sdk: flutter
-
   flutter_lints: ^3.0.0
   flutter_native_splash: ^2.4.4
+  flutter_test:
+    sdk: flutter
 
 flutter_native_splash:
   color: '#D3D3D3'
