@@ -529,6 +529,42 @@ class _LogsTab extends StatelessWidget {
   final DeviceSetupState state;
   const _LogsTab({required this.state});
 
+  void _showRestartDialog(
+      BuildContext context, DeviceSetupBloc bloc, String deviceId) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(children: [
+          Icon(Icons.restart_alt_rounded, color: Colors.red),
+          SizedBox(width: 8),
+          Text('Remote Restart'),
+        ]),
+        content: Text(
+          'ESP "$deviceId" akan restart dalam ~5 detik.\n\n'
+          'Data realtime akan berhenti sebentar lalu kembali normal.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Batal', style: TextStyle(color: Colors.grey.shade600)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              bloc.add(DeviceRestartRequested());
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade600,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Restart'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final bloc = context.read<DeviceSetupBloc>();
@@ -556,6 +592,21 @@ class _LogsTab extends StatelessWidget {
                   ],
                 ),
               ),
+
+              // restart esp
+              IconButton.filledTonal(
+                onPressed: () =>
+                    _showRestartDialog(context, bloc, state.deviceId),
+                icon: const Icon(Icons.restart_alt_rounded),
+                tooltip: 'Remote Restart ESP',
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.red.shade50,
+                  foregroundColor: Colors.red.shade700,
+                ),
+              ),
+              const SizedBox(width: 8),
+
+              // refresh log serial
               IconButton.filledTonal(
                 onPressed: state.logsLoading
                     ? null

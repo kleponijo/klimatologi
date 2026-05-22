@@ -34,6 +34,7 @@ class DeviceSetupBloc extends Bloc<DeviceSetupEvent, DeviceSetupState> {
         (e, emit) => emit(state.copyWith(intervalHistoryMs: e.ms)));
     on<DeviceSettingsSaved>(_onSettingsSaved);
     on<DeviceLogsRefreshed>(_onLogsRefreshed);
+    on<DeviceRestartRequested>(_onRestartRequested);
   }
 
   // ════════════════════════════════════════════════════════════
@@ -232,6 +233,22 @@ class DeviceSetupBloc extends Bloc<DeviceSetupEvent, DeviceSetupState> {
           errorMessage: 'Gagal mengirim ke ESP: ${e.message}',
         ));
       }
+    }
+  }
+
+  Future<void> _onRestartRequested(
+    DeviceRestartRequested event,
+    Emitter<DeviceSetupState> emit,
+  ) async {
+    try {
+      await _repository.sendRemoteRestart(state.deviceId);
+      emit(state.copyWith(status: DeviceSetupStatus.settingsSaved));
+      // Reuse status settingsSaved untuk snackbar — atau bisa buat status baru
+    } catch (e) {
+      emit(state.copyWith(
+        status: DeviceSetupStatus.settingsError,
+        errorMessage: 'Gagal kirim restart: $e',
+      ));
     }
   }
 

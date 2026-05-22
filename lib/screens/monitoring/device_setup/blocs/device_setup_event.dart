@@ -56,3 +56,5 @@ class DeviceSettingsSaved extends DeviceSetupEvent {}
 
 /// Refresh logs dari Firebase
 class DeviceLogsRefreshed extends DeviceSetupEvent {}
+
+class DeviceRestartRequested extends DeviceSetupEvent {}

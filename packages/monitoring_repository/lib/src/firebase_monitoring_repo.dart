@@ -92,6 +92,7 @@ class FirebaseMonitoringRepo implements MonitoringRepository {
   }
 
   // ── Tulis settings ke Firebase (dari app) ────────────────────
+  @override
   Future<void> updateAnemometerSettings({
     double? kFaktor,
     double? radiusM,
@@ -110,6 +111,7 @@ class FirebaseMonitoringRepo implements MonitoringRepository {
   }
 
   // ── Ambil logs dari device tertentu ──────────────────────────
+  @override
   Future<List<Map<String, dynamic>>> getDeviceLogs(
     String deviceId, {
     int limit = 50,
@@ -141,5 +143,10 @@ class FirebaseMonitoringRepo implements MonitoringRepository {
       }
     } catch (_) {}
     return [];
+  }
+
+  @override
+  Future<void> sendRemoteRestart(String deviceId) async {
+    await _db.ref('anemometer/$deviceId/command/restart').set(true);
   }
 }

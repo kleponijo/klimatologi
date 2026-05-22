@@ -38,4 +38,6 @@ abstract class MonitoringRepository {
     String deviceId, {
     int limit = 50,
   });
+
+  Future<void> sendRemoteRestart(String deviceId);
 }
