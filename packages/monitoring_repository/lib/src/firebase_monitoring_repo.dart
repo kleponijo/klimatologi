@@ -1,6 +1,4 @@
-// import 'dart:developer';
 import 'dart:async';
-// import 'package:rxdart/rxdart.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:monitoring_repository/monitoring_repository.dart';
 
@@ -15,57 +13,46 @@ class FirebaseMonitoringRepo implements MonitoringRepository {
     String path,
     T Function(Map<dynamic, dynamic> json) mapper,
   ) {
-    /// === ambil data mentah dari firebase === ///
     return _db.ref(path).onValue.map((event) {
       final Object? value = event.snapshot.value;
-
-      if (value is Map) {
-        return mapper(value);
-      } else {
-        // Jika data kosong atau bukan Map, berikan Map kosong agar mapper tidak crash
-        return mapper({});
-      }
+      return mapper(value is Map ? value : {});
     });
   }
 
+  // ── Snapshot ─────────────────────────────────────────────────
   @override
-  // Jika ingin mengambil data sekali saja (bukan stream)
   Future<T> getSensorSnapshot<T>(
     String path,
     T Function(Map<dynamic, dynamic> json) mapper,
   ) async {
     final snapshot = await _db.ref(path).get();
-    final data = snapshot.value as Map<dynamic, dynamic>? ?? {};
-    return mapper(data);
+    return mapper(
+      snapshot.value is Map ? snapshot.value as Map<dynamic, dynamic> : {},
+    );
   }
 
+  // ── History ──────────────────────────────────────────────────
   @override
   Future<List<T>> getSensorHistory<T>(
     String path,
     T Function(Map<dynamic, dynamic> json) mapper,
   ) async {
     try {
-      // Ambil data dari path history
       final snapshot = await _db.ref(path).get();
-
       if (snapshot.exists && snapshot.value is Map) {
-        final Map<dynamic, dynamic> data = snapshot.value as Map;
-
-        final list = data.values.map((item) {
-          return mapper(item as Map<dynamic, dynamic>);
-        }).toList();
-
-        // ✅ Sort by timestamp — Firebase push tidak selalu menghasilkan urutan kronologis.
+        final data = snapshot.value as Map<dynamic, dynamic>;
+        final list = data.values
+            .map((item) => mapper(item as Map<dynamic, dynamic>))
+            .toList();
         list.sort((a, b) {
           try {
-            final aTimestamp = (a as dynamic).timestamp as DateTime;
-            final bTimestamp = (b as dynamic).timestamp as DateTime;
-            return aTimestamp.compareTo(bTimestamp);
+            final aT = (a as dynamic).timestamp as DateTime;
+            final bT = (b as dynamic).timestamp as DateTime;
+            return aT.compareTo(bT);
           } catch (_) {
             return 0;
           }
         });
-
         return list;
       }
       return [];
@@ -74,29 +61,40 @@ class FirebaseMonitoringRepo implements MonitoringRepository {
     }
   }
 
-  // ── Baca settings dari Firebase ──────────────────────────────
+  // ── Anemometer Settings ──────────────────────────────────────
+  @override
   Future<Map<String, dynamic>> getAnemometerSettings() async {
+    // Default sama dengan cfg_config.h di ESP
+    const defaults = <String, dynamic>{
+      'k_faktor': 50.0,
+      'radius_m': 0.08,
+      'interval_realtime_ms': 1000,
+      'interval_history_ms': 3600000,
+    };
     try {
       final snapshot = await _db.ref('anemometer/settings').get();
       if (snapshot.exists && snapshot.value is Map) {
         final raw = snapshot.value as Map<dynamic, dynamic>;
         return {
-          'k_faktor': (raw['k_faktor'] ?? 50.0).toDouble(),
-          'interval_realtime_ms': (raw['interval_realtime_ms'] ?? 1000) as int,
-          'interval_history_ms': (raw['interval_history_ms'] ?? 3600000) as int,
+          'k_faktor': (raw['k_faktor'] ?? defaults['k_faktor']).toDouble(),
+          'radius_m': (raw['radius_m'] ?? defaults['radius_m']).toDouble(),
+          'interval_realtime_ms':
+              (raw['interval_realtime_ms'] ?? defaults['interval_realtime_ms'])
+                  as int,
+          'interval_history_ms':
+              (raw['interval_history_ms'] ?? defaults['interval_history_ms'])
+                  as int,
         };
       }
     } catch (_) {}
-    return {
-      'k_faktor': 50.0,
-      'interval_realtime_ms': 1000,
-      'interval_history_ms': 3600000,
-    };
+
+    return defaults;
   }
 
   // ── Tulis settings ke Firebase (dari app) ────────────────────
   Future<void> updateAnemometerSettings({
     double? kFaktor,
+    double? radiusM,
     int? intervalRealtimeMs,
     int? intervalHistoryMs,
   }) async {

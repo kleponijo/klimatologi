@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:monitoring_repository/monitoring_repository.dart';
 import 'package:bloc_concurrency/bloc_concurrency.dart';
 import '../../../../core/utils/time_series_mapper.dart';
@@ -13,6 +14,8 @@ part 'wind_speed_state.dart';
 /// Referensi: Beaufort scale & BMKG
 const double _kWindWarning = 8.0; // Waspada: 8–12.5 m/s (~29–45 km/h)
 const double _kWindDanger = 12.5; // Bahaya:  > 12.5 m/s (> 45 km/h)
+const _kDeviceIdKey = 'selected_device_id';
+const _kDefaultDeviceId = 'esp_lapangan';
 
 class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
   final MonitoringRepository _repository;
@@ -31,6 +34,12 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
     on<WindSpeedDateFilterChanged>(_onDateFilterChanged); // ← baru
   }
 
+  // ── Baca device ID dari SharedPreferences ─────────────────
+  Future<String> _getDeviceId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_kDeviceIdKey) ?? _kDefaultDeviceId;
+  }
+
   // ════════════════════════════════════════════════════════════
   //  START
   // ════════════════════════════════════════════════════════════
@@ -39,6 +48,9 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
     Emitter<WindSpeedState> emit,
   ) async {
     emit(state.copyWith(isLoading: true));
+
+    // Baca device ID aktif (dari SharedPreferences, diset di DeviceSetupBloc)
+    final deviceId = await _getDeviceId();
 
     final history = await _repository.getSensorHistory(
       'anemometer/esp_percobaan/history',
@@ -82,15 +94,14 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
           history.isNotEmpty ? _getAlertLevel(history.last.speed) : 'Normal',
     ));
 
+    // Subscribe realtime dari path device aktif
     await _subscription?.cancel();
     _subscription = _repository
         .getSensorStream(
-      'anemometer/esp_percobaan/realtime',
-      (json) => MyWindSpeed.fromJson(json),
-    )
-        .listen((data) {
-      add(_WindSpeedRealtimeUpdated(data));
-    });
+          'anemometer/$deviceId/realtime',
+          (json) => MyWindSpeed.fromJson(json),
+        )
+        .listen((data) => add(_WindSpeedRealtimeUpdated(data)));
   }
 
   // ════════════════════════════════════════════════════════════

@@ -1,26 +1,129 @@
 import 'package:bloc/bloc.dart';
 import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:monitoring_repository/monitoring_repository.dart';
 
 part 'device_setup_event.dart';
 part 'device_setup_state.dart';
 
+const _kDeviceIdKey = 'selected_device_id';
+
 class DeviceSetupBloc extends Bloc<DeviceSetupEvent, DeviceSetupState> {
-  DeviceSetupBloc() : super(const DeviceSetupState()) {
+  final MonitoringRepository _repository;
+
+  final Dio _dio = Dio(BaseOptions(
+    connectTimeout: const Duration(seconds: 5),
+    receiveTimeout: const Duration(seconds: 10),
+    sendTimeout: const Duration(seconds: 5),
+  ));
+
+  DeviceSetupBloc({required MonitoringRepository repository})
+      : _repository = repository,
+        super(const DeviceSetupState()) {
     on<CheckEspConnectionEvent>(_onCheckConnection);
     on<SendWifiCredentialsEvent>(_onSendCredentials);
     on<ResetDeviceSetupEvent>(_onReset);
+    // Settings
+    on<DeviceSettingsStarted>(_onSettingsStarted);
+    on<DeviceIdChanged>(_onDeviceIdChanged);
+    on<KFaktorChanged>((e, emit) => emit(state.copyWith(kFaktor: e.value)));
+    on<RadiusChanged>((e, emit) => emit(state.copyWith(radiusM: e.value)));
+    on<IntervalRealtimeChanged>(
+        (e, emit) => emit(state.copyWith(intervalRealtimeMs: e.ms)));
+    on<IntervalHistoryChanged>(
+        (e, emit) => emit(state.copyWith(intervalHistoryMs: e.ms)));
+    on<DeviceSettingsSaved>(_onSettingsSaved);
+    on<DeviceLogsRefreshed>(_onLogsRefreshed);
   }
 
-  // ── Dio instance khusus untuk komunikasi ke ESP ──────────────
-  // Timeout pendek karena ESP di jaringan lokal, harusnya cepat.
-  // Kalau timeout → berarti HP belum konek ke hotspot ESP.
-  final Dio _dio = Dio(
-    BaseOptions(
-      connectTimeout: const Duration(seconds: 5),
-      receiveTimeout: const Duration(seconds: 10),
-      sendTimeout: const Duration(seconds: 5),
-    ),
-  );
+  // ════════════════════════════════════════════════════════════
+  //  Settings
+  // ════════════════════════════════════════════════════════════
+
+  Future<void> _onSettingsStarted(
+    DeviceSettingsStarted event,
+    Emitter<DeviceSetupState> emit,
+  ) async {
+    emit(state.copyWith(status: DeviceSetupStatus.settingsLoading));
+    try {
+      // Baca device ID tersimpan lokal
+      final prefs = await SharedPreferences.getInstance();
+      final savedId = prefs.getString(_kDeviceIdKey) ?? state.deviceId;
+
+      // Baca settings dari Firebase
+      final s = await _repository.getAnemometerSettings();
+
+      // Baca logs
+      final logs = await _repository.getDeviceLogs(savedId);
+
+      emit(state.copyWith(
+        status: DeviceSetupStatus.settingsLoaded,
+        deviceId: savedId,
+        kFaktor: s['k_faktor'] as double,
+        radiusM: s['radius_m'] as double,
+        intervalRealtimeMs: s['interval_realtime_ms'] as int,
+        intervalHistoryMs: s['interval_history_ms'] as int,
+        logs: logs,
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        status: DeviceSetupStatus.settingsError,
+        errorMessage: 'Gagal memuat settings: $e',
+      ));
+    }
+  }
+
+  Future<void> _onDeviceIdChanged(
+    DeviceIdChanged event,
+    Emitter<DeviceSetupState> emit,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kDeviceIdKey, event.deviceId);
+
+    // Muat log device baru
+    emit(state.copyWith(
+      deviceId: event.deviceId,
+      logsLoading: true,
+    ));
+    final logs = await _repository.getDeviceLogs(event.deviceId);
+    emit(state.copyWith(logs: logs, logsLoading: false));
+  }
+
+  Future<void> _onSettingsSaved(
+    DeviceSettingsSaved event,
+    Emitter<DeviceSetupState> emit,
+  ) async {
+    emit(state.copyWith(status: DeviceSetupStatus.settingsSaving));
+    try {
+      await _repository.updateAnemometerSettings(
+        kFaktor: state.kFaktor,
+        radiusM: state.radiusM,
+        intervalRealtimeMs: state.intervalRealtimeMs,
+        intervalHistoryMs: state.intervalHistoryMs,
+      );
+      emit(state.copyWith(status: DeviceSetupStatus.settingsSaved));
+      await Future.delayed(const Duration(seconds: 2));
+      emit(state.copyWith(status: DeviceSetupStatus.settingsLoaded));
+    } catch (e) {
+      emit(state.copyWith(
+        status: DeviceSetupStatus.settingsError,
+        errorMessage: 'Gagal menyimpan: $e',
+      ));
+    }
+  }
+
+  Future<void> _onLogsRefreshed(
+    DeviceLogsRefreshed event,
+    Emitter<DeviceSetupState> emit,
+  ) async {
+    emit(state.copyWith(logsLoading: true));
+    final logs = await _repository.getDeviceLogs(state.deviceId);
+    emit(state.copyWith(logs: logs, logsLoading: false));
+  }
+
+  // ════════════════════════════════════════════════════════════
+  //  WiFi Setup (existing logic, tidak berubah)
+  // ════════════════════════════════════════════════════════════
 
   // ── Cek koneksi ke ESP ────────────────────────────────────────
   Future<void> _onCheckConnection(
@@ -137,6 +240,12 @@ class DeviceSetupBloc extends Bloc<DeviceSetupEvent, DeviceSetupState> {
     ResetDeviceSetupEvent event,
     Emitter<DeviceSetupState> emit,
   ) {
-    emit(const DeviceSetupState());
+    emit(DeviceSetupState(
+      deviceId: state.deviceId,
+      kFaktor: state.kFaktor,
+      radiusM: state.radiusM,
+      intervalRealtimeMs: state.intervalRealtimeMs,
+      intervalHistoryMs: state.intervalHistoryMs,
+    ));
   }
 }
