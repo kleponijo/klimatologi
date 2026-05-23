@@ -28,7 +28,5 @@ class SignInBloc extends Bloc<SignInEvent, SignInState> {
         emit(SignInFailure());
       }
     });
-
-    on<SignOutRequired>((event, emit) async => await _userRepository.logOut());
   }
 }

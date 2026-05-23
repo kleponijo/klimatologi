@@ -1,24 +1,42 @@
 import '../entities/entities.dart';
 
 class MyUser {
-  String userId;
-  String email;
-  String name;
-  bool hasActiveCart;
+  final String userId; // ← final semua
+  final String email;
+  final String name;
+  final bool hasActiveCart;
 
-  MyUser({
+  const MyUser({
     required this.userId,
     required this.email,
     required this.name,
     required this.hasActiveCart,
   });
 
-  static final empty = MyUser(
+  static const empty = MyUser(
     userId: '',
     email: '',
     name: '',
     hasActiveCart: false,
   );
+
+  bool get isEmpty => this == empty;
+  bool get isNotEmpty => this != empty;
+
+  // ← tambah copyWith agar bisa "ubah" tanpa mutasi
+  MyUser copyWith({
+    String? userId,
+    String? email,
+    String? name,
+    bool? hasActiveCart,
+  }) {
+    return MyUser(
+      userId: userId ?? this.userId,
+      email: email ?? this.email,
+      name: name ?? this.name,
+      hasActiveCart: hasActiveCart ?? this.hasActiveCart,
+    );
+  }
 
   MyUserEntity toEntity() {
     return MyUserEntity(

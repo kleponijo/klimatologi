@@ -39,12 +39,6 @@ class _SignInScreenState extends State<SignInScreen> {
 
           if (state is SignInFailure) {
             setState(() => _errorMsg = 'Email atau password salah. Coba lagi.');
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(_errorMsg!),
-                backgroundColor: Colors.red,
-              ),
-            );
           } else if (state is SignInSuccess) {
             setState(() => _errorMsg = null);
           }
@@ -159,7 +153,7 @@ class _SignInScreenState extends State<SignInScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Tombol Google — hanya muncul ketika tidak loading
+                // // Tombol Google — hanya muncul ketika tidak loading
                 SizedBox(
                   width: MediaQuery.of(context).size.width * 0.5,
                   child: TextButton.icon(

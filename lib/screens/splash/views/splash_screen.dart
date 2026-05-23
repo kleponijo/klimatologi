@@ -1,8 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-
-import '../../auth/views/welcome_screen.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:klimatologiot/blocs/authentication_bloc/authentication_bloc.dart';
+import 'package:klimatologiot/screens/auth/views/welcome_screen.dart';
+import 'package:klimatologiot/screens/home/views/home_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -15,15 +17,36 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
+    _navigateAfterSplash();
+  }
 
-    Timer(const Duration(seconds: 3), () {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const WelcomeScreen(),
-        ),
-      );
-    });
+  Future<void> _navigateAfterSplash() async {
+    // Tunggu minimal 3 detik (efek splash)
+    await Future.delayed(const Duration(seconds: 3));
+    if (!mounted) return;
+
+    final bloc = context.read<AuthenticationBloc>();
+
+    // Kalau auth state masih unknown (Firebase belum resolve), tunggu dulu
+    AuthenticationState state = bloc.state;
+    if (state.status == AuthenticationStatus.unknown) {
+      state = await bloc.stream
+          .firstWhere((s) => s.status != AuthenticationStatus.unknown)
+          .timeout(
+            const Duration(seconds: 5),
+            onTimeout: () => const AuthenticationState.unauthenticated(),
+          );
+    }
+    if (!mounted) return;
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => state.status == AuthenticationStatus.authenticated
+            ? HomeScreen()
+            : WelcomeScreen(),
+      ),
+    );
   }
 
   @override
@@ -35,7 +58,7 @@ class _SplashScreenState extends State<SplashScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Image.asset(
-              'assets/images/logo.png',
+              'images/logo_klimatologi.png',
               width: 140,
             ),
             const SizedBox(height: 24),
