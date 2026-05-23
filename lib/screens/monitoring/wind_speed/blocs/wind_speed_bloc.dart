@@ -53,7 +53,7 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
     final deviceId = await _getDeviceId();
 
     final history = await _repository.getSensorHistory(
-      'anemometer/esp_percobaan/history',
+      'anemometer/$deviceId/history',
       (json) => MyWindSpeed.fromJson(json),
     );
 
