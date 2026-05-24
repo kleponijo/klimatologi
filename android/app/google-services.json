@@ -15,6 +15,22 @@
       },
       "oauth_client": [
         {
+          "client_id": "219079385989-iav1j4cph10a1sel3fhe2gk6t8ail6vv.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.klimatologiot",
+            "certificate_hash": "cd3bca31e032654923ce19096b99aed48b95a129"
+          }
+        },
+        {
+          "client_id": "219079385989-llase5r40d3o21mc8t142gfk5kdoa0o9.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.klimatologiot",
+            "certificate_hash": "3d41c0e8611e298dc3e8adb99febe8c109b74369"
+          }
+        },
+        {
           "client_id": "219079385989-qtvssir2q3c4lo6ijn3p07kl77ukdme2.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
