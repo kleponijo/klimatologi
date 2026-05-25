@@ -42,24 +42,22 @@ class Evaporasi {
     }
 
     // ── Evaporasi (mm) ───────────────────────────────────
-    // Dibalik: Mengambil dari field tinggi_air karena ditukar
     final evaporasiRaw = toDoubleSafe(
-      json['tinggi_air_cm'] ??
-          json['tinggi_air'] ??
-          json['tinggiAir'] ??
-          json['tinggiAir_cm'] ??
-          json['water_level'] ??
-          json['waterLevel'] ??
-          json['tinggi_air_m'] ??
-          json['tinggiAir_m'],
+      json['evaporasi_mm'] ??
+          json['evaporasi'] ??
+          json['evaporasiMm'] ??
+          json['evaporation_mm'] ??
+          json['evap_mm'] ??
+          json['evaporasi_value'] ??
+          json['evaporasi_k'],
     );
-    // Konversi cm ke mm dengan mengalikan 10
-    final evaporasiVal = evaporasiRaw * 10.0;
+    // Sudah dalam mm, tidak perlu konversi
+    final evaporasiVal = evaporasiRaw;
 
     // ── Suhu (°C) ────────────────────────────────────────
     // FIX: tambah 'suhu_air_c' sesuai field yang dikirim ESP32
     final suhuRaw = toDoubleSafe(
-      json['suhu_air_c'] ??     // ← ESP32 kirim field ini
+      json['suhu_air_c'] ?? // ← ESP32 kirim field ini
           json['suhu_air'] ??
           json['suhu'] ??
           json['suhuAir'] ??
@@ -69,29 +67,27 @@ class Evaporasi {
     final suhuVal = (suhuRaw < -50 || suhuRaw > 100) ? -1.0 : suhuRaw;
 
     // ── Tinggi Air (cm) ──────────────────────────────────
-    // Dibalik: Mengambil dari field evaporasi karena ditukar
     final tinggiRaw = toDoubleSafe(
-      json['evaporasi_mm'] ??
-          json['evaporasi'] ??
-          json['evaporasiMm'] ??
-          json['evaporation_mm'] ??
-          json['evap_mm'] ??
-          json['evaporasi_value'] ??
-          json['evaporasi_k'],
+      json['tinggi_air_cm'] ??
+          json['tinggi_air'] ??
+          json['tinggiAir'] ??
+          json['tinggiAir_cm'] ??
+          json['water_level'] ??
+          json['waterLevel'] ??
+          json['tinggi_air_m'] ??
+          json['tinggiAir_m'],
     );
-    // Konversi mm ke cm dengan membagi 10 (misal 241.78 mm -> 24.18 cm)
-    final tinggiVal = tinggiRaw / 10.0;
+    // Sudah dalam cm, tidak perlu konversi
+    final tinggiVal = tinggiRaw;
 
     // ── Sanity check ─────────────────────────────────────
-    final evaporasiFiltered =
-        (evaporasiVal < 0 || evaporasiVal > 50) ? 0.0 : evaporasiVal;
-    final tinggiFiltered =
-        (tinggiVal < 0 || tinggiVal > 100) ? 0.0 : tinggiVal;
+    final evaporasiFiltered = (evaporasiVal < 0 || evaporasiVal > 50)
+        ? 0.0
+        : evaporasiVal;
+    final tinggiFiltered = (tinggiVal < 0 || tinggiVal > 100) ? 0.0 : tinggiVal;
 
     // ── Acuan Pagi (cm) ──────────────────────────────────
-    final acuanPagiVal = toDoubleSafe(
-      json['acuan_pagi_cm'] ?? json['acuan_pagi'] ?? 0.0,
-    );
+    final acuanPagiVal = toDoubleSafe(json['acuan_pagi_cm'] ?? 0.0);
 
     // ── Status ───────────────────────────────────────────
     final statusVal = json['status']?.toString() ?? "Normal";
@@ -103,8 +99,9 @@ class Evaporasi {
       try {
         if (rawTimestamp is int) {
           if (rawTimestamp < 1000000000000) {
-            return DateTime.fromMillisecondsSinceEpoch(rawTimestamp * 1000)
-                .toLocal();
+            return DateTime.fromMillisecondsSinceEpoch(
+              rawTimestamp * 1000,
+            ).toLocal();
           }
           return DateTime.fromMillisecondsSinceEpoch(rawTimestamp).toLocal();
         }
@@ -124,8 +121,9 @@ class Evaporasi {
           final unixValue = int.tryParse(s);
           if (unixValue != null) {
             if (unixValue < 1000000000000) {
-              return DateTime.fromMillisecondsSinceEpoch(unixValue * 1000)
-                  .toLocal();
+              return DateTime.fromMillisecondsSinceEpoch(
+                unixValue * 1000,
+              ).toLocal();
             }
             return DateTime.fromMillisecondsSinceEpoch(unixValue).toLocal();
           }
@@ -151,8 +149,7 @@ class Evaporasi {
 
     DateTime timestamp = DateTime.fromMillisecondsSinceEpoch(0);
 
-    final rawTimestamp =
-        json['timestamp'] ?? json['time'] ?? json['datetime'];
+    final rawTimestamp = json['timestamp'] ?? json['time'] ?? json['datetime'];
 
     if (rawTimestamp != null) {
       timestamp = parseTimestamp(rawTimestamp);
@@ -164,11 +161,9 @@ class Evaporasi {
         if (parts.length >= 2) {
           final jam = int.tryParse(parts[0]) ?? 0;
           final menit = int.tryParse(parts[1]) ?? 0;
-          final detik =
-              parts.length >= 3 ? (int.tryParse(parts[2]) ?? 0) : 0;
+          final detik = parts.length >= 3 ? (int.tryParse(parts[2]) ?? 0) : 0;
           final now = DateTime.now();
-          timestamp =
-              DateTime(now.year, now.month, now.day, jam, menit, detik);
+          timestamp = DateTime(now.year, now.month, now.day, jam, menit, detik);
         }
       }
     }

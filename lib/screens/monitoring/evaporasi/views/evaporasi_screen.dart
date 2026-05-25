@@ -474,13 +474,6 @@ class _EvaporasiScreenState extends State<EvaporasiScreen> {
               Icons.water,
               Colors.blue,
             ),
-            _miniCard(
-              cardWidth,
-              'Acuan Air Pagi',
-              '${(state.currentData?.acuanPagi ?? 0.0).toStringAsFixed(1)} cm',
-              Icons.wb_sunny_outlined,
-              Colors.amber.shade700,
-            ),
           ],
         );
       },
