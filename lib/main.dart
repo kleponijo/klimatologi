@@ -17,5 +17,3 @@ void main() async {
     FirebaseMonitoringRepo(),
   ));
 }
-// apalah
-// ngentod
