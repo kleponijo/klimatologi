@@ -35,7 +35,13 @@ class FirebaseUserRepo implements UserRepository {
           }
         } catch (e) {
           log('Error fetching user data: $e');
-          yield MyUser.empty;
+          // Firestore sementara tidak tersedia; jangan anggap user logout.
+          yield MyUser(
+            userId: firebaseUser.uid,
+            email: firebaseUser.email ?? '',
+            name: firebaseUser.displayName ?? '',
+            hasActiveCart: false,
+          );
         }
       }
     });
@@ -91,10 +97,10 @@ class FirebaseUserRepo implements UserRepository {
   }
 
   @override
-  Future<void> signInWithGoogle() async {
+  Future<bool> signInWithGoogle() async {
     try {
       final googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return; // user cancel
+      if (googleUser == null) return false; // user cancel
 
       final googleAuth = await googleUser.authentication;
       final credential = GoogleAuthProvider.credential(
@@ -117,6 +123,7 @@ class FirebaseUserRepo implements UserRepository {
         );
         await setUserData(myUser);
       }
+      return true;
     } catch (e) {
       log(e.toString());
       rethrow;

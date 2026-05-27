@@ -9,7 +9,7 @@ abstract class UserRepository {
 
   Future<void> signIn(String email, String password);
 
-  Future<void> signInWithGoogle();
+  Future<bool> signInWithGoogle();
 
   Future<void> logOut();
 }

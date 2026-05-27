@@ -22,8 +22,12 @@ class SignInBloc extends Bloc<SignInEvent, SignInState> {
     on<GoogleSignInRequired>((event, emit) async {
       emit(SignInProcess());
       try {
-        await _userRepository.signInWithGoogle();
-        emit(SignInSuccess());
+        final didSignIn = await _userRepository.signInWithGoogle();
+        if (didSignIn) {
+          emit(SignInSuccess());
+        } else {
+          emit(SignInInitial());
+        }
       } catch (e) {
         emit(SignInFailure());
       }

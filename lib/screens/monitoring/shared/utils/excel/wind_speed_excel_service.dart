@@ -10,7 +10,6 @@
 
 import 'dart:typed_data';
 import 'package:excel/excel.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:intl/intl.dart';
 import 'package:monitoring_repository/monitoring_repository.dart';
 
@@ -20,34 +19,100 @@ import 'excel_saver_stub.dart'
 
 class WindSpeedExcelService {
   // ── Format helper ──────────────────────────────────────────
-  static final _dateFmt = DateFormat('dd/MM/yyyy HH:mm:ss', 'id_ID');
-  static final _fileFmt = DateFormat('yyyyMMdd_HHmmss');
   static final _headerFmt = DateFormat('dd MMMM yyyy, HH:mm', 'id_ID');
 
   // ── Warna tema ─────────────────────────────────────────────
-  static const _colorHeader = '1A4A8C'; // biru tua
-  static const _colorSubHead = '2E75B6'; // biru medium
-  static const _colorNormal = 'E8F4FD'; // biru sangat muda
-  static const _colorWaspada = 'FFF3CD'; // kuning muda
-  static const _colorBahaya = 'F8D7DA'; // merah muda
+  static const _colorHeader = '1A4A8C';
+  static const _colorSubHead = '2E75B6';
+  static const _colorNormal = 'E8F4FD';
+  static const _colorWaspada = 'FFF3CD';
+  static const _colorBahaya = 'F8D7DA';
   static const _colorWhite = 'FFFFFF';
 
-  /// Export data kecepatan angin ke file Excel dan buka share sheet
+  // ════════════════════════════════════════════════════════════
+  //  Filter helper — dipakai oleh dua sheet
+  // ════════════════════════════════════════════════════════════
+  static List<MyWindSpeed> _applyFilter(
+    List<MyWindSpeed> history, {
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    int? hourFrom,
+    int? minuteFrom,
+    int? hourTo,
+    int? minuteTo,
+  }) {
+    return history.where((e) {
+      // ── Filter tanggal ──────────────────────────────────────
+      if (dateFrom != null && dateTo != null) {
+        final d =
+            DateTime(e.timestamp.year, e.timestamp.month, e.timestamp.day);
+        final from = DateTime(dateFrom.year, dateFrom.month, dateFrom.day);
+        final to = DateTime(dateTo.year, dateTo.month, dateTo.day);
+        if (d.isBefore(from) || d.isAfter(to)) return false;
+      }
+
+      // ── Filter jam ──────────────────────────────────────────
+      if (hourFrom != null && hourTo != null) {
+        // Bandingkan dalam menit total agar menit ikut diperhitungkan
+        final eMin = e.timestamp.hour * 60 + e.timestamp.minute;
+        final fromMin = hourFrom * 60 + (minuteFrom ?? 0);
+        final toMin = hourTo * 60 + (minuteTo ?? 59);
+
+        final pass = fromMin <= toMin
+            ? eMin >= fromMin && eMin <= toMin // normal: 08:00–17:00
+            : eMin >= fromMin || eMin <= toMin; // overnight: 23:00–02:00
+        if (!pass) return false;
+      }
+
+      return true;
+    }).toList();
+  }
+
+  // ════════════════════════════════════════════════════════════
+  //  PUBLIC: export
+  // ════════════════════════════════════════════════════════════
   static Future<void> export({
     required double currentSpeed,
     required String alertLevel,
     required String period,
     required List<MyWindSpeed> history,
-    required String fileName, // ← nama custom dari user
-    DateTime? dateFrom, // ← filter dari tanggal
-    DateTime? dateTo, // ← filter sampai tanggal
+    required String fileName,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    int? hourFrom, // ← jam mulai (0–23)
+    int? minuteFrom, // ← menit mulai
+    int? hourTo, // ← jam selesai (0–23)
+    int? minuteTo, // ← menit selesai
   }) async {
+    // Terapkan filter SATU KALI, hasil dipakai kedua sheet
+    final filtered = _applyFilter(
+      history,
+      dateFrom: dateFrom,
+      dateTo: dateTo,
+      hourFrom: hourFrom,
+      minuteFrom: minuteFrom,
+      hourTo: hourTo,
+      minuteTo: minuteTo,
+    );
+
     final excel = Excel.createExcel();
     excel.delete('Sheet1');
 
     _buildSummarySheet(
-        excel, currentSpeed, alertLevel, period, history, dateFrom, dateTo);
-    _buildHistorySheet(excel, history, dateFrom, dateTo);
+      excel,
+      currentSpeed,
+      alertLevel,
+      period,
+      filtered,
+      history.length,
+      dateFrom: dateFrom,
+      dateTo: dateTo,
+      hourFrom: hourFrom,
+      minuteFrom: minuteFrom,
+      hourTo: hourTo,
+      minuteTo: minuteTo,
+    );
+    _buildHistorySheet(excel, filtered);
 
     // ── Simpan file ─────────────────────────────────────────
     final bytes = excel.save();
@@ -59,16 +124,22 @@ class WindSpeedExcelService {
 
   // ════════════════════════════════════════════════════════════
   //  SHEET 1: Ringkasan
+  //  — statistik dihitung dari [filteredHistory] bukan all data
   // ════════════════════════════════════════════════════════════
   static void _buildSummarySheet(
     Excel excel,
     double currentSpeed,
     String alertLevel,
     String period,
-    List<MyWindSpeed> history,
+    List<MyWindSpeed> filteredHistory,
+    int totalCount, {
     DateTime? dateFrom,
     DateTime? dateTo,
-  ) {
+    int? hourFrom,
+    int? minuteFrom,
+    int? hourTo,
+    int? minuteTo,
+  }) {
     final sheet = excel['Ringkasan'];
 
     // -- Judul --
@@ -85,79 +156,103 @@ class WindSpeedExcelService {
         bold: true, bgColor: _colorSubHead, fontColor: _colorWhite);
     _setCell(sheet, 1, 1, _headerFmt.format(DateTime.now()),
         bgColor: _colorNormal);
+
     _setCell(sheet, 2, 0, 'Periode grafik',
         bold: true, bgColor: _colorSubHead, fontColor: _colorWhite);
     _setCell(sheet, 2, 1, period, bgColor: _colorNormal);
 
+    int metaRow = 3;
+
     if (dateFrom != null && dateTo != null) {
-      _setCell(sheet, 3, 0, 'Filter tanggal',
+      _setCell(sheet, metaRow, 0, 'Filter tanggal',
           bold: true, bgColor: _colorSubHead, fontColor: _colorWhite);
       _setCell(
         sheet,
-        3,
+        metaRow,
         1,
         '${DateFormat('dd MMMM yyyy', 'id_ID').format(dateFrom)}  →  ${DateFormat('dd MMMM yyyy', 'id_ID').format(dateTo)}',
         bgColor: _colorNormal,
       );
+      metaRow++;
     }
 
-    // -- Kecepatan saat ini --
-    _setCell(sheet, 5, 0, 'KECEPATAN SAAT INI',
+    if (hourFrom != null && hourTo != null) {
+      final fromStr =
+          '${hourFrom.toString().padLeft(2, '0')}:${(minuteFrom ?? 0).toString().padLeft(2, '0')}';
+      final toStr =
+          '${hourTo.toString().padLeft(2, '0')}:${(minuteTo ?? 59).toString().padLeft(2, '0')}';
+      _setCell(sheet, metaRow, 0, 'Filter jam',
+          bold: true, bgColor: _colorSubHead, fontColor: _colorWhite);
+      _setCell(sheet, metaRow, 1, '$fromStr  →  $toStr', bgColor: _colorNormal);
+      metaRow++;
+    }
+
+    // -- Kecepatan realtime saat ini --
+    final secRow = metaRow + 1;
+    _setCell(sheet, secRow, 0, 'KECEPATAN SAAT INI',
         bold: true, bgColor: _colorSubHead, fontColor: _colorWhite);
-    sheet.merge(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 5),
-        CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: 5));
+    sheet.merge(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: secRow),
+        CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: secRow));
 
-    _setCell(sheet, 6, 0, 'Kecepatan (m/s)', bold: true);
-    _setCellDouble(sheet, 6, 1, currentSpeed);
-    _setCell(sheet, 7, 0, 'Kecepatan (km/h)', bold: true);
-    _setCellDouble(sheet, 7, 1, currentSpeed * 3.6);
-    _setCell(sheet, 8, 0, 'Status', bold: true);
-    final statusColor = _alertBgColor(alertLevel);
-    _setCell(sheet, 8, 1, alertLevel, bgColor: statusColor);
+    _setCell(sheet, secRow + 1, 0, 'Kecepatan (m/s)', bold: true);
+    _setCellDouble(sheet, secRow + 1, 1, currentSpeed);
+    _setCell(sheet, secRow + 2, 0, 'Kecepatan (km/h)', bold: true);
+    _setCellDouble(sheet, secRow + 2, 1, currentSpeed * 3.6);
+    _setCell(sheet, secRow + 3, 0, 'Status', bold: true);
+    _setCell(sheet, secRow + 3, 1, alertLevel,
+        bgColor: _alertBgColor(alertLevel));
 
-    // -- Statistik ringkasan --
-    if (history.isNotEmpty) {
-      final speeds = history.map((e) => e.speed).toList();
+    // -- Statistik dari data TERFILTER (bukan all history) --
+    final statRow = secRow + 5;
+    _setCell(sheet, statRow, 0, 'STATISTIK DATA DIEKSPOR',
+        bold: true, bgColor: _colorSubHead, fontColor: _colorWhite);
+    sheet.merge(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: statRow),
+        CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: statRow));
+
+    _setCell(sheet, statRow + 1, 0, 'Total data tersimpan', bold: true);
+    _setCellInt(sheet, statRow + 1, 1, totalCount);
+    _setCell(sheet, statRow + 2, 0, 'Data diekspor', bold: true);
+    _setCellInt(sheet, statRow + 2, 1, filteredHistory.length);
+
+    if (filteredHistory.isNotEmpty) {
+      final speeds = filteredHistory.map((e) => e.speed).toList();
       final avg = speeds.reduce((a, b) => a + b) / speeds.length;
       final max = speeds.reduce((a, b) => a > b ? a : b);
       final min = speeds.reduce((a, b) => a < b ? a : b);
 
-      _setCell(sheet, 10, 0, 'STATISTIK HISTORY',
-          bold: true, bgColor: _colorSubHead, fontColor: _colorWhite);
-      sheet.merge(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 10),
-          CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: 10));
-
-      _setCell(sheet, 11, 0, 'Jumlah data', bold: true);
-      _setCellInt(sheet, 11, 1, history.length);
-      _setCell(sheet, 12, 0, 'Rata-rata (m/s)', bold: true);
-      _setCellDouble(sheet, 12, 1, avg);
-      _setCell(sheet, 13, 0, 'Maksimum (m/s)', bold: true);
-      _setCellDouble(sheet, 13, 1, max);
-      _setCell(sheet, 14, 0, 'Minimum (m/s)', bold: true);
-      _setCellDouble(sheet, 14, 1, min);
-      _setCell(sheet, 15, 0, 'Rata-rata (km/h)', bold: true);
-      _setCellDouble(sheet, 15, 1, avg * 3.6);
+      _setCell(sheet, statRow + 3, 0, 'Rata-rata (m/s)', bold: true);
+      _setCellDouble(sheet, statRow + 3, 1, avg);
+      _setCell(sheet, statRow + 4, 0, 'Maksimum (m/s)', bold: true);
+      _setCellDouble(sheet, statRow + 4, 1, max);
+      _setCell(sheet, statRow + 5, 0, 'Minimum (m/s)', bold: true);
+      _setCellDouble(sheet, statRow + 5, 1, min);
+      _setCell(sheet, statRow + 6, 0, 'Rata-rata (km/h)', bold: true);
+      _setCellDouble(sheet, statRow + 6, 1, avg * 3.6);
+    } else {
+      _setCell(sheet, statRow + 3, 0, 'Tidak ada data dalam filter ini',
+          bgColor: _colorWaspada);
+      sheet.merge(
+        CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: statRow + 3),
+        CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: statRow + 3),
+      );
     }
 
-    // Set lebar kolom
-    sheet.setColumnWidth(0, 22);
-    sheet.setColumnWidth(1, 22);
+    sheet.setColumnWidth(0, 24);
+    sheet.setColumnWidth(1, 28);
     sheet.setColumnWidth(2, 18);
     sheet.setColumnWidth(3, 18);
   }
 
   // ════════════════════════════════════════════════════════════
   //  SHEET 2: Data History
+  //  — menerima data yang sudah difilter, tidak filter ulang
   // ════════════════════════════════════════════════════════════
   static void _buildHistorySheet(
     Excel excel,
-    List<MyWindSpeed> history,
-    DateTime? dateFrom,
-    DateTime? dateTo,
+    List<MyWindSpeed> data,
   ) {
     final sheet = excel['Data History'];
 
-    // -- Header kolom --
     final headers = [
       'No',
       'Tanggal',
@@ -174,48 +269,38 @@ class WindSpeedExcelService {
           centered: true);
     }
 
-    // Filter berdasarkan rentang tanggal (inklusif kedua ujung)
-    final data = (dateFrom != null && dateTo != null)
-        ? history.where((e) {
-            final d =
-                DateTime(e.timestamp.year, e.timestamp.month, e.timestamp.day);
-            final from = DateTime(dateFrom.year, dateFrom.month, dateFrom.day);
-            final to = DateTime(dateTo.year, dateTo.month, dateTo.day);
-            return !d.isBefore(from) && !d.isAfter(to);
-          }).toList()
-        : history;
-
-    // -- Isi baris data --
-    for (var i = 0; i < data.length; i++) {
-      final item = data[i];
-      final rowIdx = i + 1;
-      final kmh = item.speed * 3.6;
-      final status = _getAlertLevel(item.speed);
-      final bgColor = i.isEven ? _colorNormal : _colorWhite;
-      final statusBg = _alertBgColor(status);
-
-      _setCellInt(sheet, rowIdx, 0, i + 1, bgColor: bgColor, centered: true);
-      _setCell(sheet, rowIdx, 1,
-          DateFormat('dd/MM/yyyy', 'id_ID').format(item.timestamp),
-          bgColor: bgColor);
-      _setCell(sheet, rowIdx, 2, DateFormat('HH:mm:ss').format(item.timestamp),
-          bgColor: bgColor, centered: true);
-      _setCellDouble(sheet, rowIdx, 3, item.speed,
-          bgColor: bgColor, centered: true);
-      _setCellDouble(sheet, rowIdx, 4, kmh, bgColor: bgColor, centered: true);
-      _setCell(sheet, rowIdx, 5, status,
-          bgColor: statusBg, centered: true, bold: true);
-    }
-
-    // -- Footer jika kosong --
     if (data.isEmpty) {
-      _setCell(sheet, 1, 0, 'Tidak ada data untuk tanggal yang dipilih',
+      _setCell(sheet, 1, 0, 'Tidak ada data untuk filter yang dipilih',
           bgColor: _colorWaspada, centered: true);
       sheet.merge(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 1),
           CellIndex.indexByColumnRow(columnIndex: 5, rowIndex: 1));
+    } else {
+      // Urutkan ascending (terlama → terbaru) di Excel
+      final sorted = [...data]
+        ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+
+      for (var i = 0; i < sorted.length; i++) {
+        final item = sorted[i];
+        final rowIdx = i + 1;
+        final kmh = item.speed * 3.6;
+        final status = _getAlertLevel(item.speed);
+        final bgColor = i.isEven ? _colorNormal : _colorWhite;
+
+        _setCellInt(sheet, rowIdx, 0, i + 1, bgColor: bgColor, centered: true);
+        _setCell(sheet, rowIdx, 1,
+            DateFormat('dd/MM/yyyy', 'id_ID').format(item.timestamp),
+            bgColor: bgColor);
+        _setCell(
+            sheet, rowIdx, 2, DateFormat('HH:mm:ss').format(item.timestamp),
+            bgColor: bgColor, centered: true);
+        _setCellDouble(sheet, rowIdx, 3, item.speed,
+            bgColor: bgColor, centered: true);
+        _setCellDouble(sheet, rowIdx, 4, kmh, bgColor: bgColor, centered: true);
+        _setCell(sheet, rowIdx, 5, status,
+            bgColor: _alertBgColor(status), centered: true, bold: true);
+      }
     }
 
-    // Set lebar kolom
     sheet.setColumnWidth(0, 6);
     sheet.setColumnWidth(1, 14);
     sheet.setColumnWidth(2, 12);
@@ -227,6 +312,36 @@ class WindSpeedExcelService {
   // ════════════════════════════════════════════════════════════
   //  HELPER CELLS
   // ════════════════════════════════════════════════════════════
+  static CellStyle _baseStyle({
+    String bgColor = _colorWhite,
+    String fontColor = '000000',
+    bool bold = false,
+    int fontSize = 11,
+    bool centered = false,
+  }) =>
+      CellStyle(
+        bold: bold,
+        fontSize: fontSize,
+        backgroundColorHex: ExcelColor.fromHexString('#$bgColor'),
+        fontColorHex: ExcelColor.fromHexString('#$fontColor'),
+        horizontalAlign:
+            centered ? HorizontalAlign.Center : HorizontalAlign.Left,
+        verticalAlign: VerticalAlign.Center,
+        textWrapping: TextWrapping.WrapText,
+        leftBorder: Border(
+            borderStyle: BorderStyle.Thin,
+            borderColorHex: ExcelColor.fromHexString('#CCCCCC')),
+        rightBorder: Border(
+            borderStyle: BorderStyle.Thin,
+            borderColorHex: ExcelColor.fromHexString('#CCCCCC')),
+        topBorder: Border(
+            borderStyle: BorderStyle.Thin,
+            borderColorHex: ExcelColor.fromHexString('#CCCCCC')),
+        bottomBorder: Border(
+            borderStyle: BorderStyle.Thin,
+            borderColorHex: ExcelColor.fromHexString('#CCCCCC')),
+      );
+
   static void _setCell(
     Sheet sheet,
     int row,

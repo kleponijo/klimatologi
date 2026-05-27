@@ -14,17 +14,17 @@ import 'excel_saver_stub.dart'
 
 class EvaporasiExcelService {
   // ── Format helper ──────────────────────────────────────────
-  static final _dateFmt  = DateFormat('dd/MM/yyyy HH:mm:ss', 'id_ID');
+  // static final _dateFmt  = DateFormat('dd/MM/yyyy HH:mm:ss', 'id_ID');
   static final _headerFmt = DateFormat('dd MMMM yyyy, HH:mm', 'id_ID');
 
   // ── Warna tema ─────────────────────────────────────────────
-  static const _colorHeader   = '1A4A8C'; // biru tua
-  static const _colorSubHead  = '2E75B6'; // biru medium
-  static const _colorNormal   = 'E8F4FD'; // biru sangat muda
-  static const _colorTinggi   = 'F8D7DA'; // merah muda
-  static const _colorRendah   = 'D1ECF1'; // biru muda
-  static const _colorWhite    = 'FFFFFF';
-  static const _colorWaspada  = 'FFF3CD'; // kuning muda
+  static const _colorHeader = '1A4A8C'; // biru tua
+  static const _colorSubHead = '2E75B6'; // biru medium
+  static const _colorNormal = 'E8F4FD'; // biru sangat muda
+  static const _colorTinggi = 'F8D7DA'; // merah muda
+  static const _colorRendah = 'D1ECF1'; // biru muda
+  static const _colorWhite = 'FFFFFF';
+  static const _colorWaspada = 'FFF3CD'; // kuning muda
 
   /// Export data evaporasi ke file Excel dan buka share sheet
   static Future<void> export({
@@ -138,10 +138,8 @@ class EvaporasiExcelService {
     // -- Statistik ringkasan --
     if (history.isNotEmpty) {
       final evapValues = history.map((e) => e.evaporasi).toList();
-      final tempValues = history
-          .map((e) => e.suhu)
-          .where((s) => s >= 0)
-          .toList();
+      final tempValues =
+          history.map((e) => e.suhu).where((s) => s >= 0).toList();
 
       final evapAvg = evapValues.reduce((a, b) => a + b) / evapValues.length;
       final evapMax = evapValues.reduce((a, b) => a > b ? a : b);
@@ -167,8 +165,7 @@ class EvaporasiExcelService {
       _setCellDouble(sheet, 15, 1, evapMin);
 
       if (tempValues.isNotEmpty) {
-        final tempAvg =
-            tempValues.reduce((a, b) => a + b) / tempValues.length;
+        final tempAvg = tempValues.reduce((a, b) => a + b) / tempValues.length;
         final tempMax = tempValues.reduce((a, b) => a > b ? a : b);
         final tempMin = tempValues.reduce((a, b) => a < b ? a : b);
 
@@ -223,10 +220,9 @@ class EvaporasiExcelService {
     // Filter berdasarkan rentang tanggal (inklusif kedua ujung)
     final data = (dateFrom != null && dateTo != null)
         ? history.where((e) {
-            final d = DateTime(
-                e.timestamp.year, e.timestamp.month, e.timestamp.day);
-            final from =
-                DateTime(dateFrom.year, dateFrom.month, dateFrom.day);
+            final d =
+                DateTime(e.timestamp.year, e.timestamp.month, e.timestamp.day);
+            final from = DateTime(dateFrom.year, dateFrom.month, dateFrom.day);
             final to = DateTime(dateTo.year, dateTo.month, dateTo.day);
             return !d.isBefore(from) && !d.isAfter(to);
           }).toList()
@@ -238,27 +234,18 @@ class EvaporasiExcelService {
 
     // -- Isi baris data --
     for (var i = 0; i < sorted.length; i++) {
-      final item   = sorted[i];
+      final item = sorted[i];
       final rowIdx = i + 1;
       final status = _getStatus(item.evaporasi);
-      final bgColor  = i.isEven ? _colorNormal : _colorWhite;
+      final bgColor = i.isEven ? _colorNormal : _colorWhite;
       final statusBg = _statusBgColor(status);
 
-      _setCellInt(sheet, rowIdx, 0, i + 1,
-          bgColor: bgColor, centered: true);
-      _setCell(
-          sheet,
-          rowIdx,
-          1,
+      _setCellInt(sheet, rowIdx, 0, i + 1, bgColor: bgColor, centered: true);
+      _setCell(sheet, rowIdx, 1,
           DateFormat('dd/MM/yyyy', 'id_ID').format(item.timestamp),
           bgColor: bgColor);
-      _setCell(
-          sheet,
-          rowIdx,
-          2,
-          DateFormat('HH:mm:ss').format(item.timestamp),
-          bgColor: bgColor,
-          centered: true);
+      _setCell(sheet, rowIdx, 2, DateFormat('HH:mm:ss').format(item.timestamp),
+          bgColor: bgColor, centered: true);
       _setCellDouble(sheet, rowIdx, 3, item.evaporasi,
           bgColor: bgColor, centered: true);
       _setCellDouble(sheet, rowIdx, 4, item.tinggiAir,
@@ -311,16 +298,15 @@ class EvaporasiExcelService {
     String fontColor = '000000',
     bool centered = false,
   }) {
-    final cell = sheet
-        .cell(CellIndex.indexByColumnRow(columnIndex: col, rowIndex: row));
+    final cell =
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: col, rowIndex: row));
     cell.value = TextCellValue(value);
     cell.cellStyle = CellStyle(
       bold: bold,
       fontSize: fontSize.toInt(),
       backgroundColorHex: ExcelColor.fromHexString('#$bgColor'),
       fontColorHex: ExcelColor.fromHexString('#$fontColor'),
-      horizontalAlign:
-          centered ? HorizontalAlign.Center : HorizontalAlign.Left,
+      horizontalAlign: centered ? HorizontalAlign.Center : HorizontalAlign.Left,
       verticalAlign: VerticalAlign.Center,
       textWrapping: TextWrapping.WrapText,
       leftBorder: Border(
@@ -346,8 +332,8 @@ class EvaporasiExcelService {
     String bgColor = _colorWhite,
     bool centered = false,
   }) {
-    final cell = sheet
-        .cell(CellIndex.indexByColumnRow(columnIndex: col, rowIndex: row));
+    final cell =
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: col, rowIndex: row));
     cell.value = DoubleCellValue(double.parse(value.toStringAsFixed(4)));
     cell.cellStyle = CellStyle(
       backgroundColorHex: ExcelColor.fromHexString('#$bgColor'),
@@ -377,8 +363,8 @@ class EvaporasiExcelService {
     String bgColor = _colorWhite,
     bool centered = false,
   }) {
-    final cell = sheet
-        .cell(CellIndex.indexByColumnRow(columnIndex: col, rowIndex: row));
+    final cell =
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: col, rowIndex: row));
     cell.value = IntCellValue(value);
     cell.cellStyle = CellStyle(
       backgroundColorHex: ExcelColor.fromHexString('#$bgColor'),
