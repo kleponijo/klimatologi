@@ -21,7 +21,7 @@ class WindSpeedScreen extends StatefulWidget {
 }
 
 class _WindSpeedScreenState extends State<WindSpeedScreen> {
-  // ── Date picker ─────────────────────────────────────────────
+  // ── Date picker (untuk filter riwayat di layar utama) ───────
   Future<void> _pickDate(BuildContext context, WindSpeedState state) async {
     DateTime firstDate = DateTime.now().subtract(const Duration(days: 365));
     DateTime lastDate = DateTime.now();
@@ -58,7 +58,9 @@ class _WindSpeedScreenState extends State<WindSpeedScreen> {
     }
   }
 
-  // ── Dialog export: nama file + date range ───────────────────
+  // ════════════════════════════════════════════════════════════
+  //  Dialog export: nama file + filter tanggal + filter jam
+  // ════════════════════════════════════════════════════════════
   Future<void> _showExportDialog(
       BuildContext context, WindSpeedState state) async {
     // Tentukan batas tanggal dari history
@@ -79,14 +81,48 @@ class _WindSpeedScreenState extends State<WindSpeedScreen> {
     );
     DateTime? dateFrom;
     DateTime? dateTo;
+    TimeOfDay? timeFrom;
+    TimeOfDay? timeTo;
 
     await showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
-          final fmt = DateFormat('dd MMM yyyy', 'id_ID');
+          final dateFmt = DateFormat('dd MMM yyyy', 'id_ID');
 
-          Future<void> pickRange() async {
+          // Hitung jumlah data sesuai filter aktif
+          int countFiltered() {
+            return state.history.where((e) {
+              bool passDate = true;
+              bool passTime = true;
+              if (dateFrom != null && dateTo != null) {
+                final d = DateTime(
+                  e.timestamp.year,
+                  e.timestamp.month,
+                  e.timestamp.day,
+                );
+                final from = DateTime(
+                  dateFrom!.year,
+                  dateFrom!.month,
+                  dateFrom!.day,
+                );
+                final to = DateTime(dateTo!.year, dateTo!.month, dateTo!.day);
+                passDate = !d.isBefore(from) && !d.isAfter(to);
+              }
+              if (timeFrom != null && timeTo != null) {
+                final h = e.timestamp.hour;
+                final fromH = timeFrom!.hour;
+                final toH = timeTo!.hour;
+                // Support overnight range (mis. 23→02)
+                passTime = fromH <= toH
+                    ? h >= fromH && h <= toH
+                    : h >= fromH || h <= toH;
+              }
+              return passDate && passTime;
+            }).length;
+          }
+
+          Future<void> pickDateRange() async {
             final range = await showDateRangePicker(
               context: ctx,
               firstDate: firstDate,
@@ -114,129 +150,368 @@ class _WindSpeedScreenState extends State<WindSpeedScreen> {
             }
           }
 
+          Future<void> pickTime(bool isFrom) async {
+            final picked = await showTimePicker(
+              context: ctx,
+              initialTime: isFrom
+                  ? (timeFrom ?? const TimeOfDay(hour: 0, minute: 0))
+                  : (timeTo ?? const TimeOfDay(hour: 23, minute: 59)),
+              builder: (ctx, child) => MediaQuery(
+                data: MediaQuery.of(ctx).copyWith(alwaysUse24HourFormat: true),
+                child: Theme(
+                  data: Theme.of(ctx).copyWith(
+                    colorScheme: ColorScheme.light(
+                      primary: Colors.blue.shade700,
+                      onPrimary: Colors.white,
+                    ),
+                  ),
+                  child: child!,
+                ),
+              ),
+            );
+            if (picked != null) {
+              setDialogState(() {
+                if (isFrom)
+                  timeFrom = picked;
+                else
+                  timeTo = picked;
+              });
+            }
+          }
+
+          String fmtTime(TimeOfDay t) =>
+              '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+
+          final filtered = countFiltered();
+          final hasAnyFilter = dateFrom != null || timeFrom != null;
+
           return AlertDialog(
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
             title: Row(
               children: [
                 Icon(Icons.file_download_outlined, color: Colors.blue.shade700),
                 const SizedBox(width: 10),
-                const Text('Export Excel',
-                    style:
-                        TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+                const Text(
+                  'Export Excel',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                ),
               ],
             ),
-            content: SizedBox(
-              width: 340,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // ── Nama file ────────────────────────────────
-                  const Text('Nama file',
+            content: SingleChildScrollView(
+              child: SizedBox(
+                width: 340,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // ── Nama file ──────────────────────────────
+                    const Text(
+                      'Nama file',
                       style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black54)),
-                  const SizedBox(height: 6),
-                  TextField(
-                    controller: nameController,
-                    decoration: InputDecoration(
-                      hintText: 'nama_file',
-                      suffixText: '.xlsx',
-                      filled: true,
-                      fillColor: Colors.grey.shade100,
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 10),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide:
-                            BorderSide(color: Colors.blue.shade600, width: 1.5),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black54,
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // ── Range tanggal ────────────────────────────
-                  const Text('Filter rentang tanggal',
-                      style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black54)),
-                  const SizedBox(height: 6),
-                  InkWell(
-                    onTap: pickRange,
-                    borderRadius: BorderRadius.circular(10),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.grey.shade300),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: nameController,
+                      decoration: InputDecoration(
+                        hintText: 'nama_file',
+                        suffixText: '.xlsx',
+                        filled: true,
+                        fillColor: Colors.grey.shade100,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 10,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(
+                            color: Colors.blue.shade600,
+                            width: 1.5,
+                          ),
+                        ),
                       ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.date_range_rounded,
-                              size: 18, color: Colors.blue.shade600),
-                          const SizedBox(width: 10),
-                          Expanded(
+                    ),
+                    const SizedBox(height: 20),
+
+                    // ── Filter tanggal ─────────────────────────
+                    const Text(
+                      'Filter rentang tanggal',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black54,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    InkWell(
+                      onTap: pickDateRange,
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.date_range_rounded,
+                              size: 18,
+                              color: Colors.blue.shade600,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                dateFrom != null && dateTo != null
+                                    ? '${dateFmt.format(dateFrom!)}  →  ${dateFmt.format(dateTo!)}'
+                                    : 'Semua tanggal (tanpa filter)',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: dateFrom != null
+                                      ? Colors.black87
+                                      : Colors.grey.shade500,
+                                ),
+                              ),
+                            ),
+                            if (dateFrom != null)
+                              GestureDetector(
+                                onTap: () => setDialogState(() {
+                                  dateFrom = null;
+                                  dateTo = null;
+                                }),
+                                child: Icon(
+                                  Icons.close_rounded,
+                                  size: 16,
+                                  color: Colors.grey.shade500,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // ── Filter jam ─────────────────────────────
+                    Row(
+                      children: [
+                        const Text(
+                          'Filter rentang jam',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black54,
+                          ),
+                        ),
+                        const Spacer(),
+                        if (timeFrom != null || timeTo != null)
+                          GestureDetector(
+                            onTap: () => setDialogState(() {
+                              timeFrom = null;
+                              timeTo = null;
+                            }),
                             child: Text(
-                              dateFrom != null && dateTo != null
-                                  ? '${fmt.format(dateFrom!)}  →  ${fmt.format(dateTo!)}'
-                                  : 'Semua data (tanpa filter)',
+                              'Reset',
                               style: TextStyle(
-                                fontSize: 13,
-                                color: dateFrom != null
-                                    ? Colors.black87
-                                    : Colors.grey.shade500,
+                                fontSize: 11,
+                                color: Colors.blue.shade600,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
-                          if (dateFrom != null)
-                            GestureDetector(
-                              onTap: () => setDialogState(() {
-                                dateFrom = null;
-                                dateTo = null;
-                              }),
-                              child: Icon(Icons.close_rounded,
-                                  size: 16, color: Colors.grey.shade500),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        // Dari jam
+                        Expanded(
+                          child: InkWell(
+                            onTap: () => pickTime(true),
+                            borderRadius: BorderRadius.circular(10),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 12,
+                              ),
+                              decoration: BoxDecoration(
+                                color: timeFrom != null
+                                    ? Colors.blue.shade50
+                                    : Colors.grey.shade100,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: timeFrom != null
+                                      ? Colors.blue.shade300
+                                      : Colors.grey.shade300,
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Dari jam',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.grey.shade500,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.schedule_rounded,
+                                        size: 14,
+                                        color: timeFrom != null
+                                            ? Colors.blue.shade600
+                                            : Colors.grey.shade400,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        timeFrom != null
+                                            ? fmtTime(timeFrom!)
+                                            : '00:00',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: timeFrom != null
+                                              ? Colors.blue.shade700
+                                              : Colors.grey.shade400,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
                             ),
-                        ],
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          child: Icon(
+                            Icons.arrow_forward_rounded,
+                            size: 16,
+                            color: Colors.grey.shade400,
+                          ),
+                        ),
+                        // Sampai jam
+                        Expanded(
+                          child: InkWell(
+                            onTap: () => pickTime(false),
+                            borderRadius: BorderRadius.circular(10),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 12,
+                              ),
+                              decoration: BoxDecoration(
+                                color: timeTo != null
+                                    ? Colors.blue.shade50
+                                    : Colors.grey.shade100,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: timeTo != null
+                                      ? Colors.blue.shade300
+                                      : Colors.grey.shade300,
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Sampai jam',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.grey.shade500,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.schedule_rounded,
+                                        size: 14,
+                                        color: timeTo != null
+                                            ? Colors.blue.shade600
+                                            : Colors.grey.shade400,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        timeTo != null
+                                            ? fmtTime(timeTo!)
+                                            : '23:59',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: timeTo != null
+                                              ? Colors.blue.shade700
+                                              : Colors.grey.shade400,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    // ── Counter data hasil filter ───────────────
+                    const SizedBox(height: 10),
+                    Text(
+                      hasAnyFilter
+                          ? '$filtered data akan diekspor'
+                          : '${state.history.length} data (semua, tanpa filter)',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: (filtered == 0 && hasAnyFilter)
+                            ? Colors.red.shade400
+                            : Colors.blue.shade600,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
-                  ),
-                  if (dateFrom != null) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      '${state.history.where((e) => !e.timestamp.isBefore(dateFrom!) && !e.timestamp.isAfter(dateTo!.add(const Duration(days: 1)))).length} data dalam rentang ini',
-                      style:
-                          TextStyle(fontSize: 11, color: Colors.blue.shade600),
-                    ),
                   ],
-                ],
+                ),
               ),
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: Text('Batal',
-                    style: TextStyle(color: Colors.grey.shade600)),
+                child: Text(
+                  'Batal',
+                  style: TextStyle(color: Colors.grey.shade600),
+                ),
               ),
               ElevatedButton.icon(
                 onPressed: () {
                   Navigator.pop(ctx);
-                  _doExport(context, state, nameController.text.trim(),
-                      dateFrom, dateTo);
+                  _doExport(
+                    context,
+                    state,
+                    nameController.text.trim(),
+                    dateFrom,
+                    dateTo,
+                    timeFrom,
+                    timeTo,
+                  );
                 },
                 icon: const Icon(Icons.download_rounded, size: 16),
                 label: const Text('Export'),
@@ -244,7 +519,8 @@ class _WindSpeedScreenState extends State<WindSpeedScreen> {
                   backgroundColor: Colors.blue.shade700,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
               ),
             ],
@@ -263,6 +539,8 @@ class _WindSpeedScreenState extends State<WindSpeedScreen> {
     String customName,
     DateTime? dateFrom,
     DateTime? dateTo,
+    TimeOfDay? timeFrom, // ← baru
+    TimeOfDay? timeTo, // ← baru
   ) async {
     final messenger = ScaffoldMessenger.of(context);
     final fileName = customName.isEmpty
@@ -294,6 +572,10 @@ class _WindSpeedScreenState extends State<WindSpeedScreen> {
         fileName: fileName,
         dateFrom: dateFrom,
         dateTo: dateTo,
+        hourFrom: timeFrom?.hour,
+        minuteFrom: timeFrom?.minute,
+        hourTo: timeTo?.hour,
+        minuteTo: timeTo?.minute,
       );
 
       messenger.hideCurrentSnackBar();
