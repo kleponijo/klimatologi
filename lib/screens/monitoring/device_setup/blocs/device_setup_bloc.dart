@@ -32,6 +32,8 @@ class DeviceSetupBloc extends Bloc<DeviceSetupEvent, DeviceSetupState> {
         (e, emit) => emit(state.copyWith(intervalRealtimeMs: e.ms)));
     on<IntervalHistoryChanged>(
         (e, emit) => emit(state.copyWith(intervalHistoryMs: e.ms)));
+    on<MagnetCountChanged>(
+        (e, emit) => emit(state.copyWith(magnetCount: e.count)));
     on<DeviceSettingsSaved>(_onSettingsSaved);
     on<DeviceLogsRefreshed>(_onLogsRefreshed);
     on<DeviceRestartRequested>(_onRestartRequested);
@@ -64,6 +66,7 @@ class DeviceSetupBloc extends Bloc<DeviceSetupEvent, DeviceSetupState> {
         radiusM: s['radius_m'] as double,
         intervalRealtimeMs: s['interval_realtime_ms'] as int,
         intervalHistoryMs: s['interval_history_ms'] as int,
+        magnetCount: (s['magnet_count'] as int?) ?? 1,
         logs: logs,
       ));
     } catch (e) {
@@ -101,6 +104,7 @@ class DeviceSetupBloc extends Bloc<DeviceSetupEvent, DeviceSetupState> {
         radiusM: state.radiusM,
         intervalRealtimeMs: state.intervalRealtimeMs,
         intervalHistoryMs: state.intervalHistoryMs,
+        magnetCount: state.magnetCount,
       );
       emit(state.copyWith(status: DeviceSetupStatus.settingsSaved));
       await Future.delayed(const Duration(seconds: 2));

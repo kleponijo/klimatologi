@@ -98,6 +98,7 @@ class FirebaseMonitoringRepo implements MonitoringRepository {
     double? radiusM,
     int? intervalRealtimeMs,
     int? intervalHistoryMs,
+    int? magnetCount,
   }) async {
     final updates = <String, dynamic>{};
     if (kFaktor != null) updates['k_faktor'] = kFaktor;

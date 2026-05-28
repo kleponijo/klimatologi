@@ -289,6 +289,21 @@ class _SensorSettingsTab extends StatelessWidget {
           ]),
           const SizedBox(height: 24),
 
+          // ── Jumlah Magnet ─────────────────────────────────────
+          _sectionTitle('Jumlah Magnet'),
+          const SizedBox(height: 4),
+          Text(
+            'Sesuaikan dengan jumlah magnet yang terpasang di lengan anemometer. '
+            'Lebih banyak magnet = resolusi lebih tinggi.',
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+          ),
+          const SizedBox(height: 10),
+          _MagnetCountSelector(
+            selected: state.magnetCount,
+            onSelected: (count) => bloc.add(MagnetCountChanged(count)),
+          ),
+          const SizedBox(height: 24),
+
           // ── Interval Realtime ─────────────────────────────────
           _sectionTitle('Interval Pengiriman Realtime'),
           const SizedBox(height: 4),
@@ -325,6 +340,7 @@ class _SensorSettingsTab extends StatelessWidget {
           _FormulaPreview(
             kFaktor: state.kFaktor,
             radiusM: state.radiusM,
+            magnetCount: state.magnetCount,
           ),
           const SizedBox(height: 32),
 
@@ -879,12 +895,18 @@ class _SettingsCard extends StatelessWidget {
 class _FormulaPreview extends StatelessWidget {
   final double kFaktor;
   final double radiusM;
-  const _FormulaPreview({required this.kFaktor, required this.radiusM});
+  final int magnetCount;
+
+  const _FormulaPreview({
+    required this.kFaktor,
+    required this.radiusM,
+    required this.magnetCount,
+  });
 
   @override
   Widget build(BuildContext context) {
     // Contoh: 1 pulsa per detik
-    final exampleRps = 1.0;
+    final exampleRps = 1.0 / magnetCount;
     final exampleSpeed = 2 * 3.14159 * radiusM * exampleRps * kFaktor;
 
     return Container(
@@ -908,7 +930,7 @@ class _FormulaPreview extends StatelessWidget {
           ]),
           const SizedBox(height: 10),
           Text(
-            'speed = 2π × radius × RPS × k_faktor',
+            'speed = 2π × radius × (pulsa / (dt × magnet)) × k',
             style: TextStyle(
                 fontSize: 12,
                 color: Colors.grey.shade400,
@@ -916,7 +938,7 @@ class _FormulaPreview extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            '       = 2π × ${radiusM.toStringAsFixed(3)}m × RPS × ${kFaktor.toStringAsFixed(1)}',
+            '       = 2π × ${radiusM.toStringAsFixed(3)}m × (p / (dt × $magnetCount)) × ${kFaktor.toStringAsFixed(1)}',
             style: const TextStyle(
                 fontSize: 12, color: Colors.white70, fontFamily: 'monospace'),
           ),
@@ -930,6 +952,105 @@ class _FormulaPreview extends StatelessWidget {
                 fontFamily: 'monospace'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── WIDGET BARU: _MagnetCountSelector ─────────────────────────
+// Tambahkan class baru ini di bagian bawah file,
+// setelah class _FormulaPreview
+
+class _MagnetCountSelector extends StatelessWidget {
+  final int selected;
+  final ValueChanged<int> onSelected;
+
+  const _MagnetCountSelector({
+    required this.selected,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const options = [1, 2, 3];
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 6),
+        ],
+      ),
+      child: Row(
+        children: options.map((count) {
+          final isSelected = count == selected;
+          return Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: InkWell(
+                onTap: () => onSelected(count),
+                borderRadius: BorderRadius.circular(10),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? Colors.blue.shade700
+                        : Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: isSelected
+                          ? Colors.blue.shade700
+                          : Colors.grey.shade300,
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      // Gambar titik magnet
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(
+                          count,
+                          (_) => Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 2),
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: isSelected
+                                  ? Colors.white
+                                  : Colors.blue.shade400,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        '$count magnet',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: isSelected ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                      Text(
+                        count == 1 ? 'default' : 'resolusi ${count}×',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: isSelected
+                              ? Colors.white70
+                              : Colors.grey.shade500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
       ),
     );
   }

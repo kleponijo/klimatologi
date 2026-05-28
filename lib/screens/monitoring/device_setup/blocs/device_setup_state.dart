@@ -1,14 +1,13 @@
 part of 'device_setup_bloc.dart';
 
 enum DeviceSetupStatus {
-  idle, // belum ada aksi
-  checkingConn, // sedang cek koneksi ke ESP
-  notConnected, // HP belum konek ke hotspot ESP
-  connected, // HP sudah konek ke hotspot ESP, siap kirim
-  sending, // sedang kirim SSID+password ke ESP
-  success, // ESP berhasil terima & akan restart
-  failure, // gagal (timeout, ESP tidak respond, dll)
-  // Settings
+  idle,
+  checkingConn,
+  notConnected,
+  connected,
+  sending,
+  success,
+  failure,
   settingsLoading,
   settingsLoaded,
   settingsSaving,
@@ -21,25 +20,17 @@ class DeviceSetupState {
   final String? errorMessage;
   final String? successMessage;
   final String espIp;
-  // ── Sensor settings ──────────────────────────────────────────
-  /// ID device aktif — menentukan path Firebase yang dibaca app.
-  /// Default 'esp_lapangan' (ESP utama di lapangan).
-  /// Disimpan lokal di SharedPreferences.
+
   final String deviceId;
-
-  /// Konstanta kalibrasi. Default 50.0 (hasil estimasi vs AWS).
   final double kFaktor;
-
-  /// Jari-jari lengan anemometer dalam meter. Default 0.08 (8 cm).
   final double radiusM;
-
-  /// Interval pengiriman realtime ke Firebase (ms). Default 1000 = 1 detik.
   final int intervalRealtimeMs;
-
-  /// Interval push history ke Firebase (ms). Default 3600000 = 1 jam.
   final int intervalHistoryMs;
 
-  // ── Logs ─────────────────────────────────────────────────────
+  /// Jumlah magnet pada anemometer. 1 = default, 3 = resolusi lebih tinggi.
+  /// Disimpan di Firebase: /anemometer/settings/magnet_count
+  final int magnetCount;
+
   final List<Map<String, dynamic>> logs;
   final bool logsLoading;
 
@@ -47,14 +38,13 @@ class DeviceSetupState {
     this.status = DeviceSetupStatus.idle,
     this.errorMessage,
     this.successMessage,
-    this.espIp = '192.168.4.1', // default IP ESP saat AP mode
-    // Settings — default sama dengan cfg_config.h di ESP
+    this.espIp = '192.168.4.1',
     this.deviceId = 'esp_lapangan',
     this.kFaktor = 50.0,
     this.radiusM = 0.08,
     this.intervalRealtimeMs = 1000,
     this.intervalHistoryMs = 3600000,
-    // Logs
+    this.magnetCount = 1, // ← default 1 magnet
     this.logs = const [],
     this.logsLoading = false,
   });
@@ -69,6 +59,7 @@ class DeviceSetupState {
     double? radiusM,
     int? intervalRealtimeMs,
     int? intervalHistoryMs,
+    int? magnetCount,
     List<Map<String, dynamic>>? logs,
     bool? logsLoading,
   }) {
@@ -82,6 +73,7 @@ class DeviceSetupState {
       radiusM: radiusM ?? this.radiusM,
       intervalRealtimeMs: intervalRealtimeMs ?? this.intervalRealtimeMs,
       intervalHistoryMs: intervalHistoryMs ?? this.intervalHistoryMs,
+      magnetCount: magnetCount ?? this.magnetCount,
       logs: logs ?? this.logs,
       logsLoading: logsLoading ?? this.logsLoading,
     );
