@@ -13,6 +13,46 @@ part 'evaporasi_event.dart';
 part 'evaporasi_state.dart';
 
 class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
+  static List<DateTime> _buildDayList(DateTime start, DateTime end) {
+    final s = DateTime(start.year, start.month, start.day);
+    final e = DateTime(end.year, end.month, end.day);
+    final days = <DateTime>[];
+    DateTime cur = s;
+    while (!cur.isAfter(e)) {
+      days.add(cur);
+      cur = cur.add(const Duration(days: 1));
+    }
+    return days;
+  }
+
+  static List<String> _buildLabels(List<DateTime> days) {
+    return days.map((d) {
+      if (days.length <= 14) {
+        return '${d.day} ${_bulan(d.month)}';
+      }
+      return '${d.day}/${d.month}';
+    }).toList();
+  }
+
+  static String _bulan(int m) {
+    const b = [
+      '',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Agu',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des'
+    ];
+    return b[m];
+  }
+
   final MonitoringRepository _repository;
   final NotificationBloc _notificationBloc;
   StreamSubscription<Evaporasi>? _subscription;
@@ -196,6 +236,7 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
     List<double> temps;
     List<String> labels;
 
+
     if (isSingle) {
       // 1 hari → per jam
       values = TimeSeriesMapper.toSpecificDate(
@@ -212,25 +253,49 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
       );
       labels = List.generate(24, (i) => '${i.toString().padLeft(2, '0')}:00');
     } else {
-      // Range → per hari
-      final evapResult = TimeSeriesMapper.toDateRange(
-        data: history,
-        getTime: (e) => e.timestamp,
-        getValue: (e) => e.evaporasi,
-        startDate: start,
-        endDate: end,
-      );
-      final tempResult = TimeSeriesMapper.toDateRange(
-        data: history,
-        getTime: (e) => e.timestamp,
-        getValue: (e) => e.suhu,
-        startDate: start,
-        endDate: end,
-      );
-      values = evapResult.values;
-      temps  = tempResult.values;
-      labels = evapResult.labels;
+      // Range → per hari (tapi evaporasi dikalibrasi dengan rumus:
+      // E(hari ke-2) = max(evap hari ke-1) - max(evap hari ke-2))
+      final days = _buildDayList(start, end);
+
+
+      final dailyMaxEvap = List<double>.filled(days.length, 0.0);
+      final dailyMaxTemp = List<double>.filled(days.length, 0.0);
+      final dailyHasValue = List<bool>.filled(days.length, false);
+
+
+      for (final item in history) {
+        final d = DateTime(item.timestamp.year, item.timestamp.month, item.timestamp.day);
+        final idx = days.indexWhere((x) => x == d);
+        if (idx < 0) continue;
+
+        final evap = item.evaporasi;
+        final temp = item.suhu;
+
+        if (!dailyHasValue[idx]) {
+          dailyHasValue[idx] = true;
+          dailyMaxEvap[idx] = evap;
+          dailyMaxTemp[idx] = temp;
+        } else {
+          if (evap > dailyMaxEvap[idx]) dailyMaxEvap[idx] = evap;
+          if (temp > dailyMaxTemp[idx]) dailyMaxTemp[idx] = temp;
+        }
+      }
+
+      // Hitung E berbasis pasangan H1 (maks hari sebelumnya) - H2 (maks hari ini).
+      // Definisi sesuai permintaan: E untuk hari i = maxEvap(hari i-1) - maxEvap(hari i)
+      // Mulai tanggal 21 Mei s/d sekarang: untuk hari pertama di rentang, nilainya 0
+      final calibrated = List<double>.filled(days.length, 0.0);
+      for (int i = 1; i < days.length; i++) {
+        final e = dailyMaxEvap[i - 1] - dailyMaxEvap[i];
+        calibrated[i] = e < 0 ? 0.0 : e;
+      }
+
+      values = calibrated;
+      temps = dailyMaxTemp;
+      labels = _buildLabels(days);
+
     }
+
 
     emit(state.copyWith(
       startDate: start,
@@ -275,10 +340,15 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
       a.year == b.year && a.month == b.month && a.day == b.day;
 
   static (String, bool) _computeStatus(double v) {
-    if (v > 10.0) return ('Tinggi', true);
-    if (v >= 2.0) return ('Normal', false);
+    // Kategori status sesuai permintaan:
+    //  - v < 20 => Rendah ("10 mm masih rendah")
+    //  - 20 <= v < 30 => Normal/Sedang
+    //  - v >= 30 => Tinggi
+    if (v >= 30.0) return ('Tinggi', true);
+    if (v >= 20.0) return ('Normal', false);
     return ('Rendah', false);
   }
+
 
   void _emitAlert(String status, bool willRain, double value) {
     final AlertSeverity severity;

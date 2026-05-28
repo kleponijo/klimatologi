@@ -1,5 +1,6 @@
 // lib/screens/monitoring/evaporasi/views/evaporasi_screen.dart
 
+import '../../device_setup/blocs/evaporasi_settings_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
@@ -318,8 +319,19 @@ class _EvaporasiScreenState extends State<EvaporasiScreen> {
                   : () => _showExportDialog(context, state),
             ),
           ),
-        ],
+     IconButton(
+    tooltip: 'Pengaturan',
+    icon: const Icon(Icons.settings_outlined),
+    onPressed: () => Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const EvaporasiSettingsScreen(),
       ),
+    ),
+  ),
+],
+      ),
+      
       body: BlocBuilder<EvaporasiBloc, EvaporasiState>(
         builder: (context, state) {
           if (state.isLoading) {
@@ -361,6 +373,71 @@ class _EvaporasiScreenState extends State<EvaporasiScreen> {
                 const EvaporasiRangeSelector(),
                 const SizedBox(height: 12),
 
+                // ── Block nilai E (kalibrasi H1 - H2) ──────────────────
+                BlocBuilder<EvaporasiBloc, EvaporasiState>(
+                  builder: (context, s) {
+                    if (s.chartValues.isEmpty) {
+                      return const SizedBox.shrink();
+                    }
+
+                    // Untuk range > 1 hari, chartValues berisi E per hari
+                    final isRange = !s.isSingleDay;
+                    if (!isRange) {
+                      return const SizedBox.shrink();
+                    }
+
+                    // Tampilkan E pada hari terakhir rentang (hari ke-N)
+                    final eLast = s.chartValues.last;
+
+                    return Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.blue.shade100),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: const [
+                              Icon(Icons.calculate_rounded,
+                                  color: Colors.blue, size: 20),
+                              SizedBox(width: 10),
+                              Text(
+                                'Nilai Evaporasi Terkalibrasi (E)',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'E terakhir (hari terakhir rentang): ${eLast.toStringAsFixed(2)} mm',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue.shade700,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Rumus: E = max(H1) − max(H2)',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.blueGrey.shade700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 20),
+
                 // ── Chart ───────────────────────────────────
                 BlocBuilder<EvaporasiBloc, EvaporasiState>(
                   builder: (context, s) => EvaporasiChartWidget(
@@ -371,6 +448,7 @@ class _EvaporasiScreenState extends State<EvaporasiScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
+
 
                 // ── Riwayat Data ────────────────────────────
                 BlocBuilder<EvaporasiBloc, EvaporasiState>(
@@ -518,6 +596,7 @@ class _EvaporasiScreenState extends State<EvaporasiScreen> {
       ),
     );
   }
+
 
   Widget _statusCard(EvaporasiState state) {
     Color statusColor;

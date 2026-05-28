@@ -198,7 +198,8 @@ class _DateGroup extends StatefulWidget {
 }
 
 class _DateGroupState extends State<_DateGroup> {
-  bool _expanded = true;
+  bool _expanded = false;
+
 
   double get _avgEvap {
     if (widget.items.isEmpty) return 0;
