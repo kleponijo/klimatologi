@@ -30,6 +30,7 @@ abstract class MonitoringRepository {
     double? radiusM,
     int? intervalRealtimeMs,
     int? intervalHistoryMs,
+    int? magnetCount,
   });
 
   // ── Device Logs ──────────────────────────────────────────────
