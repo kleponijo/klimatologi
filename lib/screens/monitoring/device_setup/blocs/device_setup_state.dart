@@ -26,13 +26,11 @@ class DeviceSetupState {
   final double radiusM;
   final int intervalRealtimeMs;
   final int intervalHistoryMs;
-
-  /// Jumlah magnet pada anemometer. 1 = default, 3 = resolusi lebih tinggi.
-  /// Disimpan di Firebase: /anemometer/settings/magnet_count
   final int magnetCount;
-
   final List<Map<String, dynamic>> logs;
   final bool logsLoading;
+  final Set<String> selectedLogKeys;
+  final bool isSelecting;
 
   const DeviceSetupState({
     this.status = DeviceSetupStatus.idle,
@@ -47,7 +45,12 @@ class DeviceSetupState {
     this.magnetCount = 1, // ← default 1 magnet
     this.logs = const [],
     this.logsLoading = false,
+    this.selectedLogKeys = const {},
+    this.isSelecting = false,
   });
+
+  bool get allSelected =>
+      logs.isNotEmpty && selectedLogKeys.length == logs.length;
 
   DeviceSetupState copyWith({
     DeviceSetupStatus? status,
@@ -62,6 +65,8 @@ class DeviceSetupState {
     int? magnetCount,
     List<Map<String, dynamic>>? logs,
     bool? logsLoading,
+    Set<String>? selectedLogKeys,
+    bool? isSelecting,
   }) {
     return DeviceSetupState(
       status: status ?? this.status,
@@ -76,6 +81,8 @@ class DeviceSetupState {
       magnetCount: magnetCount ?? this.magnetCount,
       logs: logs ?? this.logs,
       logsLoading: logsLoading ?? this.logsLoading,
+      selectedLogKeys: selectedLogKeys ?? this.selectedLogKeys,
+      isSelecting: isSelecting ?? this.isSelecting,
     );
   }
 }

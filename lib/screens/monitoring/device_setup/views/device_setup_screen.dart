@@ -581,10 +581,51 @@ class _LogsTab extends StatelessWidget {
     );
   }
 
+  void _showDeleteConfirmDialog(BuildContext context, DeviceSetupBloc bloc) {
+    final count = state.selectedLogKeys.length;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(children: [
+          Icon(Icons.delete_outline_rounded, color: Colors.red.shade600),
+          const SizedBox(width: 8),
+          const Text('Hapus Log'),
+        ]),
+        content: Text(
+          'Hapus $count log yang dipilih?\n\n'
+          'Data akan dihapus permanen dari Firebase dan tidak bisa dikembalikan.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Batal', style: TextStyle(color: Colors.grey.shade600)),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pop(ctx);
+              bloc.add(LogsDeleteRequested());
+            },
+            icon: const Icon(Icons.delete_rounded, size: 16),
+            label: const Text('Hapus'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade600,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final bloc = context.read<DeviceSetupBloc>();
     final fmt = DateFormat('dd MMM HH:mm:ss', 'id_ID');
+    final isSelecting = state.isSelecting;
+    final selectedCount = state.selectedLogKeys.length;
 
     return Column(
       children: [
@@ -597,9 +638,15 @@ class _LogsTab extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Log Device',
-                        style: const TextStyle(
-                            fontSize: 15, fontWeight: FontWeight.bold)),
+                    Text(
+                      isSelecting ? '$selectedCount dipilih' : 'Log Device',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color:
+                            isSelecting ? Colors.blue.shade700 : Colors.black87,
+                      ),
+                    ),
                     Text(
                       state.deviceId,
                       style:
@@ -608,6 +655,53 @@ class _LogsTab extends StatelessWidget {
                   ],
                 ),
               ),
+
+              if (isSelecting) ...[
+                // Pilih semua
+                TextButton(
+                  onPressed: () => bloc.add(LogSelectAllToggled()),
+                  child: Text(
+                    state.allSelected ? 'Batal semua' : 'Pilih semua',
+                    style: TextStyle(fontSize: 12, color: Colors.blue.shade700),
+                  ),
+                ),
+                // Hapus terpilih
+                IconButton.filledTonal(
+                  onPressed: selectedCount == 0
+                      ? null
+                      : () => _showDeleteConfirmDialog(context, bloc),
+                  icon: const Icon(Icons.delete_rounded),
+                  tooltip: 'Hapus yang dipilih',
+                  style: IconButton.styleFrom(
+                    backgroundColor: selectedCount > 0
+                        ? Colors.red.shade50
+                        : Colors.grey.shade100,
+                    foregroundColor: selectedCount > 0
+                        ? Colors.red.shade700
+                        : Colors.grey.shade400,
+                  ),
+                ),
+                // Batalkan mode pilih
+                IconButton(
+                  onPressed: () => bloc.add(LogSelectModeToggled()),
+                  icon: const Icon(Icons.close_rounded),
+                  tooltip: 'Batalkan',
+                ),
+              ] else ...[
+                // Tombol pilih / select mode
+                IconButton.filledTonal(
+                  onPressed: state.logs.isEmpty
+                      ? null
+                      : () => bloc.add(LogSelectModeToggled()),
+                  icon: const Icon(Icons.checklist_rounded),
+                  tooltip: 'Pilih log',
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.blue.shade50,
+                    foregroundColor: Colors.blue.shade700,
+                  ),
+                ),
+                const SizedBox(width: 4),
+              ],
 
               // restart esp
               IconButton.filledTonal(
@@ -663,8 +757,10 @@ class _LogsTab extends StatelessWidget {
                   itemCount: state.logs.length,
                   itemBuilder: (ctx, i) {
                     final log = state.logs[i];
+                    final key = log['_key'] as String;
                     final msg = log['msg'] as String;
                     final ts = log['timestamp'] as DateTime;
+                    final isSelected = state.selectedLogKeys.contains(key);
 
                     // Warna berdasarkan konten pesan
                     final isOta = msg.contains('OTA') || msg.contains('FW=');
@@ -683,46 +779,95 @@ class _LogsTab extends StatelessWidget {
                             ? Colors.blue.shade50
                             : Colors.green.shade50;
 
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: bg,
-                        borderRadius: BorderRadius.circular(10),
-                        border:
-                            Border.all(color: color.withValues(alpha: 0.25)),
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(
-                            isError
-                                ? Icons.error_outline_rounded
-                                : isOta
-                                    ? Icons.system_update_rounded
-                                    : Icons.check_circle_outline_rounded,
-                            size: 16,
-                            color: color,
+                    return GestureDetector(
+                      // Long press → masuk mode pilih sekaligus pilih item ini
+                      onLongPress: isSelecting
+                          ? null
+                          : () {
+                              bloc.add(LogSelectModeToggled());
+                              bloc.add(LogItemToggled(key));
+                            },
+                      onTap: isSelecting
+                          ? () => bloc.add(LogItemToggled(key))
+                          : null,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: isSelected ? Colors.blue.shade100 : bg,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isSelected
+                                ? Colors.blue.shade400
+                                : color.withValues(alpha: 0.25),
+                            width: isSelected ? 1.5 : 1,
                           ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(msg,
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Checkbox atau ikon
+                            if (isSelecting)
+                              Padding(
+                                padding:
+                                    const EdgeInsets.only(right: 10, top: 1),
+                                child: AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 150),
+                                  child: isSelected
+                                      ? Icon(Icons.check_circle_rounded,
+                                          key: const ValueKey('checked'),
+                                          size: 20,
+                                          color: Colors.blue.shade700)
+                                      : Icon(
+                                          Icons.radio_button_unchecked_rounded,
+                                          key: const ValueKey('unchecked'),
+                                          size: 20,
+                                          color: Colors.grey.shade400),
+                                ),
+                              )
+                            else
+                              Padding(
+                                padding:
+                                    const EdgeInsets.only(right: 10, top: 1),
+                                child: Icon(
+                                  isError
+                                      ? Icons.error_outline_rounded
+                                      : isOta
+                                          ? Icons.system_update_rounded
+                                          : Icons.check_circle_outline_rounded,
+                                  size: 16,
+                                  color: color,
+                                ),
+                              ),
+
+                            // Konten
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    msg,
                                     style: TextStyle(
-                                        fontSize: 12,
-                                        color: color,
-                                        fontFamily: 'monospace')),
-                                const SizedBox(height: 2),
-                                Text(fmt.format(ts),
+                                      fontSize: 12,
+                                      color: isSelected
+                                          ? Colors.blue.shade900
+                                          : color,
+                                      fontFamily: 'monospace',
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    fmt.format(ts),
                                     style: TextStyle(
                                         fontSize: 10,
-                                        color: Colors.grey.shade500)),
-                              ],
+                                        color: Colors.grey.shade500),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     );
                   },

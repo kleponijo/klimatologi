@@ -50,3 +50,14 @@ class DeviceSettingsSaved extends DeviceSetupEvent {}
 class DeviceLogsRefreshed extends DeviceSetupEvent {}
 
 class DeviceRestartRequested extends DeviceSetupEvent {}
+
+class LogSelectModeToggled extends DeviceSetupEvent {}
+
+class LogItemToggled extends DeviceSetupEvent {
+  final String key;
+  LogItemToggled(this.key);
+}
+
+class LogSelectAllToggled extends DeviceSetupEvent {}
+
+class LogsDeleteRequested extends DeviceSetupEvent {}

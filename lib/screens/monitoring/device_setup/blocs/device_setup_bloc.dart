@@ -37,6 +37,10 @@ class DeviceSetupBloc extends Bloc<DeviceSetupEvent, DeviceSetupState> {
     on<DeviceSettingsSaved>(_onSettingsSaved);
     on<DeviceLogsRefreshed>(_onLogsRefreshed);
     on<DeviceRestartRequested>(_onRestartRequested);
+    on<LogSelectModeToggled>(_onSelectModeToggled);
+    on<LogItemToggled>(_onLogItemToggled);
+    on<LogSelectAllToggled>(_onLogSelectAllToggled);
+    on<LogsDeleteRequested>(_onLogsDeleteRequested);
   }
 
   // ════════════════════════════════════════════════════════════
@@ -252,6 +256,74 @@ class DeviceSetupBloc extends Bloc<DeviceSetupEvent, DeviceSetupState> {
       emit(state.copyWith(
         status: DeviceSetupStatus.settingsError,
         errorMessage: 'Gagal kirim restart: $e',
+      ));
+    }
+  }
+
+  void _onSelectModeToggled(
+    LogSelectModeToggled event,
+    Emitter<DeviceSetupState> emit,
+  ) {
+    emit(state.copyWith(
+      isSelecting: !state.isSelecting,
+      selectedLogKeys: {}, // reset pilihan saat toggle mode
+    ));
+  }
+
+  void _onLogItemToggled(
+    LogItemToggled event,
+    Emitter<DeviceSetupState> emit,
+  ) {
+    final current = Set<String>.from(state.selectedLogKeys);
+    if (current.contains(event.key)) {
+      current.remove(event.key);
+    } else {
+      current.add(event.key);
+    }
+    emit(state.copyWith(selectedLogKeys: current));
+  }
+
+  void _onLogSelectAllToggled(
+    LogSelectAllToggled event,
+    Emitter<DeviceSetupState> emit,
+  ) {
+    if (state.allSelected) {
+      // Sudah semua terpilih → batalkan semua
+      emit(state.copyWith(selectedLogKeys: {}));
+    } else {
+      // Pilih semua — ambil semua '_key' dari logs
+      final allKeys = state.logs.map((e) => e['_key'] as String).toSet();
+      emit(state.copyWith(selectedLogKeys: allKeys));
+    }
+  }
+
+  Future<void> _onLogsDeleteRequested(
+    LogsDeleteRequested event,
+    Emitter<DeviceSetupState> emit,
+  ) async {
+    if (state.selectedLogKeys.isEmpty) return;
+
+    emit(state.copyWith(logsLoading: true));
+
+    try {
+      await _repository.deleteDeviceLogs(
+        state.deviceId,
+        state.selectedLogKeys.toList(),
+      );
+
+      // Refresh logs setelah delete
+      final logs = await _repository.getDeviceLogs(state.deviceId);
+      emit(state.copyWith(
+        logs: logs,
+        logsLoading: false,
+        selectedLogKeys: {},
+        isSelecting: false,
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        logsLoading: false,
+        status: DeviceSetupStatus.settingsError,
+        errorMessage: 'Gagal hapus log: $e',
       ));
     }
   }

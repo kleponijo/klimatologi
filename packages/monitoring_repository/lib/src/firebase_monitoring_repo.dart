@@ -129,6 +129,7 @@ class FirebaseMonitoringRepo implements MonitoringRepository {
         final list = raw.entries.map((e) {
           final v = e.value as Map<dynamic, dynamic>;
           return {
+            '_key': e.key.toString(),
             'msg': v['msg'] ?? '',
             'timestamp': DateTime.fromMillisecondsSinceEpoch(
               (v['timestamp'] ?? 0) * 1000,
@@ -144,6 +145,15 @@ class FirebaseMonitoringRepo implements MonitoringRepository {
       }
     } catch (_) {}
     return [];
+  }
+
+  @override
+  Future<void> deleteDeviceLogs(String deviceId, List<String> keys) async {
+    // Hapus semua key sekaligus pakai Map null (multi-path delete)
+    final Map<String, dynamic> updates = {
+      for (final key in keys) 'anemometer/$deviceId/logs/$key': null,
+    };
+    await _db.ref().update(updates);
   }
 
   @override
