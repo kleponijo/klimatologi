@@ -51,6 +51,30 @@ class EvaporasiIntervalBacaChanged extends EvaporasiSettingsEvent {
   @override List<Object?> get props => [value];
 }
 
+class EvaporasiPumpStartChanged extends EvaporasiSettingsEvent {
+  final String value; // HH:mm
+  const EvaporasiPumpStartChanged(this.value);
+  @override List<Object?> get props => [value];
+}
+
+class EvaporasiPumpEndChanged extends EvaporasiSettingsEvent {
+  final String value; // HH:mm
+  const EvaporasiPumpEndChanged(this.value);
+  @override List<Object?> get props => [value];
+}
+
+class EvaporasiD0Changed extends EvaporasiSettingsEvent {
+  final int value;
+  const EvaporasiD0Changed(this.value);
+  @override List<Object?> get props => [value];
+}
+
+class EvaporasiDmaxManualChanged extends EvaporasiSettingsEvent {
+  final int value;
+  const EvaporasiDmaxManualChanged(this.value);
+  @override List<Object?> get props => [value];
+}
+
 class EvaporasiSettingsSaved extends EvaporasiSettingsEvent {}
 
 class EvaporasiDmaxResetRequested extends EvaporasiSettingsEvent {}
