@@ -15,11 +15,20 @@ class _EvaporasiSettingsScreenState extends State<EvaporasiSettingsScreen> {
   final _rendahController = TextEditingController();
   final _tinggiController = TextEditingController();
   final _offsetController = TextEditingController();
+  final _pumpStartController = TextEditingController();
+  final _pumpEndController = TextEditingController();
+  final _d0Controller = TextEditingController();
+  final _dmaxManualController = TextEditingController();
 
   void _syncControllers(EvaporasiSettingsState s) {
     final rendah = s.thresholdRendah.toStringAsFixed(1);
     final tinggi = s.thresholdTinggi.toStringAsFixed(1);
     final offset = s.koreksiOffset.toStringAsFixed(2);
+    final pumpStart = s.pumpStartTime;
+    final pumpEnd = s.pumpEndTime;
+    final d0 = s.d0 == 0 ? '' : s.d0.toString();
+    final dmaxManual = s.dmaxManual == 0 ? '' : s.dmaxManual.toString();
+
     if (_rendahController.text != rendah) {
       _rendahController.text = rendah;
     }
@@ -29,46 +38,36 @@ class _EvaporasiSettingsScreenState extends State<EvaporasiSettingsScreen> {
     if (_offsetController.text != offset) {
       _offsetController.text = offset;
     }
+    if (_pumpStartController.text != pumpStart) {
+      _pumpStartController.text = pumpStart;
+    }
+    if (_pumpEndController.text != pumpEnd) {
+      _pumpEndController.text = pumpEnd;
+    }
+    if (_d0Controller.text != d0) {
+      _d0Controller.text = d0;
+    }
+    if (_dmaxManualController.text != dmaxManual) {
+      _dmaxManualController.text = dmaxManual;
+    }
   }
 
-  void _showResetDmaxDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(children: [
-          Icon(Icons.restart_alt_rounded, color: Colors.orange),
-          SizedBox(width: 8),
-          Text('Reset DMAX'),
-        ]),
-        content: const Text(
-          'DMAX akan direset ke nilai default.\n\n'
-          'ESP32 akan mencari nilai DMAX baru secara otomatis '
-          'pada pembacaan berikutnya.\n\n'
-          'Lakukan ini hanya jika sensor diganti atau '
-          'kalibrasi ulang diperlukan.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('Batal', style: TextStyle(color: Colors.grey.shade600)),
-          ),
-          ElevatedButton.icon(
-            onPressed: () {
-              Navigator.pop(ctx);
-              context.read<EvaporasiSettingsBloc>().add(EvaporasiDmaxResetRequested());
-            },
-            icon: const Icon(Icons.restart_alt_rounded, size: 16),
-            label: const Text('Reset DMAX'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange.shade700,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-          ),
-        ],
-      ),
+  Future<void> _pickPumpTime(BuildContext context, TextEditingController controller, ValueChanged<String> onSelected, String initialValue) async {
+    final parts = initialValue.split(':');
+    final initial = TimeOfDay(
+      hour: int.tryParse(parts[0]) ?? 6,
+      minute: int.tryParse(parts[1]) ?? 0,
     );
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: initial,
+      helpText: 'Pilih Jam Pompa',
+    );
+    if (picked != null) {
+      final value = '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+      controller.text = value;
+      onSelected(value);
+    }
   }
 
   @override
@@ -76,6 +75,10 @@ class _EvaporasiSettingsScreenState extends State<EvaporasiSettingsScreen> {
     _rendahController.dispose();
     _tinggiController.dispose();
     _offsetController.dispose();
+    _pumpStartController.dispose();
+    _pumpEndController.dispose();
+    _d0Controller.dispose();
+    _dmaxManualController.dispose();
     super.dispose();
   }
 
@@ -256,20 +259,71 @@ class _EvaporasiSettingsScreenState extends State<EvaporasiSettingsScreen> {
                           ),
                         ]),
                         const SizedBox(height: 24),
-                        _sectionTitle('Kalibrasi DMAX'),
+                        _sectionTitle('Kontrol Pompa'),
                         const SizedBox(height: 6),
                         Text(
-                          'DMAX adalah nilai raw sensor saat panci penuh. '
-                          'Diperbarui otomatis oleh ESP32. Reset hanya '
-                          'jika sensor diganti atau kalibrasi ulang diperlukan.',
+                          'Atur jam mulai dan selesai pompa secara langsung dari aplikasi.',
                           style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
                         ),
                         const SizedBox(height: 12),
                         _SettingsCard(children: [
-                          _DmaxPanel(
-                            dmax: state.dmax,
-                            isResetting: state.isResettingDmax,
-                            onReset: () => _showResetDmaxDialog(context),
+                          _TimePickerField(
+                            controller: _pumpStartController,
+                            label: 'Jam Mulai Pompa',
+                            helper: 'Pilih jam mulai pompa bekerja.',
+                            onTap: () => _pickPumpTime(
+                              context,
+                              _pumpStartController,
+                              (value) => bloc.add(EvaporasiPumpStartChanged(value)),
+                              state.pumpStartTime,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          _TimePickerField(
+                            controller: _pumpEndController,
+                            label: 'Jam Selesai Pompa',
+                            helper: 'Pilih jam berhenti pompa.',
+                            onTap: () => _pickPumpTime(
+                              context,
+                              _pumpEndController,
+                              (value) => bloc.add(EvaporasiPumpEndChanged(value)),
+                              state.pumpEndTime,
+                            ),
+                          ),
+                        ]),
+                        const SizedBox(height: 24),
+                        _sectionTitle('Kalibrasi Raw Sensor'),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Masukkan nilai D0 dan DMAX secara manual untuk kalibrasi sensor tanpa upload firmware.',
+                          style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                        ),
+                        const SizedBox(height: 12),
+                        _SettingsCard(children: [
+                          _NumericField(
+                            controller: _d0Controller,
+                            label: 'Nilai D0',
+                            hint: 'Contoh: 120',
+                            helper: 'Nilai sensor saat kondisi paling kering.',
+                            onChanged: (v) {
+                              final d = int.tryParse(v);
+                              if (d != null && d >= 0) {
+                                bloc.add(EvaporasiD0Changed(d));
+                              }
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          _NumericField(
+                            controller: _dmaxManualController,
+                            label: 'Nilai DMAX Manual',
+                            hint: 'Contoh: 1023',
+                            helper: 'Kalibrasi nilai maksimum sensor secara manual.',
+                            onChanged: (v) {
+                              final d = int.tryParse(v);
+                              if (d != null && d >= 0) {
+                                bloc.add(EvaporasiDmaxManualChanged(d));
+                              }
+                            },
                           ),
                         ]),
                         const SizedBox(height: 24),
@@ -588,6 +642,39 @@ class _NumericField extends StatelessWidget {
   }
 }
 
+class _TimePickerField extends StatelessWidget {
+  final TextEditingController controller;
+  final String label;
+  final String helper;
+  final VoidCallback onTap;
+
+  const _TimePickerField({
+    required this.controller,
+    required this.label,
+    required this.helper,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      readOnly: true,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: 'HH:mm',
+        helperText: helper,
+        helperMaxLines: 2,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        suffixIcon: const Icon(Icons.schedule_rounded),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        isDense: true,
+      ),
+      onTap: onTap,
+    );
+  }
+}
+
 class _IntervalSelector extends StatelessWidget {
   final String label;
   final String helper;
@@ -647,106 +734,65 @@ class _IntervalSelector extends StatelessWidget {
   }
 }
 
-class _DmaxPanel extends StatelessWidget {
-  final int dmax;
-  final bool isResetting;
-  final VoidCallback onReset;
+class _RealtimeInfo extends StatelessWidget {
+  final EvaporasiSettingsState state;
+  const _RealtimeInfo({required this.state});
 
-  const _DmaxPanel({
-    required this.dmax,
-    required this.isResetting,
-    required this.onReset,
-  });
+  String _fmtDate(DateTime? d) {
+    if (d == null) return '--';
+    final l = d.toLocal();
+    return '${l.day.toString().padLeft(2, '0')}/${l.month.toString().padLeft(2, '0')}/${l.year} ${l.hour.toString().padLeft(2, '0')}:${l.minute.toString().padLeft(2, '0')}:${l.second.toString().padLeft(2, '0')}';
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Nilai DMAX Saat Ini',
-          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black54),
-        ),
-        const SizedBox(height: 12),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.grey.shade900,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(children: [
-                Icon(Icons.memory_rounded, size: 15, color: Colors.amber.shade300),
-                const SizedBox(width: 8),
-                Text('Raw Sensor Value',
-                    style: TextStyle(fontSize: 12, color: Colors.amber.shade300, fontWeight: FontWeight.bold)),
-              ]),
-              const SizedBox(height: 10),
-              Text(
-                dmax == 0 ? '-- (belum terbaca)' : dmax.toString(),
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: dmax == 0 ? Colors.grey.shade500 : Colors.green.shade300,
-                  fontFamily: 'monospace',
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Diperbarui otomatis oleh ESP32',
-                style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 14),
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.orange.shade50,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.orange.shade100),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(Icons.info_outline_rounded, size: 16, color: Colors.orange.shade700),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'DMAX = nilai ADC saat panci penuh (tinggi air maksimum). '
-                  'Semakin besar DMAX, semakin akurat pembacaan tinggi air.',
-                  style: TextStyle(fontSize: 11, color: Colors.orange.shade800),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 14),
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            onPressed: isResetting ? null : onReset,
-            icon: isResetting
-                ? SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.orange.shade700),
-                  )
-                : const Icon(Icons.restart_alt_rounded),
-            label: Text(isResetting ? 'Mereset...' : 'Reset DMAX ke Default'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.orange.shade700,
-              side: BorderSide(color: Colors.orange.shade300),
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-          ),
-        ),
-      ],
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Icon(Icons.devices_rounded, size: 15, color: Colors.blue.shade700),
+          const SizedBox(width: 8),
+          Text('Informasi Perangkat', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.blue.shade700)),
+        ]),
+        const SizedBox(height: 10),
+        Wrap(spacing: 12, runSpacing: 8, children: [
+          _InfoTile(label: 'Firmware', value: state.firmwareVersion),
+          _InfoTile(label: 'WiFi', value: state.wifiConnected ? 'Terhubung' : 'Tidak'),
+          _InfoTile(label: 'Firebase', value: state.firebaseConnected ? 'Terhubung' : 'Tidak'),
+          _InfoTile(label: 'D0 aktif', value: state.activeD0 == 0 ? '--' : state.activeD0.toString()),
+          _InfoTile(label: 'DMAX aktif', value: state.activeDmax == 0 ? '--' : state.activeDmax.toString()),
+          _InfoTile(label: 'Terakhir', value: _fmtDate(state.lastUpdate)),
+        ])
+      ]),
+    );
+  }
+}
+
+class _InfoTile extends StatelessWidget {
+  final String label;
+  final String value;
+  const _InfoTile({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade100),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(label, style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+        const SizedBox(height: 6),
+        Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+      ]),
     );
   }
 }

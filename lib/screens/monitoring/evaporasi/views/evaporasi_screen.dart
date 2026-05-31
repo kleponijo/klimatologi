@@ -9,9 +9,9 @@ import '../blocs/evaporasi_bloc.dart';
 import '../../shared/utils/pdf/pdf_export_service.dart';
 import '../../shared/widgets/export_pdf_button.dart';
 import 'widgets/evaporasi_chart_widget.dart';
+import 'widgets/evaporasi_control_panel.dart';
 import 'widgets/evaporasi_range_selector.dart';
 import 'widgets/evaporasi_history_list.dart';
-// TAMBAH baris ini setelah import yang sudah ada:
 import '../../shared/utils/excel/evaporasi_excel_service.dart';
 
 class EvaporasiScreen extends StatefulWidget {
@@ -319,19 +319,18 @@ class _EvaporasiScreenState extends State<EvaporasiScreen> {
                   : () => _showExportDialog(context, state),
             ),
           ),
-     IconButton(
-    tooltip: 'Pengaturan',
-    icon: const Icon(Icons.settings_outlined),
-    onPressed: () => Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const EvaporasiSettingsScreen(),
+          IconButton(
+            tooltip: 'Pengaturan',
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const EvaporasiSettingsScreen(),
+              ),
+            ),
+          ),
+        ],
       ),
-    ),
-  ),
-],
-      ),
-      
       body: BlocBuilder<EvaporasiBloc, EvaporasiState>(
         builder: (context, state) {
           if (state.isLoading) {
@@ -362,6 +361,10 @@ class _EvaporasiScreenState extends State<EvaporasiScreen> {
 
                 // ── Status Card ─────────────────────────────
                 _statusCard(state),
+                const SizedBox(height: 20),
+
+                // ── Kontrol Database Evaporasi ───────────────
+                const EvaporasiControlPanel(),
                 const SizedBox(height: 20),
 
                 // ── Range Selector ──────────────────────────
@@ -448,7 +451,6 @@ class _EvaporasiScreenState extends State<EvaporasiScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
-
 
                 // ── Riwayat Data ────────────────────────────
                 BlocBuilder<EvaporasiBloc, EvaporasiState>(
@@ -596,7 +598,6 @@ class _EvaporasiScreenState extends State<EvaporasiScreen> {
       ),
     );
   }
-
 
   Widget _statusCard(EvaporasiState state) {
     Color statusColor;
