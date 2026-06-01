@@ -14,6 +14,7 @@ class _EvaporasiControlPanelState extends State<EvaporasiControlPanel> {
   bool _selenoid = false;
   bool _isTogglingSelenoid = false;
   bool _isResettingEvaporasi = false;
+  bool _isTriggeringOta = false;
   StreamSubscription<DatabaseEvent>? _subscription;
 
   @override
@@ -127,6 +128,42 @@ class _EvaporasiControlPanelState extends State<EvaporasiControlPanel> {
     }
   }
 
+  Future<void> _triggerOTA() async {
+    if (_isTriggeringOta) return;
+    setState(() {
+      _isTriggeringOta = true;
+    });
+
+    try {
+      await Future.wait([
+        FirebaseDatabase.instance.ref('Monitoring/ota_trigger').set(true),
+        FirebaseDatabase.instance
+            .ref('Monitoring/realtime/ota_trigger')
+            .set(true),
+      ]);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Perintah OTA trigger berhasil dikirim.'),
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Gagal mengirim perintah OTA trigger: $e'),
+          backgroundColor: Colors.red.shade600,
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isTriggeringOta = false;
+        });
+      }
+    }
+  }
+
   @override
   void dispose() {
     _subscription?.cancel();
@@ -160,7 +197,7 @@ class _EvaporasiControlPanelState extends State<EvaporasiControlPanel> {
           ),
           const SizedBox(height: 12),
           Text(
-            'Tombol ini terhubung ke path Firebase yang belum ada di UI utama: reset evaporasi dan kontrol selenoid.',
+            'Tombol ini terhubung ke Firebase untuk reset evaporasi, kontrol selenoid, dan trigger OTA.',
             style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
           ),
           const SizedBox(height: 16),
@@ -209,6 +246,24 @@ class _EvaporasiControlPanelState extends State<EvaporasiControlPanel> {
                       color: _selenoid
                           ? Colors.green.shade300
                           : Colors.grey.shade300),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                ),
+              ),
+              ElevatedButton.icon(
+                onPressed: _isTriggeringOta ? null : _triggerOTA,
+                icon: _isTriggeringOta
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.cloud_upload_rounded),
+                label: Text(_isTriggeringOta ? 'Memanggil OTA...' : 'Trigger OTA'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue.shade700,
+                  foregroundColor: Colors.white,
                   padding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 ),

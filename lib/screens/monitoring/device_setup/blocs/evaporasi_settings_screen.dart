@@ -19,6 +19,8 @@ class _EvaporasiSettingsScreenState extends State<EvaporasiSettingsScreen> {
   final _pumpEndController = TextEditingController();
   final _d0Controller = TextEditingController();
   final _dmaxManualController = TextEditingController();
+  final _standarController = TextEditingController();
+  final _batasController = TextEditingController();
 
   void _syncControllers(EvaporasiSettingsState s) {
     final rendah = s.thresholdRendah.toStringAsFixed(1);
@@ -28,6 +30,8 @@ class _EvaporasiSettingsScreenState extends State<EvaporasiSettingsScreen> {
     final pumpEnd = s.pumpEndTime;
     final d0 = s.d0 == 0 ? '' : s.d0.toString();
     final dmaxManual = s.dmaxManual == 0 ? '' : s.dmaxManual.toString();
+    final standar = s.standarTinggiCm.toStringAsFixed(1);
+    final batas = s.batasKritisCm.toStringAsFixed(1);
 
     if (_rendahController.text != rendah) {
       _rendahController.text = rendah;
@@ -49,6 +53,12 @@ class _EvaporasiSettingsScreenState extends State<EvaporasiSettingsScreen> {
     }
     if (_dmaxManualController.text != dmaxManual) {
       _dmaxManualController.text = dmaxManual;
+    }
+    if (_standarController.text != standar) {
+      _standarController.text = standar;
+    }
+    if (_batasController.text != batas) {
+      _batasController.text = batas;
     }
   }
 
@@ -79,6 +89,8 @@ class _EvaporasiSettingsScreenState extends State<EvaporasiSettingsScreen> {
     _pumpEndController.dispose();
     _d0Controller.dispose();
     _dmaxManualController.dispose();
+    _standarController.dispose();
+    _batasController.dispose();
     super.dispose();
   }
 
@@ -142,6 +154,8 @@ class _EvaporasiSettingsScreenState extends State<EvaporasiSettingsScreen> {
                           'langsung berlaku untuk semua perangkat.',
                         ),
                         const SizedBox(height: 24),
+                        _groupTitle('Grup A — Sistem & Kalibrasi'),
+                        const SizedBox(height: 12),
                         _sectionTitle('Batas Status Evaporasi'),
                         const SizedBox(height: 6),
                         Text(
@@ -259,6 +273,8 @@ class _EvaporasiSettingsScreenState extends State<EvaporasiSettingsScreen> {
                           ),
                         ]),
                         const SizedBox(height: 24),
+                        _groupTitle('Grup B — Aktuator & Pengaturan'),
+                        const SizedBox(height: 12),
                         _sectionTitle('Kontrol Pompa'),
                         const SizedBox(height: 6),
                         Text(
@@ -325,6 +341,32 @@ class _EvaporasiSettingsScreenState extends State<EvaporasiSettingsScreen> {
                               }
                             },
                           ),
+                          const SizedBox(height: 16),
+                          _NumericField(
+                            controller: _standarController,
+                            label: 'Standar Tinggi Air (cm)',
+                            hint: 'Contoh: 18.0',
+                            helper: 'Nilai tinggi standar untuk selenoid (cm).',
+                            onChanged: (v) {
+                              final d = double.tryParse(v);
+                              if (d != null && d >= 0) {
+                                bloc.add(EvaporasiStandarTinggiChanged(d));
+                              }
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          _NumericField(
+                            controller: _batasController,
+                            label: 'Batas Kritis (cm)',
+                            hint: 'Contoh: 15.0',
+                            helper: 'Jika di bawah nilai ini → pompa ON paksa.',
+                            onChanged: (v) {
+                              final d = double.tryParse(v);
+                              if (d != null && d >= 0) {
+                                bloc.add(EvaporasiBatasKritisChanged(d));
+                              }
+                            },
+                          ),
                         ]),
                         const SizedBox(height: 24),
                         SizedBox(
@@ -357,6 +399,11 @@ class _EvaporasiSettingsScreenState extends State<EvaporasiSettingsScreen> {
       ),
     );
   }
+
+  Widget _groupTitle(String text) => Text(
+        text,
+        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.blueGrey),
+      );
 
   Widget _sectionTitle(String text) => Text(
         text,

@@ -63,6 +63,18 @@ class EvaporasiPumpEndChanged extends EvaporasiSettingsEvent {
   @override List<Object?> get props => [value];
 }
 
+class EvaporasiStandarTinggiChanged extends EvaporasiSettingsEvent {
+  final double value;
+  const EvaporasiStandarTinggiChanged(this.value);
+  @override List<Object?> get props => [value];
+}
+
+class EvaporasiBatasKritisChanged extends EvaporasiSettingsEvent {
+  final double value;
+  const EvaporasiBatasKritisChanged(this.value);
+  @override List<Object?> get props => [value];
+}
+
 class EvaporasiD0Changed extends EvaporasiSettingsEvent {
   final int value;
   const EvaporasiD0Changed(this.value);

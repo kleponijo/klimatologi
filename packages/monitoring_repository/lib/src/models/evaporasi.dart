@@ -7,6 +7,20 @@ class Evaporasi {
   final double acuanPagi;
   final String status;
   final DateTime timestamp;
+  final bool sensorError;
+  final bool ntpSync;
+  final double snapshotCm;
+  final double standarTinggi;
+  final double batasKritis;
+  final int jamPompaMulai;
+  final int jamPompaSelesai;
+  final bool tempCompActive;
+  final double tempCompCoef;
+  final double tempRefC;
+  final String otaVersion;
+  final String otaStatus;
+  final bool otaTrigger;
+  final bool relayAktif;
 
   Evaporasi({
     required this.evaporasi,
@@ -15,6 +29,20 @@ class Evaporasi {
     required this.acuanPagi,
     required this.status,
     required this.timestamp,
+    this.sensorError = false,
+    this.ntpSync = false,
+    this.snapshotCm = 0.0,
+    this.standarTinggi = 0.0,
+    this.batasKritis = 0.0,
+    this.jamPompaMulai = 0,
+    this.jamPompaSelesai = 0,
+    this.tempCompActive = false,
+    this.tempCompCoef = 0.0,
+    this.tempRefC = 0.0,
+    this.otaVersion = '-',
+    this.otaStatus = '-',
+    this.otaTrigger = false,
+    this.relayAktif = false,
   });
 
   static final empty = Evaporasi(
@@ -41,6 +69,30 @@ class Evaporasi {
       return 0.0;
     }
 
+    bool toBoolSafe(dynamic v) {
+      if (v is bool) return v;
+      if (v is num) return v != 0;
+      if (v is String) {
+        final lower = v.trim().toLowerCase();
+        return lower == 'true' || lower == '1' || lower == 'yes' || lower == 'aktif';
+      }
+      return false;
+    }
+
+    int toIntSafe(dynamic v) {
+      if (v is int) return v;
+      if (v is num) return v.toInt();
+      if (v is String) {
+        return int.tryParse(v.trim()) ?? 0;
+      }
+      return 0;
+    }
+
+    String toStringSafe(dynamic v) {
+      if (v == null) return '-';
+      return v.toString();
+    }
+
     // ── Evaporasi (mm) ───────────────────────────────────
     final evaporasiRaw = toDoubleSafe(
       json['evaporasi_mm'] ??
@@ -51,13 +103,11 @@ class Evaporasi {
           json['evaporasi_value'] ??
           json['evaporasi_k'],
     );
-    // Sudah dalam mm, tidak perlu konversi
     final evaporasiVal = evaporasiRaw;
 
     // ── Suhu (°C) ────────────────────────────────────────
-    // FIX: tambah 'suhu_air_c' sesuai field yang dikirim ESP32
     final suhuRaw = toDoubleSafe(
-      json['suhu_air_c'] ?? // ← ESP32 kirim field ini
+      json['suhu_air_c'] ??
           json['suhu_air'] ??
           json['suhu'] ??
           json['suhuAir'] ??
@@ -77,7 +127,6 @@ class Evaporasi {
           json['tinggi_air_m'] ??
           json['tinggiAir_m'],
     );
-    // Sudah dalam cm, tidak perlu konversi
     final tinggiVal = tinggiRaw;
 
     // ── Sanity check ─────────────────────────────────────
@@ -92,9 +141,79 @@ class Evaporasi {
     // ── Status ───────────────────────────────────────────
     final statusVal = json['status']?.toString() ?? "Normal";
 
-    // ── Parse Timestamp ──────────────────────────────────
-    // FIX: Tambahkan offset +07:00 (WIB) jika string tidak punya info timezone,
-    //      agar tidak terjadi mismatch 7 jam antara Firebase dan Flutter.
+    final sensorErrorVal = toBoolSafe(
+      json['sensor_error'] ??
+          json['sensorError'] ??
+          json['sensor'] ??
+          json['status_sensor'],
+    );
+    final ntpSyncVal = toBoolSafe(
+      json['ntp_sync'] ??
+          json['ntpSync'] ??
+          json['ntp'],
+    );
+    final snapshotVal = toDoubleSafe(
+      json['snapshot_cm'] ??
+          json['snapshot'] ??
+          json['acuan_pagi_cm'] ??
+          0.0,
+    );
+    final standarTinggiVal = toDoubleSafe(
+      json['standar_tinggi'] ??
+          json['standarTinggi'] ??
+          json['standard_height'] ??
+          0.0,
+    );
+    final batasKritisVal = toDoubleSafe(
+      json['batas_kritis'] ??
+          json['batasKritis'] ??
+          json['critical_level'] ??
+          0.0,
+    );
+    final jamPompaMulaiVal = toIntSafe(
+      json['jam_pompa_mulai'] ??
+          json['jamPompaMulai'] ??
+          json['pump_start'] ??
+          0,
+    );
+    final jamPompaSelesaiVal = toIntSafe(
+      json['jam_pompa_selesai'] ??
+          json['jamPompaSelesai'] ??
+          json['pump_end'] ??
+          0,
+    );
+    final tempCompActiveVal = toBoolSafe(
+      json['temp_comp_aktif'] ??
+          json['temp_comp_aktif'] ??
+          json['tempCompAktif'] ??
+          json['temp_comp_active'] ??
+          false,
+    );
+    final tempCompCoefVal = toDoubleSafe(
+      json['temp_comp_koef'] ??
+          json['tempCompKoef'] ??
+          json['temp_comp_coefficient'] ??
+          0.0,
+    );
+    final tempRefCVal = toDoubleSafe(
+      json['temp_ref_c'] ??
+          json['tempRefC'] ??
+          json['temp_ref'] ??
+          0.0,
+    );
+    final otaVersionVal = toStringSafe(
+      json['ota_version'] ?? json['otaVersion'] ?? json['firmware_version'] ?? '-',
+    );
+    final otaStatusVal = toStringSafe(
+      json['ota_status'] ?? json['otaStatus'] ?? '-',
+    );
+    final otaTriggerVal = toBoolSafe(
+      json['ota_trigger'] ?? json['otaTrigger'] ?? false,
+    );
+    final relayAktifVal = toBoolSafe(
+      json['selenoid'] ?? json['selenoid_on'] ?? json['relay'],
+    );
+
     DateTime parseTimestamp(dynamic rawTimestamp) {
       try {
         if (rawTimestamp is int) {
@@ -117,7 +236,6 @@ class Evaporasi {
         if (rawTimestamp is String) {
           String s = rawTimestamp.trim();
 
-          // UNIX string
           final unixValue = int.tryParse(s);
           if (unixValue != null) {
             if (unixValue < 1000000000000) {
@@ -128,13 +246,10 @@ class Evaporasi {
             return DateTime.fromMillisecondsSinceEpoch(unixValue).toLocal();
           }
 
-          // Format "YYYY-MM-DD HH:mm:ss" → tambah 'T' agar bisa diparsing
           if (s.contains(' ') && !s.contains('T')) {
             s = s.replaceFirst(' ', 'T');
           }
 
-          // FIX: Jika tidak ada info timezone, anggap WIB (UTC+7)
-          // agar jam di chart tidak mismatch 7 jam
           if (!s.contains('+') && !s.contains('Z') && !s.contains('-', 10)) {
             s = '${s}+07:00';
           }
@@ -143,18 +258,15 @@ class Evaporasi {
           if (parsed != null) return parsed.toLocal();
         }
       } catch (_) {}
-
       return DateTime.fromMillisecondsSinceEpoch(0);
     }
 
     DateTime timestamp = DateTime.fromMillisecondsSinceEpoch(0);
-
     final rawTimestamp = json['timestamp'] ?? json['time'] ?? json['datetime'];
 
     if (rawTimestamp != null) {
       timestamp = parseTimestamp(rawTimestamp);
     } else {
-      // Legacy fallback: field "waktu" format "HH:mm:ss"
       final waktuStr = json['waktu'] as String?;
       if (waktuStr != null) {
         final parts = waktuStr.split(':');
@@ -175,6 +287,20 @@ class Evaporasi {
       acuanPagi: acuanPagiVal,
       status: statusVal,
       timestamp: timestamp,
+      sensorError: sensorErrorVal,
+      ntpSync: ntpSyncVal,
+      snapshotCm: snapshotVal,
+      standarTinggi: standarTinggiVal,
+      batasKritis: batasKritisVal,
+      jamPompaMulai: jamPompaMulaiVal,
+      jamPompaSelesai: jamPompaSelesaiVal,
+      tempCompActive: tempCompActiveVal,
+      tempCompCoef: tempCompCoefVal,
+      tempRefC: tempRefCVal,
+      otaVersion: otaVersionVal,
+      otaStatus: otaStatusVal,
+      otaTrigger: otaTriggerVal,
+      relayAktif: relayAktifVal,
     );
   }
 }
