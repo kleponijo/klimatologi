@@ -1,14 +1,19 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:firebase_database/firebase_database.dart';
 
 import 'evaporasi_settings_bloc.dart';
+
+import '../../evaporasi/views/widgets/evaporasi_control_panel.dart';
+import '../../evaporasi/views/evaporasi_screen.dart';
 
 class EvaporasiSettingsScreen extends StatefulWidget {
   const EvaporasiSettingsScreen({super.key});
 
   @override
-  State<EvaporasiSettingsScreen> createState() => _EvaporasiSettingsScreenState();
+  State<EvaporasiSettingsScreen> createState() =>
+      _EvaporasiSettingsScreenState();
 }
 
 class _EvaporasiSettingsScreenState extends State<EvaporasiSettingsScreen> {
@@ -62,7 +67,11 @@ class _EvaporasiSettingsScreenState extends State<EvaporasiSettingsScreen> {
     }
   }
 
-  Future<void> _pickPumpTime(BuildContext context, TextEditingController controller, ValueChanged<String> onSelected, String initialValue) async {
+  Future<void> _pickPumpTime(
+      BuildContext context,
+      TextEditingController controller,
+      ValueChanged<String> onSelected,
+      String initialValue) async {
     final parts = initialValue.split(':');
     final initial = TimeOfDay(
       hour: int.tryParse(parts[0]) ?? 6,
@@ -74,7 +83,8 @@ class _EvaporasiSettingsScreenState extends State<EvaporasiSettingsScreen> {
       helpText: 'Pilih Jam Pompa',
     );
     if (picked != null) {
-      final value = '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+      final value =
+          '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
       controller.text = value;
       onSelected(value);
     }
@@ -113,7 +123,8 @@ class _EvaporasiSettingsScreenState extends State<EvaporasiSettingsScreen> {
               ]),
               backgroundColor: Colors.green.shade600,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
             ));
           }
           if (state.status == EvaporasiSettingsStatus.error &&
@@ -144,253 +155,195 @@ class _EvaporasiSettingsScreenState extends State<EvaporasiSettingsScreen> {
             ),
             body: isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : SingleChildScrollView(
-                    padding: const EdgeInsets.all(20),
+                : DefaultTabController(
+                    length: 3,
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _InfoCard(
-                          'Pengaturan disimpan ke Firebase Firestore dan '
-                          'langsung berlaku untuk semua perangkat.',
+                        Material(
+                          color: Colors.transparent,
+                          child: TabBar(
+                            labelColor: Colors.blue.shade700,
+                            unselectedLabelColor: Colors.grey.shade600,
+                            indicatorColor: Colors.blue.shade700,
+                            tabs: const [
+                              Tab(text: 'Sistem & Kalibrasi'),
+                              Tab(text: 'Aktuator & Kontrol'),
+                              Tab(text: 'OTA & Firmware'),
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 24),
-                        _groupTitle('Grup A — Sistem & Kalibrasi'),
-                        const SizedBox(height: 12),
-                        _sectionTitle('Batas Status Evaporasi'),
-                        const SizedBox(height: 6),
-                        Text(
-                          'Tentukan nilai (mm) untuk klasifikasi status '
-                          'Rendah, Normal, dan Tinggi.',
-                          style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                        Expanded(
+                          child: TabBarView(
+                            children: [
+                              SingleChildScrollView(
+                                padding: const EdgeInsets.all(20),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _InfoCard(
+                                      'Pengaturan disimpan ke Firebase Realtime DB dan langsung berlaku untuk perangkat.',
+                                    ),
+                                    const SizedBox(height: 16),
+                                    _groupTitle('Informasi Sistem & Sensor'),
+                                    const SizedBox(height: 12),
+                                    _SettingsCard(children: [
+                                      _RealtimeInfo(state: state),
+                                      const SizedBox(height: 12),
+                                      _CompensationCard(state: state),
+                                    ]),
+                                    const SizedBox(height: 20),
+                                    _groupTitle('Interval Pengumpulan Data'),
+                                    const SizedBox(height: 12),
+                                    _SettingsCard(children: [
+                                      _CollectionIntervalCard(
+                                        state: state,
+                                        onHistoryIntervalChanged: (v) {
+                                          final bloc = context
+                                              .read<EvaporasiSettingsBloc>();
+                                          bloc.add(
+                                              EvaporasiIntervalHistoryChanged(
+                                                  v));
+                                        },
+                                      ),
+                                    ]),
+                                    const SizedBox(height: 20),
+                                  ],
+                                ),
+                              ),
+                              SingleChildScrollView(
+                                padding: const EdgeInsets.all(20),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _groupTitle('Aktuator & Pengaturan'),
+                                    const SizedBox(height: 12),
+                                    _SettingsCard(children: [
+                                      _TimePickerField(
+                                        controller: _pumpStartController,
+                                        label: 'Jam Mulai Pompa',
+                                        helper:
+                                            'Pilih jam mulai pompa bekerja.',
+                                        onTap: () => _pickPumpTime(
+                                          context,
+                                          _pumpStartController,
+                                          (value) => bloc.add(
+                                              EvaporasiPumpStartChanged(value)),
+                                          state.pumpStartTime,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      _TimePickerField(
+                                        controller: _pumpEndController,
+                                        label: 'Jam Selesai Pompa',
+                                        helper: 'Pilih jam berhenti pompa.',
+                                        onTap: () => _pickPumpTime(
+                                          context,
+                                          _pumpEndController,
+                                          (value) => bloc.add(
+                                              EvaporasiPumpEndChanged(value)),
+                                          state.pumpEndTime,
+                                        ),
+                                      ),
+                                      const Divider(height: 20),
+                                      _NumericField(
+                                        controller: _standarController,
+                                        label: 'Standar Tinggi Air (cm)',
+                                        hint: 'Contoh: 18.0',
+                                        helper:
+                                            'Nilai tinggi standar untuk selenoid (cm).',
+                                        onChanged: (v) {
+                                          final d = double.tryParse(v);
+                                          if (d != null && d >= 0) {
+                                            bloc.add(
+                                                EvaporasiStandarTinggiChanged(
+                                                    d));
+                                          }
+                                        },
+                                      ),
+                                      const SizedBox(height: 12),
+                                      _NumericField(
+                                        controller: _batasController,
+                                        label: 'Batas Kritis (cm)',
+                                        hint: 'Contoh: 15.0',
+                                        helper:
+                                            'Jika di bawah nilai ini → pompa ON paksa.',
+                                        onChanged: (v) {
+                                          final d = double.tryParse(v);
+                                          if (d != null && d >= 0) {
+                                            bloc.add(
+                                                EvaporasiBatasKritisChanged(d));
+                                          }
+                                        },
+                                      ),
+                                    ]),
+                                    const SizedBox(height: 16),
+                                    const SizedBox(height: 12),
+                                    EvaporasiControlPanel(),
+                                    const SizedBox(height: 20),
+                                  ],
+                                ),
+                              ),
+                              SingleChildScrollView(
+                                padding: const EdgeInsets.all(20),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _groupTitle('OTA & Firmware'),
+                                    const SizedBox(height: 12),
+                                    _SettingsCard(children: [
+                                      _InfoTile(
+                                          label: 'Versi Firmware',
+                                          value: state.firmwareVersion),
+                                      const SizedBox(height: 8),
+                                      _InfoTile(
+                                          label: 'Status OTA',
+                                          value: state.otaStatus),
+                                      const SizedBox(height: 8),
+                                      _InfoTile(
+                                          label: 'Riwayat Data',
+                                          value: '${state.historyCount} entri'),
+                                      const SizedBox(height: 12),
+                                      _OtaCard(state: state),
+                                    ]),
+                                    const SizedBox(height: 20),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 12),
-                        _SettingsCard(children: [
-                          _ThresholdPreview(state: state),
-                          const Divider(height: 28),
-                          _NumericField(
-                            controller: _rendahController,
-                            label: 'Batas Rendah–Normal (mm)',
-                            hint: 'Contoh: 20.0',
-                            helper: 'Nilai < batas ini → Status Rendah. Default: 20.0',
-                            onChanged: (v) {
-                              final d = double.tryParse(v);
-                              if (d != null && d >= 0) {
-                                bloc.add(EvaporasiThresholdRendahChanged(d));
-                              }
-                            },
-                          ),
-                          const SizedBox(height: 16),
-                          _NumericField(
-                            controller: _tinggiController,
-                            label: 'Batas Normal–Tinggi (mm)',
-                            hint: 'Contoh: 30.0',
-                            helper: 'Nilai ≥ batas ini → Status Tinggi. Default: 30.0',
-                            onChanged: (v) {
-                              final d = double.tryParse(v);
-                              if (d != null && d >= 0) {
-                                bloc.add(EvaporasiThresholdTinggiChanged(d));
-                              }
-                            },
-                          ),
-                        ]),
-                        const SizedBox(height: 24),
-                        _sectionTitle('Rumus Kalibrasi E'),
-                        const SizedBox(height: 6),
-                        Text(
-                          'Pilih metode penghitungan nilai evaporasi '
-                          'terkalibrasi (E) dari data sensor.',
-                          style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
-                        ),
-                        const SizedBox(height: 12),
-                        _SettingsCard(children: [
-                          _RumusSelector(
-                            selected: state.rumusKalibrasi,
-                            onChanged: (v) => bloc.add(EvaporasiRumusKalibrasiChanged(v)),
-                          ),
-                          const Divider(height: 28),
-                          _FormulaPreview(state: state),
-                          const Divider(height: 28),
-                          _NumericField(
-                            controller: _offsetController,
-                            label: 'Koreksi Offset (mm)',
-                            hint: 'Contoh: 0.0 atau -1.5',
-                            helper: 'Nilai ditambahkan ke hasil E. Gunakan negatif untuk koreksi ke bawah.',
-                            allowNegative: true,
-                            onChanged: (v) {
-                              final d = double.tryParse(v);
-                              if (d != null) {
-                                bloc.add(EvaporasiKoreksiOffsetChanged(d));
-                              }
-                            },
-                          ),
-                        ]),
-                        const SizedBox(height: 24),
-                        _sectionTitle('Interval Pengiriman & Pembacaan'),
-                        const SizedBox(height: 6),
-                        Text(
-                          'Atur seberapa sering ESP32 membaca sensor dan mengirim data. '
-                          'Interval lebih pendek = data lebih real-time, baterai lebih boros.',
-                          style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
-                        ),
-                        const SizedBox(height: 12),
-                        _SettingsCard(children: [
-                          _IntervalSelector(
-                            label: 'Interval Baca Sensor',
-                            helper: 'Seberapa sering sensor dibaca. Min: 5 detik.',
-                            options: const {
-                              5000: '5 detik',
-                              10000: '10 detik (default)',
-                              30000: '30 detik',
-                              60000: '1 menit',
-                            },
-                            selected: state.intervalBaca_ms,
-                            onChanged: (v) => bloc.add(EvaporasiIntervalBacaChanged(v)),
-                          ),
-                          const Divider(height: 24),
-                          _IntervalSelector(
-                            label: 'Interval Kirim Realtime',
-                            helper: 'Frekuensi update data real-time ke Firebase.',
-                            options: const {
-                              60000: '1 menit',
-                              300000: '5 menit (default)',
-                              600000: '10 menit',
-                            },
-                            selected: state.intervalRealtime_ms,
-                            onChanged: (v) => bloc.add(EvaporasiIntervalRealtimeChanged(v)),
-                          ),
-                          const Divider(height: 24),
-                          _IntervalSelector(
-                            label: 'Interval Simpan History',
-                            helper: 'Frekuensi pencatatan ke riwayat Firebase.',
-                            options: const {
-                              300000: '5 menit',
-                              600000: '10 menit (default)',
-                              1800000: '30 menit',
-                              3600000: '1 jam',
-                            },
-                            selected: state.intervalHistory_ms,
-                            onChanged: (v) => bloc.add(EvaporasiIntervalHistoryChanged(v)),
-                          ),
-                        ]),
-                        const SizedBox(height: 24),
-                        _groupTitle('Grup B — Aktuator & Pengaturan'),
-                        const SizedBox(height: 12),
-                        _sectionTitle('Kontrol Pompa'),
-                        const SizedBox(height: 6),
-                        Text(
-                          'Atur jam mulai dan selesai pompa secara langsung dari aplikasi.',
-                          style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
-                        ),
-                        const SizedBox(height: 12),
-                        _SettingsCard(children: [
-                          _TimePickerField(
-                            controller: _pumpStartController,
-                            label: 'Jam Mulai Pompa',
-                            helper: 'Pilih jam mulai pompa bekerja.',
-                            onTap: () => _pickPumpTime(
-                              context,
-                              _pumpStartController,
-                              (value) => bloc.add(EvaporasiPumpStartChanged(value)),
-                              state.pumpStartTime,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          _TimePickerField(
-                            controller: _pumpEndController,
-                            label: 'Jam Selesai Pompa',
-                            helper: 'Pilih jam berhenti pompa.',
-                            onTap: () => _pickPumpTime(
-                              context,
-                              _pumpEndController,
-                              (value) => bloc.add(EvaporasiPumpEndChanged(value)),
-                              state.pumpEndTime,
-                            ),
-                          ),
-                        ]),
-                        const SizedBox(height: 24),
-                        _sectionTitle('Kalibrasi Raw Sensor'),
-                        const SizedBox(height: 6),
-                        Text(
-                          'Masukkan nilai D0 dan DMAX secara manual untuk kalibrasi sensor tanpa upload firmware.',
-                          style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
-                        ),
-                        const SizedBox(height: 12),
-                        _SettingsCard(children: [
-                          _NumericField(
-                            controller: _d0Controller,
-                            label: 'Nilai D0',
-                            hint: 'Contoh: 120',
-                            helper: 'Nilai sensor saat kondisi paling kering.',
-                            onChanged: (v) {
-                              final d = int.tryParse(v);
-                              if (d != null && d >= 0) {
-                                bloc.add(EvaporasiD0Changed(d));
-                              }
-                            },
-                          ),
-                          const SizedBox(height: 16),
-                          _NumericField(
-                            controller: _dmaxManualController,
-                            label: 'Nilai DMAX Manual',
-                            hint: 'Contoh: 1023',
-                            helper: 'Kalibrasi nilai maksimum sensor secara manual.',
-                            onChanged: (v) {
-                              final d = int.tryParse(v);
-                              if (d != null && d >= 0) {
-                                bloc.add(EvaporasiDmaxManualChanged(d));
-                              }
-                            },
-                          ),
-                          const SizedBox(height: 16),
-                          _NumericField(
-                            controller: _standarController,
-                            label: 'Standar Tinggi Air (cm)',
-                            hint: 'Contoh: 18.0',
-                            helper: 'Nilai tinggi standar untuk selenoid (cm).',
-                            onChanged: (v) {
-                              final d = double.tryParse(v);
-                              if (d != null && d >= 0) {
-                                bloc.add(EvaporasiStandarTinggiChanged(d));
-                              }
-                            },
-                          ),
-                          const SizedBox(height: 16),
-                          _NumericField(
-                            controller: _batasController,
-                            label: 'Batas Kritis (cm)',
-                            hint: 'Contoh: 15.0',
-                            helper: 'Jika di bawah nilai ini → pompa ON paksa.',
-                            onChanged: (v) {
-                              final d = double.tryParse(v);
-                              if (d != null && d >= 0) {
-                                bloc.add(EvaporasiBatasKritisChanged(d));
-                              }
-                            },
-                          ),
-                        ]),
-                        const SizedBox(height: 24),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: isSaving ? null : () => bloc.add(EvaporasiSettingsSaved()),
-                            icon: isSaving
-                                ? const SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                  )
-                                : const Icon(Icons.save_rounded),
-                            label: Text(isSaving ? 'Menyimpan...' : 'Simpan ke Firebase'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue.shade700,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                              textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                        Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: isSaving
+                                  ? null
+                                  : () => bloc.add(EvaporasiSettingsSaved()),
+                              icon: isSaving
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2, color: Colors.white),
+                                    )
+                                  : const Icon(Icons.save_rounded),
+                              label: Text(isSaving
+                                  ? 'Menyimpan...'
+                                  : 'Simpan ke Firebase'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue.shade700,
+                                foregroundColor: Colors.white,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14)),
+                                textStyle: const TextStyle(
+                                    fontSize: 15, fontWeight: FontWeight.bold),
+                              ),
                             ),
                           ),
                         ),
-                        const SizedBox(height: 20),
                       ],
                     ),
                   ),
@@ -402,7 +355,8 @@ class _EvaporasiSettingsScreenState extends State<EvaporasiSettingsScreen> {
 
   Widget _groupTitle(String text) => Text(
         text,
-        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.blueGrey),
+        style: const TextStyle(
+            fontSize: 15, fontWeight: FontWeight.bold, color: Colors.blueGrey),
       );
 
   Widget _sectionTitle(String text) => Text(
@@ -425,15 +379,23 @@ class _ThresholdPreview extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text('Preview Klasifikasi',
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black54)),
+            style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Colors.black54)),
         const SizedBox(height: 10),
         Row(
           children: [
-            _StatusChip('Rendah', '< ${rendah.toStringAsFixed(0)} mm', Colors.green),
+            _StatusChip(
+                'Rendah', '< ${rendah.toStringAsFixed(0)} mm', Colors.green),
             const SizedBox(width: 8),
-            _StatusChip('Normal', '${rendah.toStringAsFixed(0)}–${tinggi.toStringAsFixed(0)} mm', Colors.orange),
+            _StatusChip(
+                'Normal',
+                '${rendah.toStringAsFixed(0)}–${tinggi.toStringAsFixed(0)} mm',
+                Colors.orange),
             const SizedBox(width: 8),
-            _StatusChip('Tinggi', '≥ ${tinggi.toStringAsFixed(0)} mm', Colors.red),
+            _StatusChip(
+                'Tinggi', '≥ ${tinggi.toStringAsFixed(0)} mm', Colors.red),
           ],
         ),
         if (!isValid) ...[
@@ -469,9 +431,12 @@ class _StatusChip extends StatelessWidget {
         child: Column(
           children: [
             Text(label,
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color)),
+                style: TextStyle(
+                    fontSize: 11, fontWeight: FontWeight.bold, color: color)),
             const SizedBox(height: 2),
-            Text(range, style: TextStyle(fontSize: 9, color: color), textAlign: TextAlign.center),
+            Text(range,
+                style: TextStyle(fontSize: 9, color: color),
+                textAlign: TextAlign.center),
           ],
         ),
       ),
@@ -505,7 +470,10 @@ class _RumusSelector extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text('Metode Kalkulasi',
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black54)),
+            style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Colors.black54)),
         const SizedBox(height: 10),
         ...options.map((opt) {
           final isSelected = opt.value == selected;
@@ -519,13 +487,18 @@ class _RumusSelector extends StatelessWidget {
                 color: isSelected ? Colors.blue.shade50 : Colors.grey.shade50,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: isSelected ? Colors.blue.shade400 : Colors.grey.shade200,
+                  color:
+                      isSelected ? Colors.blue.shade400 : Colors.grey.shade200,
                   width: isSelected ? 1.5 : 1,
                 ),
               ),
               child: Row(
                 children: [
-                  Icon(opt.icon, color: isSelected ? Colors.blue.shade700 : Colors.grey.shade500, size: 22),
+                  Icon(opt.icon,
+                      color: isSelected
+                          ? Colors.blue.shade700
+                          : Colors.grey.shade500,
+                      size: 22),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -535,18 +508,23 @@ class _RumusSelector extends StatelessWidget {
                             style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
-                                color: isSelected ? Colors.blue.shade800 : Colors.black87)),
+                                color: isSelected
+                                    ? Colors.blue.shade800
+                                    : Colors.black87)),
                         const SizedBox(height: 2),
                         Text(opt.subtitle,
                             style: TextStyle(
                                 fontSize: 11,
                                 fontFamily: 'monospace',
-                                color: isSelected ? Colors.blue.shade600 : Colors.grey.shade500)),
+                                color: isSelected
+                                    ? Colors.blue.shade600
+                                    : Colors.grey.shade500)),
                       ],
                     ),
                   ),
                   if (isSelected)
-                    Icon(Icons.check_circle_rounded, color: Colors.blue.shade600, size: 20),
+                    Icon(Icons.check_circle_rounded,
+                        color: Colors.blue.shade600, size: 20),
                 ],
               ),
             ),
@@ -580,14 +558,21 @@ class _FormulaPreview extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(children: [
-            Icon(Icons.functions_rounded, size: 15, color: Colors.amber.shade300),
+            Icon(Icons.functions_rounded,
+                size: 15, color: Colors.amber.shade300),
             const SizedBox(width: 8),
             Text('Preview Rumus',
-                style: TextStyle(fontSize: 12, color: Colors.amber.shade300, fontWeight: FontWeight.bold)),
+                style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.amber.shade300,
+                    fontWeight: FontWeight.bold)),
           ]),
           const SizedBox(height: 10),
           Text(rumus,
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade300, fontFamily: 'monospace')),
+              style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade300,
+                  fontFamily: 'monospace')),
           const SizedBox(height: 6),
           Text('offset = $offsetStr mm',
               style: TextStyle(
@@ -617,10 +602,12 @@ class _InfoCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.info_outline_rounded, size: 18, color: Colors.blue.shade600),
+          Icon(Icons.info_outline_rounded,
+              size: 18, color: Colors.blue.shade600),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(text, style: TextStyle(fontSize: 12, color: Colors.blue.shade800)),
+            child: Text(text,
+                style: TextStyle(fontSize: 12, color: Colors.blue.shade800)),
           ),
         ],
       ),
@@ -643,7 +630,8 @@ class _SettingsCard extends StatelessWidget {
           BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6),
         ],
       ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: children),
+      child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start, children: children),
     );
   }
 }
@@ -669,7 +657,8 @@ class _NumericField extends StatelessWidget {
   Widget build(BuildContext context) {
     return TextField(
       controller: controller,
-      keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+      keyboardType:
+          const TextInputType.numberWithOptions(decimal: true, signed: true),
       inputFormatters: [
         FilteringTextInputFormatter.allow(
           allowNegative ? RegExp(r'^-?[0-9]*\.?[0-9]*') : RegExp(r'[0-9.]'),
@@ -681,7 +670,8 @@ class _NumericField extends StatelessWidget {
         helperText: helper,
         helperMaxLines: 2,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         isDense: true,
       ),
       onChanged: onChanged,
@@ -714,7 +704,8 @@ class _TimePickerField extends StatelessWidget {
         helperMaxLines: 2,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
         suffixIcon: const Icon(Icons.schedule_rounded),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         isDense: true,
       ),
       onTap: onTap,
@@ -745,7 +736,8 @@ class _IntervalSelector extends StatelessWidget {
         Text(label,
             style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
         const SizedBox(height: 4),
-        Text(helper, style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+        Text(helper,
+            style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
         const SizedBox(height: 10),
         Wrap(
           spacing: 8,
@@ -756,12 +748,16 @@ class _IntervalSelector extends StatelessWidget {
               onTap: () => onChanged(e.key),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 180),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
-                  color: isSelected ? Colors.blue.shade700 : Colors.grey.shade100,
+                  color:
+                      isSelected ? Colors.blue.shade700 : Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: isSelected ? Colors.blue.shade700 : Colors.grey.shade300,
+                    color: isSelected
+                        ? Colors.blue.shade700
+                        : Colors.grey.shade300,
                   ),
                 ),
                 child: Text(
@@ -778,6 +774,102 @@ class _IntervalSelector extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+class _CompensationCard extends StatelessWidget {
+  final EvaporasiSettingsState state;
+  const _CompensationCard({required this.state});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Icon(Icons.thermostat_rounded,
+              size: 15, color: Colors.orange.shade700),
+          const SizedBox(width: 8),
+          Text('Kalibrasi & Kompensasi',
+              style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.orange.shade700)),
+        ]),
+        const SizedBox(height: 10),
+        Wrap(spacing: 12, runSpacing: 8, children: [
+          _InfoTile(
+              label: 'Snapshot (cm)',
+              value: state.snapshotCm > 0
+                  ? state.snapshotCm.toStringAsFixed(2)
+                  : '--'),
+          _InfoTile(
+              label: 'Koef. Kompensasi',
+              value: state.tempCompCoef.toStringAsFixed(2)),
+          _InfoTile(
+              label: 'Ref Suhu (°C)', value: state.tempRefC.toStringAsFixed(1)),
+          _InfoTile(
+              label: 'Komp. Aktif',
+              value: state.tempCompActive ? 'Ya' : 'Tidak'),
+          _InfoTile(
+              label: 'Sensor Error', value: state.sensorError ? 'YA' : 'TIDAK'),
+          _InfoTile(label: 'NTP Sync', value: state.ntpSync ? 'OK' : 'GAGAL'),
+        ])
+      ]),
+    );
+  }
+}
+
+class _OtaCard extends StatelessWidget {
+  final EvaporasiSettingsState state;
+  const _OtaCard({required this.state});
+
+  Future<void> _triggerOta(BuildContext context) async {
+    try {
+      await FirebaseDatabase.instance.ref('Monitoring/ota_trigger').set(true);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Trigger OTA dikirim.')));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Gagal trigger OTA: $e'),
+          backgroundColor: Colors.red.shade600));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text('OTA kontrol',
+          style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Colors.blue.shade800)),
+      const SizedBox(height: 8),
+      Row(children: [
+        Expanded(
+          child: ElevatedButton.icon(
+            onPressed: () => _triggerOta(context),
+            icon: const Icon(Icons.system_update_alt_rounded),
+            label: const Text('Trigger OTA'),
+            style:
+                ElevatedButton.styleFrom(backgroundColor: Colors.blue.shade700),
+          ),
+        ),
+        const SizedBox(width: 12),
+        OutlinedButton.icon(
+          onPressed: () => Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => const EvaporasiScreen())),
+          icon: const Icon(Icons.history_rounded),
+          label: const Text('Lihat Riwayat'),
+        ),
+      ])
+    ]);
   }
 }
 
@@ -805,15 +897,28 @@ class _RealtimeInfo extends StatelessWidget {
         Row(children: [
           Icon(Icons.devices_rounded, size: 15, color: Colors.blue.shade700),
           const SizedBox(width: 8),
-          Text('Informasi Perangkat', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.blue.shade700)),
+          Text('Informasi Perangkat',
+              style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue.shade700)),
         ]),
         const SizedBox(height: 10),
         Wrap(spacing: 12, runSpacing: 8, children: [
           _InfoTile(label: 'Firmware', value: state.firmwareVersion),
-          _InfoTile(label: 'WiFi', value: state.wifiConnected ? 'Terhubung' : 'Tidak'),
-          _InfoTile(label: 'Firebase', value: state.firebaseConnected ? 'Terhubung' : 'Tidak'),
-          _InfoTile(label: 'D0 aktif', value: state.activeD0 == 0 ? '--' : state.activeD0.toString()),
-          _InfoTile(label: 'DMAX aktif', value: state.activeDmax == 0 ? '--' : state.activeDmax.toString()),
+          _InfoTile(
+              label: 'WiFi',
+              value: state.wifiConnected ? 'Terhubung' : 'Tidak'),
+          _InfoTile(
+              label: 'Firebase',
+              value: state.firebaseConnected ? 'Terhubung' : 'Tidak'),
+          _InfoTile(
+              label: 'D0 aktif',
+              value: state.activeD0 == 0 ? '--' : state.activeD0.toString()),
+          _InfoTile(
+              label: 'DMAX aktif',
+              value:
+                  state.activeDmax == 0 ? '--' : state.activeDmax.toString()),
           _InfoTile(label: 'Terakhir', value: _fmtDate(state.lastUpdate)),
         ])
       ]),
@@ -836,10 +941,154 @@ class _InfoTile extends StatelessWidget {
         border: Border.all(color: Colors.grey.shade100),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(label, style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+        Text(label,
+            style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
         const SizedBox(height: 6),
-        Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+        Text(value,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
       ]),
+    );
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// Data Collection Interval Card
+// ════════════════════════════════════════════════════════════
+
+class _CollectionIntervalCard extends StatelessWidget {
+  final EvaporasiSettingsState state;
+  final ValueChanged<int> onHistoryIntervalChanged;
+
+  const _CollectionIntervalCard({
+    required this.state,
+    required this.onHistoryIntervalChanged,
+  });
+
+  static final Map<int, String> historyOptions = {
+    600000: '10 menit',
+    1800000: '30 menit',
+    3600000: '1 jam',
+    7200000: '2 jam',
+    14400000: '4 jam',
+  };
+
+  static String _getHistoryLabel(int ms) {
+    return historyOptions[ms] ?? '${ms ~/ 1000}s';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currentInterval = state.intervalHistory_ms;
+    final dataPerDay = (24 * 60 * 60 * 1000) ~/ currentInterval;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.schedule_outlined,
+                size: 15, color: Colors.teal.shade700),
+            const SizedBox(width: 8),
+            Text(
+              'Interval Pengumpulan Data',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: Colors.teal.shade700,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'Pilih interval untuk menyimpan data ke Firebase:',
+          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: historyOptions.entries.map((e) {
+            final isSelected = e.key == currentInterval;
+            return GestureDetector(
+              onTap: () => onHistoryIntervalChanged(e.key),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color:
+                      isSelected ? Colors.teal.shade600 : Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: isSelected
+                        ? Colors.teal.shade600
+                        : Colors.grey.shade300,
+                    width: isSelected ? 2 : 1,
+                  ),
+                ),
+                child: Text(
+                  e.value,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: isSelected ? Colors.white : Colors.black87,
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.teal.shade50,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.teal.shade100),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.info_outline_rounded,
+                      size: 14, color: Colors.teal.shade700),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Info',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.teal.shade700,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Interval saat ini: ${_getHistoryLabel(currentInterval)}',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.teal.shade700,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Perkiraan data: ~$dataPerDay data per 24 jam',
+                style: TextStyle(fontSize: 11, color: Colors.teal.shade600),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Interval lebih singkat = data lebih detail tapi lebih banyak penyimpanan',
+                style: TextStyle(fontSize: 10, color: Colors.teal.shade500),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

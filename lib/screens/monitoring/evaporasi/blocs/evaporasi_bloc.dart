@@ -4,6 +4,7 @@ import 'dart:async';
 
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:monitoring_repository/monitoring_repository.dart';
 
 import '../../../../blocs/notification_bloc/notification_bloc.dart';
@@ -56,6 +57,8 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
   final MonitoringRepository _repository;
   final NotificationBloc _notificationBloc;
   StreamSubscription<Evaporasi>? _subscription;
+  double _thresholdRendah = 2.0;
+  double _thresholdTinggi = 10.0;
 
   EvaporasiBloc({
     required MonitoringRepository repository,
@@ -100,11 +103,17 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
     final labels = List.generate(
         24, (i) => '${i.toString().padLeft(2, '0')}:00');
 
+    await _loadThresholdSettings();
+
     final lastValue = history.isNotEmpty ? history.last.evaporasi : 0.0;
     final lastWater = history.isNotEmpty ? history.last.tinggiAir : 0.0;
     final lastTemp  = history.isNotEmpty ? history.last.suhu : 0.0;
 
-    final (status, willRain) = _computeStatus(lastValue);
+    final (status, willRain) = computeStatus(
+      lastValue,
+      thresholdRendah: _thresholdRendah,
+      thresholdTinggi: _thresholdTinggi,
+    );
     _emitAlert(status, willRain, lastValue);
 
     emit(state.copyWith(
@@ -138,10 +147,10 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
   // ════════════════════════════════════════════════════════════
   //  REALTIME UPDATE
   // ════════════════════════════════════════════════════════════
-  void _onRealtimeUpdated(
+  Future<void> _onRealtimeUpdated(
     _EvaporasiRealtimeUpdated event,
     Emitter<EvaporasiState> emit,
-  ) {
+  ) async {
     final updatedHistory = List<Evaporasi>.from(state.history);
     final dupIdx = updatedHistory.indexWhere(
       (e) => e.timestamp.toUtc() == event.data.timestamp.toUtc(),
@@ -194,7 +203,13 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
       updatedLabels = evapResult.labels;
     }
 
-    final (status, willRain) = _computeStatus(event.data.evaporasi);
+    await _loadThresholdSettings();
+
+    final (status, willRain) = computeStatus(
+      event.data.evaporasi,
+      thresholdRendah: _thresholdRendah,
+      thresholdTinggi: _thresholdTinggi,
+    );
     _emitAlert(status, willRain, event.data.evaporasi);
 
     emit(state.copyWith(
@@ -339,16 +354,37 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
   static bool _isSameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
 
-  static (String, bool) _computeStatus(double v) {
-    // Kategori status sesuai permintaan:
-    //  - v < 20 => Rendah ("10 mm masih rendah")
-    //  - 20 <= v < 30 => Normal/Sedang
-    //  - v >= 30 => Tinggi
-    if (v >= 30.0) return ('Tinggi', true);
-    if (v >= 20.0) return ('Normal', false);
+  static (String, bool) computeStatus(
+    double value, {
+      double thresholdRendah = 2.0,
+      double thresholdTinggi = 10.0,
+    }) {
+    if (value >= thresholdTinggi) return ('Tinggi', true);
+    if (value >= thresholdRendah) return ('Normal', false);
     return ('Rendah', false);
   }
 
+  Future<void> _loadThresholdSettings() async {
+    try {
+      final snap = await FirebaseDatabase.instance
+          .ref('Monitoring/settings/evaporasi')
+          .get();
+      if (!snap.exists || snap.value == null) return;
+
+      final data = Map<String, dynamic>.from(snap.value as Map);
+      _thresholdRendah = _toDouble(data['threshold_rendah'], _thresholdRendah);
+      _thresholdTinggi = _toDouble(data['threshold_tinggi'], _thresholdTinggi);
+    } catch (_) {
+      // Tetap pakai nilai default jika pembacaan gagal.
+    }
+  }
+
+  static double _toDouble(dynamic value, double fallback) {
+    if (value == null) return fallback;
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? fallback;
+    return fallback;
+  }
 
   void _emitAlert(String status, bool willRain, double value) {
     final AlertSeverity severity;

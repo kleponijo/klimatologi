@@ -174,9 +174,7 @@ class _ChipButton extends StatelessWidget {
             const SizedBox(width: 6),
             Text(label,
                 style: TextStyle(
-                    fontSize: 12,
-                    color: color,
-                    fontWeight: FontWeight.w600)),
+                    fontSize: 12, color: color, fontWeight: FontWeight.w600)),
           ],
         ),
       ),
@@ -200,7 +198,6 @@ class _DateGroup extends StatefulWidget {
 class _DateGroupState extends State<_DateGroup> {
   bool _expanded = false;
 
-
   double get _avgEvap {
     if (widget.items.isEmpty) return 0;
     return widget.items.map((e) => e.evaporasi).reduce((a, b) => a + b) /
@@ -209,9 +206,21 @@ class _DateGroupState extends State<_DateGroup> {
 
   double get _maxEvap {
     if (widget.items.isEmpty) return 0;
-    return widget.items
-        .map((e) => e.evaporasi)
-        .reduce((a, b) => a > b ? a : b);
+    return widget.items.map((e) => e.evaporasi).reduce((a, b) => a > b ? a : b);
+  }
+
+  double get _avgTemp {
+    if (widget.items.isEmpty) return 0;
+    final validTemps =
+        widget.items.where((e) => e.suhu >= -50 && e.suhu <= 100).toList();
+    if (validTemps.isEmpty) return 0;
+    return validTemps.map((e) => e.suhu).reduce((a, b) => a + b) /
+        validTemps.length;
+  }
+
+  double get _maxTemp {
+    if (widget.items.isEmpty) return 0;
+    return widget.items.map((e) => e.suhu).reduce((a, b) => a > b ? a : b);
   }
 
   @override
@@ -234,11 +243,9 @@ class _DateGroupState extends State<_DateGroup> {
           // ── Group header ──────────────────────────────────
           InkWell(
             onTap: () => setState(() => _expanded = !_expanded),
-            borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(16)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
             child: Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 children: [
                   Container(
@@ -256,11 +263,16 @@ class _DateGroupState extends State<_DateGroup> {
                       children: [
                         Text(widget.label,
                             style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13)),
+                                fontWeight: FontWeight.bold, fontSize: 13)),
                         const SizedBox(height: 2),
                         Text(
                           '${widget.items.length} data  •  rata-rata ${_avgEvap.toStringAsFixed(2)} mm  •  maks ${_maxEvap.toStringAsFixed(2)} mm',
+                          style: TextStyle(
+                              fontSize: 11, color: Colors.grey.shade600),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'rata-rata suhu ${_avgTemp.toStringAsFixed(1)} °C  •  maks suhu ${_maxTemp.toStringAsFixed(1)} °C',
                           style: TextStyle(
                               fontSize: 11, color: Colors.grey.shade600),
                         ),
@@ -368,8 +380,7 @@ class _HistoryItemTile extends StatelessWidget {
                       ),
                       const TextSpan(
                         text: ' mm',
-                        style:
-                            TextStyle(fontSize: 11, color: Colors.black54),
+                        style: TextStyle(fontSize: 11, color: Colors.black54),
                       ),
                     ],
                   ),
@@ -378,13 +389,12 @@ class _HistoryItemTile extends StatelessWidget {
                 // Tinggi Air
                 Row(
                   children: [
-                    Icon(Icons.water, size: 11,
-                        color: Colors.blue.shade400),
+                    Icon(Icons.water, size: 11, color: Colors.blue.shade400),
                     const SizedBox(width: 3),
                     Text(
                       'Tinggi Air: ${item.tinggiAir.toStringAsFixed(1)} cm',
-                      style: TextStyle(
-                          fontSize: 11, color: Colors.blue.shade600),
+                      style:
+                          TextStyle(fontSize: 11, color: Colors.blue.shade600),
                     ),
                   ],
                 ),
@@ -392,8 +402,8 @@ class _HistoryItemTile extends StatelessWidget {
                 // Suhu
                 Row(
                   children: [
-                    Icon(Icons.thermostat, size: 11,
-                        color: Colors.orange.shade400),
+                    Icon(Icons.thermostat,
+                        size: 11, color: Colors.orange.shade400),
                     const SizedBox(width: 3),
                     Text(
                       'Suhu: ${item.suhu.toStringAsFixed(1)} °C',
@@ -408,13 +418,11 @@ class _HistoryItemTile extends StatelessWidget {
 
           // ── Badge status ──────────────────────────────────
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
               color: _statusColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20),
-              border:
-                  Border.all(color: _statusColor.withValues(alpha: 0.4)),
+              border: Border.all(color: _statusColor.withValues(alpha: 0.4)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -456,9 +464,7 @@ class _EmptyState extends StatelessWidget {
       child: Column(
         children: [
           Icon(
-            hasFilter
-                ? Icons.search_off_rounded
-                : Icons.inbox_rounded,
+            hasFilter ? Icons.search_off_rounded : Icons.inbox_rounded,
             size: 48,
             color: Colors.grey.shade300,
           ),
@@ -467,8 +473,7 @@ class _EmptyState extends StatelessWidget {
             hasFilter
                 ? 'Tidak ada data untuk tanggal ini'
                 : 'Belum ada data history',
-            style:
-                TextStyle(color: Colors.grey.shade500, fontSize: 14),
+            style: TextStyle(color: Colors.grey.shade500, fontSize: 14),
           ),
         ],
       ),
