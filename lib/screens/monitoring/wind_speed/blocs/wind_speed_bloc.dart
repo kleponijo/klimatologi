@@ -12,8 +12,8 @@ part 'wind_speed_state.dart';
 
 /// Threshold kecepatan angin (satuan m/s)
 /// Referensi: Beaufort scale & BMKG
-const double _kWindWarning = 8.0; // Waspada: 8–12.5 m/s (~29–45 km/h)
-const double _kWindDanger = 12.5; // Bahaya:  > 12.5 m/s (> 45 km/h)
+const double _kWindWarning = 25.0; // Waspada: 8–12.5 m/s (~29–45 km/h)
+const double _kWindDanger = 45.5; // Bahaya:  > 12.5 m/s (> 45 km/h)
 const _kDeviceIdKey = 'selected_device_id';
 const _kDefaultDeviceId = 'esp_lapangan';
 
