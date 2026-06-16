@@ -204,10 +204,7 @@ class EvaporasiExcelService {
       'Tanggal',
       'Waktu',
       'Evaporasi (mm)',
-      'Tinggi Air (cm)',
       'Suhu (°C)',
-      'Acuan Pagi (cm)',
-      'Status',
     ];
     for (var i = 0; i < headers.length; i++) {
       _setCell(sheet, 0, i, headers[i],
@@ -236,9 +233,7 @@ class EvaporasiExcelService {
     for (var i = 0; i < sorted.length; i++) {
       final item = sorted[i];
       final rowIdx = i + 1;
-      final status = _getStatus(item.evaporasi);
       final bgColor = i.isEven ? _colorNormal : _colorWhite;
-      final statusBg = _statusBgColor(status);
 
       _setCellInt(sheet, rowIdx, 0, i + 1, bgColor: bgColor, centered: true);
       _setCell(sheet, rowIdx, 1,
@@ -248,19 +243,13 @@ class EvaporasiExcelService {
           bgColor: bgColor, centered: true);
       _setCellDouble(sheet, rowIdx, 3, item.evaporasi,
           bgColor: bgColor, centered: true);
-      _setCellDouble(sheet, rowIdx, 4, item.tinggiAir,
-          bgColor: bgColor, centered: true);
       // Suhu: tampilkan '-' jika sensor error (< 0)
       if (item.suhu < 0) {
-        _setCell(sheet, rowIdx, 5, '-', bgColor: bgColor, centered: true);
+        _setCell(sheet, rowIdx, 4, '-', bgColor: bgColor, centered: true);
       } else {
-        _setCellDouble(sheet, rowIdx, 5, item.suhu,
+        _setCellDouble(sheet, rowIdx, 4, item.suhu,
             bgColor: bgColor, centered: true);
       }
-      _setCellDouble(sheet, rowIdx, 6, item.acuanPagi,
-          bgColor: bgColor, centered: true);
-      _setCell(sheet, rowIdx, 7, status,
-          bgColor: statusBg, centered: true, bold: true);
     }
 
     // -- Footer jika kosong --
@@ -269,7 +258,7 @@ class EvaporasiExcelService {
           bgColor: _colorWaspada, centered: true);
       sheet.merge(
         CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 1),
-        CellIndex.indexByColumnRow(columnIndex: 7, rowIndex: 1),
+        CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: 1),
       );
     }
 
@@ -278,10 +267,7 @@ class EvaporasiExcelService {
     sheet.setColumnWidth(1, 14);
     sheet.setColumnWidth(2, 12);
     sheet.setColumnWidth(3, 18);
-    sheet.setColumnWidth(4, 18);
-    sheet.setColumnWidth(5, 14);
-    sheet.setColumnWidth(6, 18);
-    sheet.setColumnWidth(7, 12);
+    sheet.setColumnWidth(4, 14);
   }
 
   // ════════════════════════════════════════════════════════════
