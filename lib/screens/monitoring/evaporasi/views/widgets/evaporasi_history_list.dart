@@ -252,12 +252,12 @@ class _DateGroup extends StatelessWidget {
                           fontWeight: FontWeight.bold, fontSize: 13)),
                   const SizedBox(height: 2),
                   Text(
-                    '${items.length} data  •  rata-rata ${_avgEvap.toStringAsFixed(2)} mm  •  maks ${_maxEvap.toStringAsFixed(2)} mm',
+                    'rata-rata ${_avgEvap.toStringAsFixed(2)} mm',
                     style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'rata-rata suhu ${_avgTemp.toStringAsFixed(1)} °C  •  maks suhu ${_maxTemp.toStringAsFixed(1)} °C',
+                    'rata-rata suhu ${_avgTemp.toStringAsFixed(1)} °C',
                     style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
                   ),
                 ],
