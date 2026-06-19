@@ -185,42 +185,34 @@ class _ChipButton extends StatelessWidget {
 // ════════════════════════════════════════════════════════════
 //  Group per tanggal
 // ════════════════════════════════════════════════════════════
-class _DateGroup extends StatefulWidget {
+class _DateGroup extends StatelessWidget {
   final String label;
   final List<Evaporasi> items;
 
   const _DateGroup({required this.label, required this.items});
 
-  @override
-  State<_DateGroup> createState() => _DateGroupState();
-}
-
-class _DateGroupState extends State<_DateGroup> {
-  bool _expanded = false;
-
   double get _avgEvap {
-    if (widget.items.isEmpty) return 0;
-    return widget.items.map((e) => e.evaporasi).reduce((a, b) => a + b) /
-        widget.items.length;
+    if (items.isEmpty) return 0;
+    return items.map((e) => e.evaporasi).reduce((a, b) => a + b) / items.length;
   }
 
   double get _maxEvap {
-    if (widget.items.isEmpty) return 0;
-    return widget.items.map((e) => e.evaporasi).reduce((a, b) => a > b ? a : b);
+    if (items.isEmpty) return 0;
+    return items.map((e) => e.evaporasi).reduce((a, b) => a > b ? a : b);
   }
 
   double get _avgTemp {
-    if (widget.items.isEmpty) return 0;
+    if (items.isEmpty) return 0;
     final validTemps =
-        widget.items.where((e) => e.suhu >= -50 && e.suhu <= 100).toList();
+        items.where((e) => e.suhu >= -50 && e.suhu <= 100).toList();
     if (validTemps.isEmpty) return 0;
     return validTemps.map((e) => e.suhu).reduce((a, b) => a + b) /
         validTemps.length;
   }
 
   double get _maxTemp {
-    if (widget.items.isEmpty) return 0;
-    return widget.items.map((e) => e.suhu).reduce((a, b) => a > b ? a : b);
+    if (items.isEmpty) return 0;
+    return items.map((e) => e.suhu).reduce((a, b) => a > b ? a : b);
   }
 
   @override
@@ -238,208 +230,41 @@ class _DateGroupState extends State<_DateGroup> {
           ),
         ],
       ),
-      child: Column(
-        children: [
-          // ── Group header ──────────────────────────────────
-          InkWell(
-            onTap: () => setState(() => _expanded = !_expanded),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              width: 4,
+              height: 36,
+              decoration: BoxDecoration(
+                color: Colors.blue.shade600,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 4,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade600,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
+                  Text(label,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 13)),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${items.length} data  •  rata-rata ${_avgEvap.toStringAsFixed(2)} mm  •  maks ${_maxEvap.toStringAsFixed(2)} mm',
+                    style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(widget.label,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 13)),
-                        const SizedBox(height: 2),
-                        Text(
-                          '${widget.items.length} data  •  rata-rata ${_avgEvap.toStringAsFixed(2)} mm  •  maks ${_maxEvap.toStringAsFixed(2)} mm',
-                          style: TextStyle(
-                              fontSize: 11, color: Colors.grey.shade600),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'rata-rata suhu ${_avgTemp.toStringAsFixed(1)} °C  •  maks suhu ${_maxTemp.toStringAsFixed(1)} °C',
-                          style: TextStyle(
-                              fontSize: 11, color: Colors.grey.shade600),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(
-                    _expanded
-                        ? Icons.keyboard_arrow_up_rounded
-                        : Icons.keyboard_arrow_down_rounded,
-                    color: Colors.grey.shade500,
+                  const SizedBox(height: 2),
+                  Text(
+                    'rata-rata suhu ${_avgTemp.toStringAsFixed(1)} °C  •  maks suhu ${_maxTemp.toStringAsFixed(1)} °C',
+                    style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
                   ),
                 ],
               ),
             ),
-          ),
-
-          // ── Item list ─────────────────────────────────────
-          if (_expanded)
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: widget.items.length,
-              separatorBuilder: (_, __) =>
-                  Divider(height: 1, color: Colors.grey.shade100),
-              itemBuilder: (context, i) =>
-                  _HistoryItemTile(item: widget.items[i]),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-// ════════════════════════════════════════════════════════════
-//  Satu baris data history
-// ════════════════════════════════════════════════════════════
-class _HistoryItemTile extends StatelessWidget {
-  final Evaporasi item;
-
-  const _HistoryItemTile({required this.item});
-
-  String get _status {
-    if (item.evaporasi > 10.0) return 'Tinggi';
-    if (item.evaporasi >= 2.0) return 'Normal';
-    return 'Rendah';
-  }
-
-  Color get _statusColor {
-    switch (_status) {
-      case 'Tinggi':
-        return Colors.red.shade600;
-      case 'Normal':
-        return Colors.orange.shade700;
-      default:
-        return Colors.green.shade600;
-    }
-  }
-
-  IconData get _statusIcon {
-    switch (_status) {
-      case 'Tinggi':
-        return Icons.warning_rounded;
-      case 'Normal':
-        return Icons.info_outline_rounded;
-      default:
-        return Icons.check_circle_outline_rounded;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ── Jam ───────────────────────────────────────────
-          SizedBox(
-            width: 56,
-            child: Text(
-              DateFormat('HH:mm:ss').format(item.timestamp),
-              style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  fontFamily: 'monospace'),
-            ),
-          ),
-          const SizedBox(width: 8),
-
-          // ── Data evaporasi, tinggi air, suhu ─────────────
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Evaporasi
-                RichText(
-                  text: TextSpan(
-                    style: const TextStyle(color: Colors.black87),
-                    children: [
-                      TextSpan(
-                        text: item.evaporasi.toStringAsFixed(2),
-                        style: const TextStyle(
-                            fontSize: 15, fontWeight: FontWeight.bold),
-                      ),
-                      const TextSpan(
-                        text: ' mm',
-                        style: TextStyle(fontSize: 11, color: Colors.black54),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 3),
-                // Tinggi Air
-                Row(
-                  children: [
-                    Icon(Icons.water, size: 11, color: Colors.blue.shade400),
-                    const SizedBox(width: 3),
-                    Text(
-                      'Tinggi Air: ${item.tinggiAir.toStringAsFixed(1)} cm',
-                      style:
-                          TextStyle(fontSize: 11, color: Colors.blue.shade600),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                // Suhu
-                Row(
-                  children: [
-                    Icon(Icons.thermostat,
-                        size: 11, color: Colors.orange.shade400),
-                    const SizedBox(width: 3),
-                    Text(
-                      'Suhu: ${item.suhu.toStringAsFixed(1)} °C',
-                      style: TextStyle(
-                          fontSize: 11, color: Colors.orange.shade700),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          // ── Badge status ──────────────────────────────────
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: _statusColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: _statusColor.withValues(alpha: 0.4)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(_statusIcon, size: 12, color: _statusColor),
-                const SizedBox(width: 4),
-                Text(
-                  _status,
-                  style: TextStyle(
-                      fontSize: 11,
-                      color: _statusColor,
-                      fontWeight: FontWeight.w600),
-                ),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
