@@ -104,23 +104,10 @@ class _HeaderBar extends StatelessWidget {
     final filtered = selectedDate != null;
     return Row(
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Riwayat Data',
-              style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87),
-            ),
-            Text(
-              filtered
-                  ? '${DateFormat('dd MMM yyyy', 'id_ID').format(selectedDate!)} • $totalCount data'
-                  : '$totalCount data tersimpan',
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-            ),
-          ],
+        const Text(
+          'History',
+          style: TextStyle(
+              fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
         ),
         const Spacer(),
         if (filtered)
