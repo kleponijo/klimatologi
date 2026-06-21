@@ -101,7 +101,7 @@ class _HeaderBar extends StatelessWidget {
     return Row(
       children: [
         const Text(
-          'Riwayat Data',
+          'History Evaporasi Harian',
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
@@ -171,32 +171,22 @@ class _ChipButton extends StatelessWidget {
 // ════════════════════════════════════════════════════════════
 //  Group per tanggal
 // ════════════════════════════════════════════════════
-class _DateGroup extends StatefulWidget {
+class _DateGroup extends StatelessWidget {
   final String label;
   final List<Evaporasi> items;
 
   const _DateGroup({required this.label, required this.items});
 
-  @override
-  State<_DateGroup> createState() => _DateGroupState();
-}
-
-class _DateGroupState extends State<_DateGroup> {
-  bool _expanded = true;
-
   double get _avgEvap {
-    if (widget.items.isEmpty) return 0;
-    return widget.items.map((e) => e.evaporasi).reduce((a, b) => a + b) /
-        widget.items.length;
+    if (items.isEmpty) return 0;
+    return items.map((e) => e.evaporasi).reduce((a, b) => a + b) / items.length;
   }
 
   double get _avgTemp {
-    if (widget.items.isEmpty) return 0;
-    final validTemps =
-        widget.items.where((e) => e.suhu >= -50 && e.suhu <= 100).toList();
+    if (items.isEmpty) return 0;
+    final validTemps = items.where((e) => e.suhu >= -50 && e.suhu <= 100).toList();
     if (validTemps.isEmpty) return 0;
-    return validTemps.map((e) => e.suhu).reduce((a, b) => a + b) /
-        validTemps.length;
+    return validTemps.map((e) => e.suhu).reduce((a, b) => a + b) / validTemps.length;
   }
 
   @override
@@ -214,103 +204,36 @@ class _DateGroupState extends State<_DateGroup> {
           ),
         ],
       ),
-      child: Column(
-        children: [
-          InkWell(
-            onTap: () => setState(() => _expanded = !_expanded),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        child: Row(
+          children: [
+            Container(
+              width: 4,
+              height: 36,
+              decoration: BoxDecoration(
+                color: Colors.blue.shade600,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 4,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade600,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(widget.label,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 13)),
-                        const SizedBox(height: 2),
-                        Text(
-                          '${widget.items.length} data • rata-rata ${_avgEvap.toStringAsFixed(2)} mm • suhu rata-rata ${_avgTemp.toStringAsFixed(1)} °C',
-                          style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(
-                    _expanded
-                        ? Icons.keyboard_arrow_up_rounded
-                        : Icons.keyboard_arrow_down_rounded,
-                    color: Colors.grey.shade500,
+                  Text(label,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 13)),
+                  const SizedBox(height: 6),
+                  Text(
+                    'rata-rata evaporasi ${_avgEvap.toStringAsFixed(2)} mm • rata-rata suhu ${_avgTemp.toStringAsFixed(1)} °C',
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                   ),
                 ],
               ),
             ),
-          ),
-          if (_expanded)
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: widget.items.length,
-              separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey.shade100),
-              itemBuilder: (context, i) => _HistoryItemTile(item: widget.items[i]),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _HistoryItemTile extends StatelessWidget {
-  final Evaporasi item;
-
-  const _HistoryItemTile({required this.item});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 52,
-            child: Text(
-              DateFormat('HH:mm:ss').format(item.timestamp),
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                fontFamily: 'monospace',
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${item.evaporasi.toStringAsFixed(2)} mm • ${item.suhu.toStringAsFixed(1)} °C • ${item.tinggiAir.toStringAsFixed(1)} cm',
-                  style: const TextStyle(fontSize: 13, color: Colors.black87),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  item.status,
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-                ),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
