@@ -34,7 +34,7 @@ class EvaporasiHistoryList extends StatelessWidget {
   Widget build(BuildContext context) {
     final grouped = _groupByDate(history);
     final sortedKeys = grouped.keys.toList()
-      ..sort((a, b) => b.compareTo(a)); // terbaru di atas
+      ..sort((a, b) => b.compareTo(a));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -68,15 +68,11 @@ class EvaporasiHistoryList extends StatelessWidget {
   String _formatDateLabel(String key) {
     final dt = DateTime.parse(key);
     final today = DateTime.now();
-    if (dt.year == today.year &&
-        dt.month == today.month &&
-        dt.day == today.day) {
+    if (dt.year == today.year && dt.month == today.month && dt.day == today.day) {
       return 'Hari Ini — ${DateFormat('dd MMMM yyyy', 'id_ID').format(dt)}';
     }
     final yesterday = today.subtract(const Duration(days: 1));
-    if (dt.year == yesterday.year &&
-        dt.month == yesterday.month &&
-        dt.day == yesterday.day) {
+    if (dt.year == yesterday.year && dt.month == yesterday.month && dt.day == yesterday.day) {
       return 'Kemarin — ${DateFormat('dd MMMM yyyy', 'id_ID').format(dt)}';
     }
     return DateFormat('EEEE, dd MMMM yyyy', 'id_ID').format(dt);
@@ -105,9 +101,12 @@ class _HeaderBar extends StatelessWidget {
     return Row(
       children: [
         const Text(
-          'History',
+          'Riwayat Data',
           style: TextStyle(
-              fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
         ),
         const Spacer(),
         if (filtered)
@@ -171,35 +170,33 @@ class _ChipButton extends StatelessWidget {
 
 // ════════════════════════════════════════════════════════════
 //  Group per tanggal
-// ════════════════════════════════════════════════════════════
-class _DateGroup extends StatelessWidget {
+// ════════════════════════════════════════════════════
+class _DateGroup extends StatefulWidget {
   final String label;
   final List<Evaporasi> items;
 
   const _DateGroup({required this.label, required this.items});
 
-  double get _avgEvap {
-    if (items.isEmpty) return 0;
-    return items.map((e) => e.evaporasi).reduce((a, b) => a + b) / items.length;
-  }
+  @override
+  State<_DateGroup> createState() => _DateGroupState();
+}
 
-  double get _maxEvap {
-    if (items.isEmpty) return 0;
-    return items.map((e) => e.evaporasi).reduce((a, b) => a > b ? a : b);
+class _DateGroupState extends State<_DateGroup> {
+  bool _expanded = true;
+
+  double get _avgEvap {
+    if (widget.items.isEmpty) return 0;
+    return widget.items.map((e) => e.evaporasi).reduce((a, b) => a + b) /
+        widget.items.length;
   }
 
   double get _avgTemp {
-    if (items.isEmpty) return 0;
+    if (widget.items.isEmpty) return 0;
     final validTemps =
-        items.where((e) => e.suhu >= -50 && e.suhu <= 100).toList();
+        widget.items.where((e) => e.suhu >= -50 && e.suhu <= 100).toList();
     if (validTemps.isEmpty) return 0;
     return validTemps.map((e) => e.suhu).reduce((a, b) => a + b) /
         validTemps.length;
-  }
-
-  double get _maxTemp {
-    if (items.isEmpty) return 0;
-    return items.map((e) => e.suhu).reduce((a, b) => a > b ? a : b);
   }
 
   @override
@@ -217,41 +214,103 @@ class _DateGroup extends StatelessWidget {
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          children: [
-            Container(
-              width: 4,
-              height: 36,
-              decoration: BoxDecoration(
-                color: Colors.blue.shade600,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
+        children: [
+          InkWell(
+            onTap: () => setState(() => _expanded = !_expanded),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
                 children: [
-                  Text(label,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 13)),
-                  const SizedBox(height: 2),
-                  Text(
-                    'rata-rata ${_avgEvap.toStringAsFixed(2)} mm',
-                    style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                  Container(
+                    width: 4,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade600,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'rata-rata suhu ${_avgTemp.toStringAsFixed(1)} °C',
-                    style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(widget.label,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 13)),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${widget.items.length} data • rata-rata ${_avgEvap.toStringAsFixed(2)} mm • suhu rata-rata ${_avgTemp.toStringAsFixed(1)} °C',
+                          style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    _expanded
+                        ? Icons.keyboard_arrow_up_rounded
+                        : Icons.keyboard_arrow_down_rounded,
+                    color: Colors.grey.shade500,
                   ),
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+          if (_expanded)
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: widget.items.length,
+              separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey.shade100),
+              itemBuilder: (context, i) => _HistoryItemTile(item: widget.items[i]),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HistoryItemTile extends StatelessWidget {
+  final Evaporasi item;
+
+  const _HistoryItemTile({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 52,
+            child: Text(
+              DateFormat('HH:mm:ss').format(item.timestamp),
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                fontFamily: 'monospace',
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${item.evaporasi.toStringAsFixed(2)} mm • ${item.suhu.toStringAsFixed(1)} °C • ${item.tinggiAir.toStringAsFixed(1)} cm',
+                  style: const TextStyle(fontSize: 13, color: Colors.black87),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  item.status,
+                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

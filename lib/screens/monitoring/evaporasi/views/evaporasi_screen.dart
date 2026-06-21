@@ -363,10 +363,6 @@ class _EvaporasiScreenState extends State<EvaporasiScreen> {
                 _statusCard(state),
                 const SizedBox(height: 20),
 
-                // ── Kontrol Database Evaporasi ───────────────
-                const EvaporasiControlPanel(),
-                const SizedBox(height: 20),
-
                 // ── Range Selector ──────────────────────────
                 const Text(
                   'Tren Evaporasi & Suhu',

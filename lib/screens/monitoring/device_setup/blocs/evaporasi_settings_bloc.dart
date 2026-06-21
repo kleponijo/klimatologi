@@ -9,7 +9,7 @@ class EvaporasiSettingsBloc extends Bloc<EvaporasiSettingsEvent, EvaporasiSettin
   final DatabaseReference _ref;
 
   static const _path = 'Monitoring/settings/evaporasi';
-  static const _rtdbResetPath = 'Monitoring/reset_dmax';
+  static const _rtdbResetPath = 'Monitoring/reset_evaporasi';
   static const _rtdbRealtimePath = 'Monitoring/realtime/dmax_saat_ini';
 
   EvaporasiSettingsBloc({DatabaseReference? ref})
@@ -18,7 +18,7 @@ class EvaporasiSettingsBloc extends Bloc<EvaporasiSettingsEvent, EvaporasiSettin
     on<EvaporasiSettingsStarted>(_onStarted);
     on<EvaporasiThresholdRendahChanged>(_onThresholdRendahChanged);
     on<EvaporasiThresholdTinggiChanged>(_onThresholdTinggiChanged);
-    on<EvaporasiRumusKalibrasiChanged>(_onRumusChanged);
+    // rumusKalibrasi removed: calculation is handled on ESP32 hardware
     on<EvaporasiKoreksiOffsetChanged>(_onOffsetChanged);
     on<EvaporasiPumpStartChanged>(_onPumpStartChanged);
     on<EvaporasiPumpEndChanged>(_onPumpEndChanged);
@@ -40,12 +40,11 @@ class EvaporasiSettingsBloc extends Bloc<EvaporasiSettingsEvent, EvaporasiSettin
     emit(state.copyWith(status: EvaporasiSettingsStatus.loading));
     try {
       final snap = await _ref.get();
-      if (snap.exists && snap.value != null) {
+        if (snap.exists && snap.value != null) {
         final data = Map<String, dynamic>.from(snap.value as Map);
         emit(state.copyWith(
           thresholdRendah: _toDouble(data['threshold_rendah'], 2.0),
           thresholdTinggi: _toDouble(data['threshold_tinggi'], 10.0),
-          rumusKalibrasi: (data['rumus_kalibrasi'] as String?) ?? 'selisih_max',
           koreksiOffset: _toDouble(data['koreksi_offset'], 0.0),
           pumpStartTime: (data['pump_start_time'] as String?) ??
               (data['jam_pompa_mulai'] != null ? '${_toInt(data['jam_pompa_mulai'], 6).toString().padLeft(2, '0')}:00' : '06:00'),
@@ -134,10 +133,7 @@ class EvaporasiSettingsBloc extends Bloc<EvaporasiSettingsEvent, EvaporasiSettin
     Emitter<EvaporasiSettingsState> emit,
   ) => emit(state.copyWith(thresholdTinggi: event.value));
 
-  void _onRumusChanged(
-    EvaporasiRumusKalibrasiChanged event,
-    Emitter<EvaporasiSettingsState> emit,
-  ) => emit(state.copyWith(rumusKalibrasi: event.rumus));
+  // rumusKalibrasi handling removed — device firmware defines the formula
 
   void _onOffsetChanged(
     EvaporasiKoreksiOffsetChanged event,
@@ -221,17 +217,20 @@ class EvaporasiSettingsBloc extends Bloc<EvaporasiSettingsEvent, EvaporasiSettin
     try {
       final pumpStartHour = int.tryParse(state.pumpStartTime.split(':').first) ?? 0;
       final pumpEndHour = int.tryParse(state.pumpEndTime.split(':').first) ?? 0;
-      await _ref.set({
+      await FirebaseDatabase.instance
+          .ref('Monitoring/settings/kalibrasi')
+          .update({
+        'd0': state.d0,
+        'dmax': state.dmaxManual,
+      });
+      await _ref.update({
         'threshold_rendah': state.thresholdRendah,
         'threshold_tinggi': state.thresholdTinggi,
-        'rumus_kalibrasi': state.rumusKalibrasi,
         'koreksi_offset': state.koreksiOffset,
         'pump_start_time': state.pumpStartTime,
         'pump_end_time': state.pumpEndTime,
         'jam_pompa_mulai': pumpStartHour,
         'jam_pompa_selesai': pumpEndHour,
-        'd0': state.d0,
-        'dmax_manual': state.dmaxManual,
         'standar_tinggi_cm': state.standarTinggiCm,
         'batas_kritis_cm': state.batasKritisCm,
         'interval_realtime_ms': state.intervalRealtime_ms,

@@ -151,58 +151,6 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
     _EvaporasiRealtimeUpdated event,
     Emitter<EvaporasiState> emit,
   ) async {
-    final updatedHistory = List<Evaporasi>.from(state.history);
-    final dupIdx = updatedHistory.indexWhere(
-      (e) => e.timestamp.toUtc() == event.data.timestamp.toUtc(),
-    );
-    if (dupIdx >= 0) {
-      updatedHistory[dupIdx] = event.data;
-    } else {
-      updatedHistory.add(event.data);
-    }
-    updatedHistory.sort((a, b) => a.timestamp.compareTo(b.timestamp));
-
-    // Regenerasikan data chart secara dinamis agar selalu sinkron dengan data real-time
-    List<double> updatedChart;
-    List<double> updatedTemp;
-    List<String> updatedLabels = state.chartLabels;
-
-    final isSingle = _isSameDay(state.startDate, state.endDate);
-
-    if (isSingle) {
-      updatedChart = TimeSeriesMapper.toSpecificDate(
-        data: updatedHistory,
-        getTime: (e) => e.timestamp,
-        getValue: (e) => e.evaporasi,
-        targetDate: state.startDate,
-      );
-      updatedTemp = TimeSeriesMapper.toSpecificDate(
-        data: updatedHistory,
-        getTime: (e) => e.timestamp,
-        getValue: (e) => e.suhu,
-        targetDate: state.startDate,
-      );
-      updatedLabels = List.generate(24, (i) => '${i.toString().padLeft(2, '0')}:00');
-    } else {
-      final evapResult = TimeSeriesMapper.toDateRange(
-        data: updatedHistory,
-        getTime: (e) => e.timestamp,
-        getValue: (e) => e.evaporasi,
-        startDate: state.startDate,
-        endDate: state.endDate,
-      );
-      final tempResult = TimeSeriesMapper.toDateRange(
-        data: updatedHistory,
-        getTime: (e) => e.timestamp,
-        getValue: (e) => e.suhu,
-        startDate: state.startDate,
-        endDate: state.endDate,
-      );
-      updatedChart = evapResult.values;
-      updatedTemp  = tempResult.values;
-      updatedLabels = evapResult.labels;
-    }
-
     await _loadThresholdSettings();
 
     final (status, willRain) = computeStatus(
@@ -213,19 +161,9 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
     _emitAlert(status, willRain, event.data.evaporasi);
 
     emit(state.copyWith(
-      history: updatedHistory,
-      filteredHistory: state.selectedDateFilter != null
-          ? updatedHistory.where((e) =>
-              e.timestamp.year == state.selectedDateFilter!.year &&
-              e.timestamp.month == state.selectedDateFilter!.month &&
-              e.timestamp.day == state.selectedDateFilter!.day).toList()
-          : updatedHistory,
       currentValue: event.data.evaporasi,
       temperature: event.data.suhu,
       waterLevel: event.data.tinggiAir,
-      chartValues: updatedChart,
-      chartTemperatures: updatedTemp,
-      chartLabels: updatedLabels,
       weatherStatus: status,
       willRain: willRain,
       currentData: event.data,

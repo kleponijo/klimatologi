@@ -20,11 +20,6 @@ class EvaporasiThresholdTinggiChanged extends EvaporasiSettingsEvent {
   @override List<Object?> get props => [value];
 }
 
-class EvaporasiRumusKalibrasiChanged extends EvaporasiSettingsEvent {
-  final String rumus;
-  const EvaporasiRumusKalibrasiChanged(this.rumus);
-  @override List<Object?> get props => [rumus];
-}
 
 class EvaporasiKoreksiOffsetChanged extends EvaporasiSettingsEvent {
   final double value;

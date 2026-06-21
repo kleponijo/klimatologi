@@ -5,7 +5,6 @@ enum EvaporasiSettingsStatus { loading, loaded, saving, saved, error }
 class EvaporasiSettingsState extends Equatable {
   final double thresholdRendah;
   final double thresholdTinggi;
-  final String rumusKalibrasi;
   final double koreksiOffset;
   final String pumpStartTime;
   final String pumpEndTime;
@@ -45,7 +44,6 @@ class EvaporasiSettingsState extends Equatable {
   const EvaporasiSettingsState({
     this.thresholdRendah     = 2.0,
     this.thresholdTinggi     = 10.0,
-    this.rumusKalibrasi      = 'selisih_max',
     this.koreksiOffset       = 0.0,
     this.pumpStartTime       = '06:00',
     this.pumpEndTime         = '18:00',
@@ -82,7 +80,6 @@ class EvaporasiSettingsState extends Equatable {
   EvaporasiSettingsState copyWith({
     double? thresholdRendah,
     double? thresholdTinggi,
-    String? rumusKalibrasi,
     double? koreksiOffset,
     String? pumpStartTime,
     String? pumpEndTime,
@@ -118,7 +115,6 @@ class EvaporasiSettingsState extends Equatable {
     return EvaporasiSettingsState(
       thresholdRendah:     thresholdRendah     ?? this.thresholdRendah,
       thresholdTinggi:     thresholdTinggi     ?? this.thresholdTinggi,
-      rumusKalibrasi:      rumusKalibrasi      ?? this.rumusKalibrasi,
       koreksiOffset:       koreksiOffset       ?? this.koreksiOffset,
       pumpStartTime:       pumpStartTime       ?? this.pumpStartTime,
       pumpEndTime:         pumpEndTime         ?? this.pumpEndTime,
@@ -155,7 +151,7 @@ class EvaporasiSettingsState extends Equatable {
 
   @override
   List<Object?> get props => [
-        thresholdRendah, thresholdTinggi, rumusKalibrasi, koreksiOffset,
+      thresholdRendah, thresholdTinggi, koreksiOffset,
         pumpStartTime, pumpEndTime, d0, dmaxManual,
         intervalRealtime_ms, intervalHistory_ms, intervalBaca_ms,
         standarTinggiCm, batasKritisCm, tempCompActive, tempCompCoef, tempRefC,
