@@ -336,14 +336,6 @@ class _SensorSettingsTab extends StatelessWidget {
           ),
           const SizedBox(height: 32),
 
-          // ── Rumus preview ─────────────────────────────────────
-          _FormulaPreview(
-            kFaktor: state.kFaktor,
-            radiusM: state.radiusM,
-            magnetCount: state.magnetCount,
-          ),
-          const SizedBox(height: 32),
-
           // ── Tombol Simpan ─────────────────────────────────────
           SizedBox(
             width: double.infinity,
@@ -1036,75 +1028,6 @@ class _SettingsCard extends StatelessWidget {
     );
   }
 }
-
-class _FormulaPreview extends StatelessWidget {
-  final double kFaktor;
-  final double radiusM;
-  final int magnetCount;
-
-  const _FormulaPreview({
-    required this.kFaktor,
-    required this.radiusM,
-    required this.magnetCount,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    // Contoh: 1 pulsa per detik
-    final exampleRps = 1.0 / magnetCount;
-    final exampleSpeed = 2 * 3.14159 * radiusM * exampleRps * kFaktor;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade900,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(children: [
-            Icon(Icons.functions_rounded,
-                size: 16, color: Colors.amber.shade300),
-            const SizedBox(width: 8),
-            Text('Preview Rumus',
-                style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.amber.shade300,
-                    fontWeight: FontWeight.bold)),
-          ]),
-          const SizedBox(height: 10),
-          Text(
-            'speed = 2π × radius × (pulsa / (dt × magnet)) × k',
-            style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey.shade400,
-                fontFamily: 'monospace'),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            '       = 2π × ${radiusM.toStringAsFixed(3)}m × (p / (dt × $magnetCount)) × ${kFaktor.toStringAsFixed(1)}',
-            style: const TextStyle(
-                fontSize: 12, color: Colors.white70, fontFamily: 'monospace'),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            '@ 1 pulsa/detik → ${exampleSpeed.toStringAsFixed(3)} m/s',
-            style: TextStyle(
-                fontSize: 13,
-                color: Colors.green.shade300,
-                fontWeight: FontWeight.bold,
-                fontFamily: 'monospace'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── WIDGET BARU: _MagnetCountSelector ─────────────────────────
-// Tambahkan class baru ini di bagian bawah file,
-// setelah class _FormulaPreview
 
 class _MagnetCountSelector extends StatelessWidget {
   final int selected;

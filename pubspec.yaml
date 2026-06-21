@@ -29,6 +29,7 @@ dependencies:
     path: packages/monitoring_repository
   path_provider: ^2.1.5
   pdf: ^3.11.1
+  flutter_local_notifications: ^22.0.1
   printing: ^5.13.1
   rxdart: ^0.27.7
   share_plus: ^13.1.0

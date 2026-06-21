@@ -18,7 +18,6 @@ class EvaporasiSettingsBloc extends Bloc<EvaporasiSettingsEvent, EvaporasiSettin
     on<EvaporasiSettingsStarted>(_onStarted);
     on<EvaporasiThresholdRendahChanged>(_onThresholdRendahChanged);
     on<EvaporasiThresholdTinggiChanged>(_onThresholdTinggiChanged);
-    // rumusKalibrasi removed: calculation is handled on ESP32 hardware
     on<EvaporasiKoreksiOffsetChanged>(_onOffsetChanged);
     on<EvaporasiPumpStartChanged>(_onPumpStartChanged);
     on<EvaporasiPumpEndChanged>(_onPumpEndChanged);
@@ -132,8 +131,6 @@ class EvaporasiSettingsBloc extends Bloc<EvaporasiSettingsEvent, EvaporasiSettin
     EvaporasiThresholdTinggiChanged event,
     Emitter<EvaporasiSettingsState> emit,
   ) => emit(state.copyWith(thresholdTinggi: event.value));
-
-  // rumusKalibrasi handling removed — device firmware defines the formula
 
   void _onOffsetChanged(
     EvaporasiKoreksiOffsetChanged event,

@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:monitoring_repository/monitoring_repository.dart';
 
 import '../../../../blocs/notification_bloc/notification_bloc.dart';
@@ -56,6 +57,8 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
 
   final MonitoringRepository _repository;
   final NotificationBloc _notificationBloc;
+  final FlutterLocalNotificationsPlugin _localNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
   StreamSubscription<Evaporasi>? _subscription;
   double _thresholdRendah = 2.0;
   double _thresholdTinggi = 10.0;
@@ -66,6 +69,7 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
   })  : _repository = repository,
         _notificationBloc = notificationBloc,
         super(EvaporasiState()) {
+    _initLocalNotifications();
     on<WatchEvaporasiStarted>(_onStarted);
     on<_EvaporasiRealtimeUpdated>(_onRealtimeUpdated);
     on<EvaporasiDateRangeChanged>(_onDateRangeChanged);
@@ -158,6 +162,17 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
       thresholdRendah: _thresholdRendah,
       thresholdTinggi: _thresholdTinggi,
     );
+
+    final bool hasFallenBelowCritical =
+        event.data.tinggiAir < state.batasKritisCm &&
+        state.waterLevel >= state.batasKritisCm;
+    final bool statusBecameHigh =
+        state.weatherStatus != 'Tinggi' && status == 'Tinggi';
+
+    if (hasFallenBelowCritical || statusBecameHigh) {
+      await _showCriticalNotification();
+    }
+
     _emitAlert(status, willRain, event.data.evaporasi);
 
     emit(state.copyWith(
@@ -180,79 +195,29 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
     emit(state.copyWith(isLoading: true));
 
     final history = state.history;
-    final start = event.startDate;
-    final end   = event.endDate;
+    final selectedDate = DateTime(
+      event.startDate.year,
+      event.startDate.month,
+      event.startDate.day,
+    );
 
-    final isSingle = _isSameDay(start, end);
-
-    List<double> values;
-    List<double> temps;
-    List<String> labels;
-
-
-    if (isSingle) {
-      // 1 hari → per jam
-      values = TimeSeriesMapper.toSpecificDate(
-        data: history,
-        getTime: (e) => e.timestamp,
-        getValue: (e) => e.evaporasi,
-        targetDate: start,
-      );
-      temps = TimeSeriesMapper.toSpecificDate(
-        data: history,
-        getTime: (e) => e.timestamp,
-        getValue: (e) => e.suhu,
-        targetDate: start,
-      );
-      labels = List.generate(24, (i) => '${i.toString().padLeft(2, '0')}:00');
-    } else {
-      // Range → per hari (tapi evaporasi dikalibrasi dengan rumus:
-      // E(hari ke-2) = max(evap hari ke-1) - max(evap hari ke-2))
-      final days = _buildDayList(start, end);
-
-
-      final dailyMaxEvap = List<double>.filled(days.length, 0.0);
-      final dailyMaxTemp = List<double>.filled(days.length, 0.0);
-      final dailyHasValue = List<bool>.filled(days.length, false);
-
-
-      for (final item in history) {
-        final d = DateTime(item.timestamp.year, item.timestamp.month, item.timestamp.day);
-        final idx = days.indexWhere((x) => x == d);
-        if (idx < 0) continue;
-
-        final evap = item.evaporasi;
-        final temp = item.suhu;
-
-        if (!dailyHasValue[idx]) {
-          dailyHasValue[idx] = true;
-          dailyMaxEvap[idx] = evap;
-          dailyMaxTemp[idx] = temp;
-        } else {
-          if (evap > dailyMaxEvap[idx]) dailyMaxEvap[idx] = evap;
-          if (temp > dailyMaxTemp[idx]) dailyMaxTemp[idx] = temp;
-        }
-      }
-
-      // Hitung E berbasis pasangan H1 (maks hari sebelumnya) - H2 (maks hari ini).
-      // Definisi sesuai permintaan: E untuk hari i = maxEvap(hari i-1) - maxEvap(hari i)
-      // Mulai tanggal 21 Mei s/d sekarang: untuk hari pertama di rentang, nilainya 0
-      final calibrated = List<double>.filled(days.length, 0.0);
-      for (int i = 1; i < days.length; i++) {
-        final e = dailyMaxEvap[i - 1] - dailyMaxEvap[i];
-        calibrated[i] = e < 0 ? 0.0 : e;
-      }
-
-      values = calibrated;
-      temps = dailyMaxTemp;
-      labels = _buildLabels(days);
-
-    }
-
+    final values = TimeSeriesMapper.toSpecificDate(
+      data: history,
+      getTime: (e) => e.timestamp,
+      getValue: (e) => e.evaporasi,
+      targetDate: selectedDate,
+    );
+    final temps = TimeSeriesMapper.toSpecificDate(
+      data: history,
+      getTime: (e) => e.timestamp,
+      getValue: (e) => e.suhu,
+      targetDate: selectedDate,
+    );
+    final labels = List.generate(24, (i) => '${i.toString().padLeft(2, '0')}:00');
 
     emit(state.copyWith(
-      startDate: start,
-      endDate: end,
+      startDate: selectedDate,
+      endDate: selectedDate,
       chartValues: values,
       chartTemperatures: temps,
       chartLabels: labels,
@@ -314,6 +279,56 @@ class EvaporasiBloc extends Bloc<EvaporasiEvent, EvaporasiState> {
       _thresholdTinggi = _toDouble(data['threshold_tinggi'], _thresholdTinggi);
     } catch (_) {
       // Tetap pakai nilai default jika pembacaan gagal.
+    }
+  }
+
+  Future<void> _initLocalNotifications() async {
+    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const iosSettings = DarwinInitializationSettings();
+    const initSettings = InitializationSettings(
+      android: androidSettings,
+      iOS: iosSettings,
+      macOS: iosSettings,
+    );
+
+    try {
+      await _localNotificationsPlugin.initialize(settings: initSettings);
+    } catch (_) {
+      // Jika gagal, lanjutkan tanpa notifikasi lokal.
+    }
+  }
+
+  Future<void> _showCriticalNotification() async {
+    const androidDetails = AndroidNotificationDetails(
+      'evaporasi_alerts',
+      'Evaporasi Alerts',
+      channelDescription: 'Peringatan Evaporasi dan level air kritis',
+      importance: Importance.max,
+      priority: Priority.high,
+      ticker: 'Peringatan Darurat',
+      playSound: true,
+      enableVibration: true,
+    );
+    const iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentSound: true,
+      presentBadge: true,
+    );
+    const notificationDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+      macOS: iosDetails,
+    );
+
+    try {
+      await _localNotificationsPlugin.show(
+        id: 0,
+        title: 'Peringatan Darurat',
+        body: 'Peringatan Darurat: Batas Air Kritis tercapai, periksa pompa segera!',
+        notificationDetails: notificationDetails,
+      );
+    } catch (_) {
+      // Ignore local notification failure.
     }
   }
 

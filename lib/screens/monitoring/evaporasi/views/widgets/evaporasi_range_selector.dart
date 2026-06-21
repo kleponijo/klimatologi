@@ -20,7 +20,7 @@ class EvaporasiRangeSelector extends StatelessWidget {
         : '${_fmt(start)}  →  ${_fmt(end)}';
 
     return GestureDetector(
-      onTap: () => _pickRange(context, start, end),
+      onTap: () => _pickDate(context, start),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
@@ -79,9 +79,9 @@ class EvaporasiRangeSelector extends StatelessWidget {
                   },
                 ),
                 const SizedBox(width: 6),
-                // Tombol pilih range bebas
+                // Tombol pilih tanggal harian
                 GestureDetector(
-                  onTap: () => _pickRange(context, start, end),
+                  onTap: () => _pickDate(context, start),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 12, vertical: 6),
@@ -115,13 +115,13 @@ class EvaporasiRangeSelector extends StatelessWidget {
     );
   }
 
-  Future<void> _pickRange(
-      BuildContext context, DateTime start, DateTime end) async {
-    final picked = await showDateRangePicker(
+  Future<void> _pickDate(
+      BuildContext context, DateTime date) async {
+    final picked = await showDatePicker(
       context: context,
+      initialDate: date,
       firstDate: DateTime(2024),
       lastDate: DateTime.now(),
-      initialDateRange: DateTimeRange(start: start, end: end),
       locale: const Locale('id', 'ID'),
       builder: (context, child) {
         return Theme(
@@ -138,10 +138,11 @@ class EvaporasiRangeSelector extends StatelessWidget {
     );
 
     if (picked != null && context.mounted) {
+      final selected = DateTime(picked.year, picked.month, picked.day);
       context.read<EvaporasiBloc>().add(
             EvaporasiDateRangeChanged(
-              startDate: picked.start,
-              endDate: picked.end,
+              startDate: selected,
+              endDate: selected,
             ),
           );
     }

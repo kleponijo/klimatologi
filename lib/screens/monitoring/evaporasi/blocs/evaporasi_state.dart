@@ -5,6 +5,7 @@ class EvaporasiState extends Equatable {
   final double currentValue;
   final double temperature;
   final double waterLevel;
+  final double batasKritisCm;
 
   // Rentang tanggal aktif untuk grafik
   final DateTime startDate;
@@ -31,6 +32,7 @@ class EvaporasiState extends Equatable {
     this.currentValue = 0.0,
     this.temperature = 0.0,
     this.waterLevel = 0.0,
+    this.batasKritisCm = 15.0,
     DateTime? startDate,
     DateTime? endDate,
     this.chartValues = const [],
@@ -50,6 +52,7 @@ class EvaporasiState extends Equatable {
     double? currentValue,
     double? temperature,
     double? waterLevel,
+    double? batasKritisCm,
     DateTime? startDate,
     DateTime? endDate,
     List<double>? chartValues,
@@ -68,6 +71,7 @@ class EvaporasiState extends Equatable {
       currentValue: currentValue ?? this.currentValue,
       temperature: temperature ?? this.temperature,
       waterLevel: waterLevel ?? this.waterLevel,
+      batasKritisCm: batasKritisCm ?? this.batasKritisCm,
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
       chartValues: chartValues ?? this.chartValues,
@@ -94,7 +98,7 @@ class EvaporasiState extends Equatable {
 
   @override
   List<Object?> get props => [
-        currentValue, temperature, waterLevel,
+        currentValue, temperature, waterLevel, batasKritisCm,
         startDate, endDate,
         chartValues, chartTemperatures, chartLabels,
         history, filteredHistory, selectedDateFilter,
