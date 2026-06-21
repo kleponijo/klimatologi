@@ -10,7 +10,7 @@ import 'package:monitoring_repository/monitoring_repository.dart';
 import '../blocs/wind_speed_bloc.dart';
 import 'widgets/wind_speed_chart_widget.dart';
 import 'widgets/period_selector.dart';
-import '../../device_setup/views/device_setup_screen.dart';
+import '../../device_setup/views/device_setup_wind_speed_screen.dart';
 import '../../shared/utils/excel/wind_speed_excel_service.dart';
 
 class WindSpeedScreen extends StatefulWidget {
