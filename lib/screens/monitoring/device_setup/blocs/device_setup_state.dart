@@ -1,4 +1,4 @@
-part of 'device_setup_bloc.dart';
+part of 'device_setup_wind_speed_bloc.dart';
 
 enum DeviceSetupStatus {
   idle,

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../monitoring/wind_speed/blocs/wind_speed_bloc.dart';
-import '../../monitoring/evaporasi/blocs/evaporasi_bloc.dart';
 import '../../monitoring/atmospheric_conditions/blocs/atmospheric_conditions_bloc.dart';
 
 /// Period selector khusus untuk dashboard
@@ -74,29 +73,6 @@ class _DashboardChartsState extends State<DashboardCharts> {
     final now = DateTime.now();
 
     context.read<WindSpeedBloc>().add(WindSpeedPeriodChanged(p));
-    context.read<EvaporasiBloc>().add(
-          EvaporasiDateRangeChanged(
-            startDate: _evaporasiStartOfPeriod(p, now),
-            endDate: _evaporasiEndOfPeriod(now),
-          ),
-        );
-    // AtmosphericBloc tidak punya period (hanya realtime)
-  }
-
-  DateTime _evaporasiStartOfPeriod(String period, DateTime now) {
-    final today = DateTime(now.year, now.month, now.day);
-    if (period == "Minggu Ini") {
-      final monday = today.subtract(Duration(days: today.weekday - 1));
-      return monday;
-    }
-    if (period == "Bulan Ini") {
-      return DateTime(today.year, today.month, 1);
-    }
-    return today;
-  }
-
-  DateTime _evaporasiEndOfPeriod(DateTime now) {
-    return DateTime(now.year, now.month, now.day);
   }
 
   @override
@@ -145,24 +121,6 @@ class _DashboardChartsState extends State<DashboardCharts> {
                     icon: Icons.air,
                     currentValue: state.currentSpeed,
                     data: data,
-                    period: _period,
-                    isLoading: state.isLoading,
-                  );
-                },
-              ),
-              const SizedBox(width: 12),
-
-              // 2. Evaporasi
-              BlocBuilder<EvaporasiBloc, EvaporasiState>(
-                builder: (context, state) {
-                  return _SensorChartCard(
-                    title: 'Evaporasi',
-                    unit: 'mm',
-                    color: Colors.teal.shade600,
-                    bgColor: Colors.teal.shade50,
-                    icon: Icons.water_drop_outlined,
-                    currentValue: state.currentValue,
-                    data: state.chartValues,
                     period: _period,
                     isLoading: state.isLoading,
                   );

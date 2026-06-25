@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../monitoring/wind_speed/blocs/wind_speed_bloc.dart';
-import '../../monitoring/evaporasi/blocs/evaporasi_bloc.dart';
 import '../../monitoring/atmospheric_conditions/blocs/atmospheric_conditions_bloc.dart';
 
 class SensorGrid extends StatelessWidget {
@@ -30,23 +29,6 @@ class SensorGrid extends StatelessWidget {
                     ? '—'
                     : state.currentSpeed.toStringAsFixed(1),
                 unit: 'm/s',
-                isLoading: state.isLoading,
-              ),
-            ),
-
-            // --- EVAPORASI ---
-            BlocBuilder<EvaporasiBloc, EvaporasiState>(
-              builder: (context, state) => SensorCard(
-                width: cardWidth,
-                icon: Icons.water_drop_outlined,
-                iconColor: Colors.teal.shade600,
-                iconBgColor: Colors.teal.shade50,
-                label: 'Evaporasi',
-                value: state.isLoading
-                    ? '—'
-                    : state.currentValue.toStringAsFixed(1),
-                unit: 'mm',
-                status: state.currentData?.status,
                 isLoading: state.isLoading,
               ),
             ),
@@ -170,11 +152,14 @@ class SensorCard extends StatelessWidget {
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: (status == 'Tinggi'
                           ? Colors.red.shade50
-                          : (status == 'Rendah' ? Colors.blue.shade50 : Colors.green.shade50)),
+                          : (status == 'Rendah'
+                              ? Colors.blue.shade50
+                              : Colors.green.shade50)),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
@@ -184,7 +169,9 @@ class SensorCard extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                         color: (status == 'Tinggi'
                             ? Colors.red.shade600
-                            : (status == 'Rendah' ? Colors.blue.shade600 : Colors.green.shade600)),
+                            : (status == 'Rendah'
+                                ? Colors.blue.shade600
+                                : Colors.green.shade600)),
                       ),
                     ),
                   ),

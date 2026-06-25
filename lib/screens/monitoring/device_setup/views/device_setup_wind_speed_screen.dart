@@ -4,7 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:monitoring_repository/monitoring_repository.dart';
 import 'package:app_settings/app_settings.dart';
-import '../blocs/device_setup_bloc.dart';
+import '../blocs/device_setup_wind_speed_bloc.dart';
 
 // ── Opsi device yang tersedia ─────────────────────────────────
 const _kDeviceOptions = ['esp_lapangan', 'esp_percobaan'];
