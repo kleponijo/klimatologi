@@ -309,38 +309,38 @@ class WindSpeedExcelService {
     sheet.setColumnWidth(5, 12);
   }
 
-  // ════════════════════════════════════════════════════════════
-  //  HELPER CELLS
-  // ════════════════════════════════════════════════════════════
-  static CellStyle _baseStyle({
-    String bgColor = _colorWhite,
-    String fontColor = '000000',
-    bool bold = false,
-    int fontSize = 11,
-    bool centered = false,
-  }) =>
-      CellStyle(
-        bold: bold,
-        fontSize: fontSize,
-        backgroundColorHex: ExcelColor.fromHexString('#$bgColor'),
-        fontColorHex: ExcelColor.fromHexString('#$fontColor'),
-        horizontalAlign:
-            centered ? HorizontalAlign.Center : HorizontalAlign.Left,
-        verticalAlign: VerticalAlign.Center,
-        textWrapping: TextWrapping.WrapText,
-        leftBorder: Border(
-            borderStyle: BorderStyle.Thin,
-            borderColorHex: ExcelColor.fromHexString('#CCCCCC')),
-        rightBorder: Border(
-            borderStyle: BorderStyle.Thin,
-            borderColorHex: ExcelColor.fromHexString('#CCCCCC')),
-        topBorder: Border(
-            borderStyle: BorderStyle.Thin,
-            borderColorHex: ExcelColor.fromHexString('#CCCCCC')),
-        bottomBorder: Border(
-            borderStyle: BorderStyle.Thin,
-            borderColorHex: ExcelColor.fromHexString('#CCCCCC')),
-      );
+  // // ════════════════════════════════════════════════════════════
+  // //  HELPER CELLS
+  // // ════════════════════════════════════════════════════════════
+  // static CellStyle _baseStyle({
+  //   String bgColor = _colorWhite,
+  //   String fontColor = '000000',
+  //   bool bold = false,
+  //   int fontSize = 11,
+  //   bool centered = false,
+  // }) =>
+  //     CellStyle(
+  //       bold: bold,
+  //       fontSize: fontSize,
+  //       backgroundColorHex: ExcelColor.fromHexString('#$bgColor'),
+  //       fontColorHex: ExcelColor.fromHexString('#$fontColor'),
+  //       horizontalAlign:
+  //           centered ? HorizontalAlign.Center : HorizontalAlign.Left,
+  //       verticalAlign: VerticalAlign.Center,
+  //       textWrapping: TextWrapping.WrapText,
+  //       leftBorder: Border(
+  //           borderStyle: BorderStyle.Thin,
+  //           borderColorHex: ExcelColor.fromHexString('#CCCCCC')),
+  //       rightBorder: Border(
+  //           borderStyle: BorderStyle.Thin,
+  //           borderColorHex: ExcelColor.fromHexString('#CCCCCC')),
+  //       topBorder: Border(
+  //           borderStyle: BorderStyle.Thin,
+  //           borderColorHex: ExcelColor.fromHexString('#CCCCCC')),
+  //       bottomBorder: Border(
+  //           borderStyle: BorderStyle.Thin,
+  //           borderColorHex: ExcelColor.fromHexString('#CCCCCC')),
+  //     );
 
   static void _setCell(
     Sheet sheet,
