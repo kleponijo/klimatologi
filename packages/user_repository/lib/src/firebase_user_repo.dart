@@ -80,6 +80,7 @@ class FirebaseUserRepo implements UserRepository {
   }
 
   @override
+<<<<<<< Updated upstream
   Future<void> signInWithGoogle() async {
     try {
       UserCredential userCredential;
@@ -121,6 +122,47 @@ class FirebaseUserRepo implements UserRepository {
       }
     } catch (e) {
       log('Google sign-in error: $e');
+=======
+  Future<bool> signInWithGoogle() async {
+    print("GOOGLE FUNCTION CALLED");
+    try {
+      print("STEP 1");
+
+      final googleUser = await _googleSignIn.signIn();
+
+      print("STEP 2");
+      print(googleUser);
+      print("GOOGLE USER = $googleUser");
+
+      if (googleUser == null) {
+        print("USER CANCEL");
+        return false;
+      }
+
+      print("STEP 3");
+
+      final googleAuth = await googleUser.authentication;
+
+      print("STEP 4");
+
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      print("STEP 5");
+
+      final userCredential =
+          await _firebaseAuth.signInWithCredential(credential);
+
+      print("STEP 6");
+
+      print(userCredential.user?.email);
+      return true;
+    } catch (e, stack) {
+      print("ERROR = $e");
+      print("STACK = $stack");
+>>>>>>> Stashed changes
       rethrow;
     }
   }

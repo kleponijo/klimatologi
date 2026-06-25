@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../monitoring/wind_speed/blocs/wind_speed_bloc.dart';
-import '../../monitoring/evaporasi/blocs/evaporasi_bloc.dart';
 import '../../monitoring/atmospheric_conditions/blocs/atmospheric_conditions_bloc.dart';
 
 /// Period selector khusus untuk dashboard
@@ -72,7 +71,10 @@ class _DashboardChartsState extends State<DashboardCharts> {
   void _onPeriodChanged(String p) {
     setState(() => _period = p);
     context.read<WindSpeedBloc>().add(WindSpeedPeriodChanged(p));
+<<<<<<< Updated upstream
     context.read<EvaporasiBloc>().add(EvaporasiPeriodChanged(p));
+=======
+>>>>>>> Stashed changes
     // AtmosphericBloc tidak punya period (hanya realtime)
   }
 
@@ -129,6 +131,7 @@ class _DashboardChartsState extends State<DashboardCharts> {
               ),
               const SizedBox(width: 12),
 
+<<<<<<< Updated upstream
               // 2. Evaporasi
               BlocBuilder<EvaporasiBloc, EvaporasiState>(
                 builder: (context, state) {
@@ -150,6 +153,8 @@ class _DashboardChartsState extends State<DashboardCharts> {
                   );
                 },
               ),
+=======
+>>>>>>> Stashed changes
               const SizedBox(width: 12),
 
               // 3. Tekanan Udara — hanya realtime (tidak ada history)

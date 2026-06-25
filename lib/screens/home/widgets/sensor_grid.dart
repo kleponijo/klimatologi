@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../monitoring/wind_speed/blocs/wind_speed_bloc.dart';
-import '../../monitoring/evaporasi/blocs/evaporasi_bloc.dart';
 import '../../monitoring/atmospheric_conditions/blocs/atmospheric_conditions_bloc.dart';
 
 class SensorGrid extends StatelessWidget {
@@ -34,6 +33,7 @@ class SensorGrid extends StatelessWidget {
               ),
             ),
 
+<<<<<<< Updated upstream
             // --- EVAPORASI ---
             BlocBuilder<EvaporasiBloc, EvaporasiState>(
               builder: (context, state) => SensorCard(
@@ -50,6 +50,8 @@ class SensorGrid extends StatelessWidget {
               ),
             ),
 
+=======
+>>>>>>> Stashed changes
             // --- TEKANAN UDARA ---
             BlocBuilder<AtmosphericConditionsBloc, AtmosphericConditionsState>(
               builder: (context, state) => SensorCard(
@@ -162,6 +164,40 @@ class SensorCard extends StatelessWidget {
                       ),
                     ],
                   ),
+<<<<<<< Updated upstream
+=======
+            if (status != null && !isLoading) ...[
+              const SizedBox(height: 5),
+              Row(
+                children: [
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: (status == 'Tinggi'
+                          ? Colors.red.shade50
+                          : (status == 'Rendah'
+                              ? Colors.blue.shade50
+                              : Colors.green.shade50)),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      status!,
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                        color: (status == 'Tinggi'
+                            ? Colors.red.shade600
+                            : (status == 'Rendah'
+                                ? Colors.blue.shade600
+                                : Colors.green.shade600)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+>>>>>>> Stashed changes
             const SizedBox(height: 4),
             // Label
             Text(

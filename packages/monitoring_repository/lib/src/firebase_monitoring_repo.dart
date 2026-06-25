@@ -59,4 +59,107 @@ class FirebaseMonitoringRepo implements MonitoringRepository {
       return [];
     }
   }
+
+  // ── Delete Sensor History ────────────────────────────────────
+  @override
+  Future<void> deleteSensorHistoryAll(String path) async {
+    await _db.ref(path).remove();
+  }
+
+  @override
+  Future<void> deleteSensorHistoryByDate(String path, DateTime date) async {
+    final snapshot = await _db.ref(path).get();
+    if (snapshot.exists && snapshot.value is Map) {
+      final raw = snapshot.value as Map<dynamic, dynamic>;
+      final updates = <String, dynamic>{};
+
+      for (final entry in raw.entries) {
+        final item = entry.value as Map<dynamic, dynamic>;
+        final timestamp = _parseTimestamp(item);
+        if (timestamp != null &&
+            timestamp.year == date.year &&
+            timestamp.month == date.month &&
+            timestamp.day == date.day) {
+          updates['$path/${entry.key}'] = null;
+        }
+      }
+
+      if (updates.isNotEmpty) {
+        await _db.ref().update(updates);
+      }
+    }
+  }
+
+  @override
+  Future<void> deleteSensorHistoryByDateRange(
+    String path,
+    DateTime startDate,
+    DateTime endDate,
+  ) async {
+    final snapshot = await _db.ref(path).get();
+    if (snapshot.exists && snapshot.value is Map) {
+      final raw = snapshot.value as Map<dynamic, dynamic>;
+      final updates = <String, dynamic>{};
+      final endDateNext = DateTime(
+        endDate.year,
+        endDate.month,
+        endDate.day + 1,
+      );
+
+      for (final entry in raw.entries) {
+        final item = entry.value as Map<dynamic, dynamic>;
+        final timestamp = _parseTimestamp(item);
+        if (timestamp != null &&
+            !timestamp.isBefore(startDate) &&
+            timestamp.isBefore(endDateNext)) {
+          updates['$path/${entry.key}'] = null;
+        }
+      }
+
+      if (updates.isNotEmpty) {
+        await _db.ref().update(updates);
+      }
+    }
+  }
+
+  @override
+  Future<void> deleteSensorHistoryByHourRange(
+    String path,
+    DateTime date,
+    int hourFrom,
+    int hourTo,
+  ) async {
+    final snapshot = await _db.ref(path).get();
+    if (snapshot.exists && snapshot.value is Map) {
+      final raw = snapshot.value as Map<dynamic, dynamic>;
+      final updates = <String, dynamic>{};
+
+      for (final entry in raw.entries) {
+        final item = entry.value as Map<dynamic, dynamic>;
+        final timestamp = _parseTimestamp(item);
+        if (timestamp != null &&
+            timestamp.year == date.year &&
+            timestamp.month == date.month &&
+            timestamp.day == date.day &&
+            timestamp.hour >= hourFrom &&
+            timestamp.hour <= hourTo) {
+          updates['$path/${entry.key}'] = null;
+        }
+      }
+
+      if (updates.isNotEmpty) {
+        await _db.ref().update(updates);
+      }
+    }
+  }
+
+  // ── Helper: Parse timestamp dari item ─────────────────────────
+  DateTime? _parseTimestamp(Map<dynamic, dynamic> item) {
+    try {
+      if (item['timestamp'] is int) {
+        return DateTime.fromMillisecondsSinceEpoch(item['timestamp'] as int);
+      }
+    } catch (_) {}
+    return null;
+  }
 }

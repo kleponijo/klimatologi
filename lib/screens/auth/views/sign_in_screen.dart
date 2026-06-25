@@ -164,7 +164,10 @@ class _SignInScreenState extends State<SignInScreen> {
                   width: MediaQuery.of(context).size.width * 0.5,
                   child: TextButton.icon(
                     onPressed: () {
-                      context.read<SignInBloc>().add(GoogleSignInRequired());
+                      print("BUTTON CLICKED");
+                      context.read<SignInBloc>().add(
+                            GoogleSignInRequired(),
+                          );
                     },
                     icon: SizedBox(
                       height: 20,

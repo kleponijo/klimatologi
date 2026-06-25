@@ -1,8 +1,8 @@
 import 'package:bloc/bloc.dart';
 import 'package:dio/dio.dart';
 
-part 'device_setup_event.dart';
-part 'device_setup_state.dart';
+part 'device_setup_wind_speed_event.dart';
+part 'device_setup_wind_speed_state.dart';
 
 class DeviceSetupBloc extends Bloc<DeviceSetupEvent, DeviceSetupState> {
   DeviceSetupBloc() : super(const DeviceSetupState()) {

@@ -33,6 +33,14 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
 
     /// 🔥 CHANGE PERIOD
     on<WindSpeedPeriodChanged>(_onPeriodChanged);
+<<<<<<< Updated upstream
+=======
+    on<WindSpeedDateFilterChanged>(_onDateFilterChanged);
+    on<WindSpeedHistoryDeleteAll>(_onDeleteAll);
+    on<WindSpeedHistoryDeleteByDate>(_onDeleteByDate);
+    on<WindSpeedHistoryDeleteByDateRange>(_onDeleteByDateRange);
+    on<WindSpeedHistoryDeleteByHourRange>(_onDeleteByHourRange);
+>>>>>>> Stashed changes
   }
 
   /// =========================
@@ -52,12 +60,31 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
       limit: 500,
     );
 
+<<<<<<< Updated upstream
     final dailyGraph =
         TimeSeriesMapper.dailyFrom<MyWindSpeed>(history, (e) => e.speed);
     final weekly =
         TimeSeriesMapper.weeklyFrom<MyWindSpeed>(history, (e) => e.speed);
     final monthly =
         TimeSeriesMapper.monthlyFrom<MyWindSpeed>(history, (e) => e.speed);
+=======
+    // Aggregate data by period (no filtering/interpolation, trust Firebase data)
+    final dailyGraph = TimeSeriesMapper.toDaily(
+      data: history,
+      getTime: (e) => e.timestamp,
+      getValue: (e) => e.speed,
+    );
+    final weekly = TimeSeriesMapper.toWeekly(
+      data: history,
+      getTime: (e) => e.timestamp,
+      getValue: (e) => e.speed,
+    );
+    final monthly = TimeSeriesMapper.toMonthly(
+      data: history,
+      getTime: (e) => e.timestamp,
+      getValue: (e) => e.speed,
+    );
+>>>>>>> Stashed changes
 
     // Cek kondisi awal dari history
     if (history.isNotEmpty) {
@@ -88,13 +115,20 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
     });
   }
 
+<<<<<<< Updated upstream
   /// =========================
   /// ⚡ REALTIME UPDATE
   /// =========================
+=======
+  // ════════════════════════════════════════════════════════════
+  //  REALTIME UPDATE - Trust Firebase data, display as-is
+  // ════════════════════════════════════════════════════════════
+>>>>>>> Stashed changes
   void _onRealtimeUpdated(
     _WindSpeedRealtimeUpdated event,
     Emitter<WindSpeedState> emit,
   ) {
+<<<<<<< Updated upstream
     final updated = List<double>.from(state.dailySpeeds);
     final index = DateTime.now().hour;
     double newValue = event.data.speed;
@@ -112,12 +146,15 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
       }
       updated[index] = newValue.clamp(0, 100);
     }
+=======
+    final newValue = event.data.speed;
+>>>>>>> Stashed changes
 
+    // Update current speed display and alert status
     _emitWindAlert(newValue);
 
     emit(state.copyWith(
       currentSpeed: newValue,
-      dailySpeeds: updated,
       alertLevel: _getAlertLevel(newValue),
     ));
   }
@@ -128,6 +165,48 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
   void _onPeriodChanged(
     WindSpeedPeriodChanged event,
     Emitter<WindSpeedState> emit,
+<<<<<<< Updated upstream
+=======
+  ) async {
+    emit(state.copyWith(selectedPeriod: event.period));
+    final history = state.history;
+
+    List<double> raw;
+    if (event.period == 'Minggu Ini') {
+      raw = TimeSeriesMapper.toWeekly(
+        data: history,
+        getTime: (e) => e.timestamp,
+        getValue: (e) => e.speed,
+      );
+    } else if (event.period == 'Bulan Ini') {
+      raw = TimeSeriesMapper.toMonthly(
+        data: history,
+        getTime: (e) => e.timestamp,
+        getValue: (e) => e.speed,
+      );
+    } else {
+      raw = TimeSeriesMapper.toDaily(
+        data: history,
+        getTime: (e) => e.timestamp,
+        getValue: (e) => e.speed,
+      );
+    }
+
+    emit(state.copyWith(
+      dailySpeeds: event.period == 'Hari Ini' ? raw : state.dailySpeeds,
+      weeklySpeeds: event.period == 'Minggu Ini' ? raw : state.weeklySpeeds,
+      monthlySpeeds: event.period == 'Bulan Ini' ? raw : state.monthlySpeeds,
+      isLoading: false,
+    ));
+  }
+
+  // ════════════════════════════════════════════════════════════
+  //  DATE FILTER CHANGED  ← baru
+  // ════════════════════════════════════════════════════════════
+  void _onDateFilterChanged(
+    WindSpeedDateFilterChanged event,
+    Emitter<WindSpeedState> emit,
+>>>>>>> Stashed changes
   ) {
     emit(state.copyWith(selectedPeriod: event.period));
   }
@@ -138,6 +217,212 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
     return super.close();
   }
 
+<<<<<<< Updated upstream
+=======
+  // ════════════════════════════════════════════════════════════
+  //  DELETE HISTORY HANDLERS
+  // ════════════════════════════════════════════════════════════
+  Future<void> _onDeleteAll(
+    WindSpeedHistoryDeleteAll event,
+    Emitter<WindSpeedState> emit,
+  ) async {
+    try {
+      final deviceId = await _getDeviceId();
+      await _repository.deleteSensorHistoryAll(
+        'anemometer/$deviceId/history',
+      );
+
+      // Refresh data
+      final history = await _repository.getSensorHistory(
+        'anemometer/$deviceId/history',
+        (json) => MyWindSpeed.fromJson(json),
+      );
+
+      final daily = TimeSeriesMapper.toDaily(
+        data: history,
+        getTime: (e) => e.timestamp,
+        getValue: (e) => e.speed,
+      );
+      final weekly = TimeSeriesMapper.toWeekly(
+        data: history,
+        getTime: (e) => e.timestamp,
+        getValue: (e) => e.speed,
+      );
+      final monthly = TimeSeriesMapper.toMonthly(
+        data: history,
+        getTime: (e) => e.timestamp,
+        getValue: (e) => e.speed,
+      );
+
+      emit(state.copyWith(
+        history: history,
+        filteredHistory: history,
+        dailySpeeds: daily,
+        weeklySpeeds: weekly,
+        monthlySpeeds: monthly,
+        deleteMessage: '✅ Semua history berhasil dihapus',
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        deleteMessage: '❌ Gagal hapus history: $e',
+      ));
+    }
+  }
+
+  Future<void> _onDeleteByDate(
+    WindSpeedHistoryDeleteByDate event,
+    Emitter<WindSpeedState> emit,
+  ) async {
+    try {
+      final deviceId = await _getDeviceId();
+      await _repository.deleteSensorHistoryByDate(
+        'anemometer/$deviceId/history',
+        event.date,
+      );
+
+      // Refresh data
+      final history = await _repository.getSensorHistory(
+        'anemometer/$deviceId/history',
+        (json) => MyWindSpeed.fromJson(json),
+      );
+
+      final daily = TimeSeriesMapper.toDaily(
+        data: history,
+        getTime: (e) => e.timestamp,
+        getValue: (e) => e.speed,
+      );
+      final weekly = TimeSeriesMapper.toWeekly(
+        data: history,
+        getTime: (e) => e.timestamp,
+        getValue: (e) => e.speed,
+      );
+      final monthly = TimeSeriesMapper.toMonthly(
+        data: history,
+        getTime: (e) => e.timestamp,
+        getValue: (e) => e.speed,
+      );
+
+      emit(state.copyWith(
+        history: history,
+        filteredHistory: history,
+        dailySpeeds: daily,
+        weeklySpeeds: weekly,
+        monthlySpeeds: monthly,
+        deleteMessage:
+            '✅ History ${event.date.day}/${event.date.month}/${event.date.year} berhasil dihapus',
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        deleteMessage: '❌ Gagal hapus history: $e',
+      ));
+    }
+  }
+
+  Future<void> _onDeleteByDateRange(
+    WindSpeedHistoryDeleteByDateRange event,
+    Emitter<WindSpeedState> emit,
+  ) async {
+    try {
+      final deviceId = await _getDeviceId();
+      await _repository.deleteSensorHistoryByDateRange(
+        'anemometer/$deviceId/history',
+        event.startDate,
+        event.endDate,
+      );
+
+      // Refresh data
+      final history = await _repository.getSensorHistory(
+        'anemometer/$deviceId/history',
+        (json) => MyWindSpeed.fromJson(json),
+      );
+
+      final daily = TimeSeriesMapper.toDaily(
+        data: history,
+        getTime: (e) => e.timestamp,
+        getValue: (e) => e.speed,
+      );
+      final weekly = TimeSeriesMapper.toWeekly(
+        data: history,
+        getTime: (e) => e.timestamp,
+        getValue: (e) => e.speed,
+      );
+      final monthly = TimeSeriesMapper.toMonthly(
+        data: history,
+        getTime: (e) => e.timestamp,
+        getValue: (e) => e.speed,
+      );
+
+      emit(state.copyWith(
+        history: history,
+        filteredHistory: history,
+        dailySpeeds: daily,
+        weeklySpeeds: weekly,
+        monthlySpeeds: monthly,
+        deleteMessage:
+            '✅ History ${event.startDate.day}/${event.startDate.month} - ${event.endDate.day}/${event.endDate.month} berhasil dihapus',
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        deleteMessage: '❌ Gagal hapus history: $e',
+      ));
+    }
+  }
+
+  Future<void> _onDeleteByHourRange(
+    WindSpeedHistoryDeleteByHourRange event,
+    Emitter<WindSpeedState> emit,
+  ) async {
+    try {
+      final deviceId = await _getDeviceId();
+      await _repository.deleteSensorHistoryByHourRange(
+        'anemometer/$deviceId/history',
+        event.date,
+        event.hourFrom,
+        event.hourTo,
+      );
+
+      // Refresh data
+      final history = await _repository.getSensorHistory(
+        'anemometer/$deviceId/history',
+        (json) => MyWindSpeed.fromJson(json),
+      );
+
+      final daily = TimeSeriesMapper.toDaily(
+        data: history,
+        getTime: (e) => e.timestamp,
+        getValue: (e) => e.speed,
+      );
+      final weekly = TimeSeriesMapper.toWeekly(
+        data: history,
+        getTime: (e) => e.timestamp,
+        getValue: (e) => e.speed,
+      );
+      final monthly = TimeSeriesMapper.toMonthly(
+        data: history,
+        getTime: (e) => e.timestamp,
+        getValue: (e) => e.speed,
+      );
+
+      emit(state.copyWith(
+        history: history,
+        filteredHistory: history,
+        dailySpeeds: daily,
+        weeklySpeeds: weekly,
+        monthlySpeeds: monthly,
+        deleteMessage:
+            '✅ History jam ${event.hourFrom}:00 - ${event.hourTo}:00 pada ${event.date.day}/${event.date.month}/${event.date.year} berhasil dihapus',
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        deleteMessage: '❌ Gagal hapus history: $e',
+      ));
+    }
+  }
+
+  // ════════════════════════════════════════════════════════════
+  //  HELPERS
+  // ════════════════════════════════════════════════════════════
+>>>>>>> Stashed changes
   String _getAlertLevel(double speed) {
     if (speed >= _kWindDanger) return "Bahaya";
     if (speed >= _kWindWarning) return "Waspada";
