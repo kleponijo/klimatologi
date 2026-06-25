@@ -601,6 +601,24 @@ class _WindSpeedScreenState extends State<WindSpeedScreen> {
     }
   }
 
+  // ════════════════════════════════════════════════════════════
+//  Delete bottom sheet
+// ════════════════════════════════════════════════════════════
+  void _showDeleteSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => BlocProvider.value(
+        value: context.read<WindSpeedBloc>(),
+        child: const _DeleteSheet(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -634,7 +652,16 @@ class _WindSpeedScreenState extends State<WindSpeedScreen> {
           ),
         ],
       ),
-      body: BlocBuilder<WindSpeedBloc, WindSpeedState>(
+      body: BlocConsumer<WindSpeedBloc, WindSpeedState>(
+        listenWhen: (prev, curr) =>
+            curr.deleteError != null && prev.deleteError != curr.deleteError,
+        listener: (context, state) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Gagal menghapus: ${state.deleteError}'),
+            backgroundColor: Colors.red.shade700,
+            behavior: SnackBarBehavior.floating,
+          ));
+        },
         builder: (context, state) {
           if (state.isLoading) {
             return const Center(child: CircularProgressIndicator());
@@ -875,6 +902,26 @@ class _WindSpeedScreenState extends State<WindSpeedScreen> {
                     label: 'Filter Tanggal',
                     icon: Icons.calendar_month_rounded,
                     onTap: () => _pickDate(context, state),
+                  ),
+            // ── Tombol Delete ──────────────────────────────────────────
+            const SizedBox(width: 4),
+            state.isDeleting
+                ? const Padding(
+                    padding: EdgeInsets.all(10),
+                    child: SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2.5),
+                    ),
+                  )
+                : IconButton(
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(Icons.delete_sweep_outlined,
+                        color: Colors.redAccent),
+                    tooltip: 'Hapus riwayat',
+                    onPressed: state.history.isEmpty
+                        ? null
+                        : () => _showDeleteSheet(context),
                   ),
           ],
         ),
@@ -1127,5 +1174,312 @@ class _HistoryTile extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+//  Delete Bottom Sheet
+// ════════════════════════════════════════════════════════════
+class _DeleteSheet extends StatefulWidget {
+  const _DeleteSheet();
+
+  @override
+  State<_DeleteSheet> createState() => _DeleteSheetState();
+}
+
+class _DeleteSheetState extends State<_DeleteSheet> {
+  int _mode = 0; // 0=all, 1=date, 2=range, 3=hour
+  DateTime? _byDate;
+  DateTime? _rangeStart;
+  DateTime? _rangeEnd;
+  DateTime? _hourDate;
+  int _startHour = 0;
+  int _endHour = 23;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+          16, 16, 16, MediaQuery.of(context).viewInsets.bottom + 24),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              const Icon(Icons.delete_sweep, color: Colors.redAccent),
+              const SizedBox(width: 10),
+              const Text('Hapus Riwayat Angin',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              const Spacer(),
+              IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context)),
+            ]),
+            const Divider(),
+            const SizedBox(height: 4),
+            _modeCard(0, Icons.select_all_rounded, 'Hapus Semua',
+                'Menghapus seluruh riwayat dari Firebase'),
+            _modeCard(1, Icons.event_outlined, 'Berdasarkan Tanggal',
+                'Hapus data pada satu tanggal tertentu'),
+            _modeCard(2, Icons.date_range_outlined, 'Rentang Tanggal',
+                'Hapus data dalam rentang tanggal (inklusif)'),
+            _modeCard(3, Icons.schedule_outlined, 'Rentang Jam',
+                'Hapus data berdasarkan jam pada suatu tanggal'),
+            if (_mode > 0) ...[
+              const SizedBox(height: 12),
+              const Divider(),
+              const SizedBox(height: 8),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: _buildSubInput(),
+              ),
+            ],
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                ),
+                onPressed: _valid ? _confirm : null,
+                icon: const Icon(Icons.delete_forever),
+                label: const Text('Hapus Sekarang',
+                    style:
+                        TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+              ),
+            ),
+            if (_mode == 0)
+              const Padding(
+                padding: EdgeInsets.only(top: 8),
+                child: Center(
+                  child: Text('⚠️  Tindakan ini tidak dapat dibatalkan',
+                      style: TextStyle(fontSize: 11, color: Colors.deepOrange)),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _modeCard(int value, IconData icon, String title, String sub) {
+    final sel = _mode == value;
+    return GestureDetector(
+      onTap: () => setState(() => _mode = value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        margin: const EdgeInsets.symmetric(vertical: 3),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: sel ? Colors.red.withOpacity(0.07) : Colors.transparent,
+          border: Border.all(
+              color: sel ? Colors.red.shade300 : Colors.grey.shade200),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(children: [
+          Icon(icon, size: 20, color: sel ? Colors.red : Colors.grey),
+          const SizedBox(width: 12),
+          Expanded(
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(title,
+                  style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                      color: sel ? Colors.red : Colors.black87)),
+              Text(sub,
+                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+            ]),
+          ),
+          if (sel) const Icon(Icons.check_circle, color: Colors.red, size: 18),
+        ]),
+      ),
+    );
+  }
+
+  Widget _buildSubInput() {
+    switch (_mode) {
+      case 1:
+        return _datePicker(
+            'Pilih Tanggal', _byDate, (d) => setState(() => _byDate = d),
+            key: const ValueKey('by_date'));
+      case 2:
+        return Column(key: const ValueKey('range'), children: [
+          _datePicker('Tanggal Mulai', _rangeStart,
+              (d) => setState(() => _rangeStart = d)),
+          const SizedBox(height: 8),
+          _datePicker(
+              'Tanggal Akhir', _rangeEnd, (d) => setState(() => _rangeEnd = d)),
+          if (_rangeStart != null &&
+              _rangeEnd != null &&
+              _rangeEnd!.isBefore(_rangeStart!))
+            const Padding(
+              padding: EdgeInsets.only(top: 4),
+              child: Text('Tanggal akhir harus ≥ tanggal mulai',
+                  style: TextStyle(color: Colors.red, fontSize: 11)),
+            ),
+        ]);
+      case 3:
+        return Column(
+            key: const ValueKey('hour'),
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _datePicker('Pilih Tanggal', _hourDate,
+                  (d) => setState(() => _hourDate = d)),
+              const SizedBox(height: 12),
+              const Text('Rentang Jam',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+              const SizedBox(height: 6),
+              Row(children: [
+                Expanded(
+                    child: _hourDrop('Jam Mulai', _startHour,
+                        (v) => setState(() => _startHour = v))),
+                const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 10),
+                    child: Text('—', style: TextStyle(fontSize: 18))),
+                Expanded(
+                    child: _hourDrop('Jam Akhir', _endHour,
+                        (v) => setState(() => _endHour = v))),
+              ]),
+              if (_startHour > _endHour)
+                const Padding(
+                  padding: EdgeInsets.only(top: 4),
+                  child: Text('Jam mulai harus ≤ jam akhir',
+                      style: TextStyle(color: Colors.red, fontSize: 11)),
+                ),
+            ]);
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+
+  Widget _datePicker(
+      String hint, DateTime? value, ValueChanged<DateTime> onPick,
+      {Key? key}) {
+    return GestureDetector(
+      key: key,
+      onTap: () async {
+        final d = await showDatePicker(
+          context: context,
+          initialDate: value ?? DateTime.now(),
+          firstDate: DateTime(2020),
+          lastDate: DateTime.now(),
+          confirmText: 'Pilih',
+          cancelText: 'Batal',
+        );
+        if (d != null) onPick(d);
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade50,
+          border: Border.all(
+              color:
+                  value != null ? Colors.red.shade300 : Colors.grey.shade300),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(children: [
+          Icon(Icons.calendar_month_outlined,
+              size: 16,
+              color: value != null ? Colors.red : Colors.grey.shade400),
+          const SizedBox(width: 8),
+          Text(
+            value != null
+                ? DateFormat('d MMMM yyyy', 'id_ID').format(value)
+                : hint,
+            style: TextStyle(
+                fontSize: 13,
+                color: value != null ? Colors.black87 : Colors.grey.shade400),
+          ),
+        ]),
+      ),
+    );
+  }
+
+  Widget _hourDrop(String label, int value, ValueChanged<int> onChange) {
+    return DropdownButtonFormField<int>(
+      value: value,
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(fontSize: 11),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+        isDense: true,
+      ),
+      items: List.generate(
+        24,
+        (i) => DropdownMenuItem(
+          value: i,
+          child: Text('${i.toString().padLeft(2, '0')}:00',
+              style: const TextStyle(fontSize: 13)),
+        ),
+      ),
+      onChanged: (v) => onChange(v!),
+    );
+  }
+
+  bool get _valid {
+    switch (_mode) {
+      case 0:
+        return true;
+      case 1:
+        return _byDate != null;
+      case 2:
+        return _rangeStart != null &&
+            _rangeEnd != null &&
+            !_rangeEnd!.isBefore(_rangeStart!);
+      case 3:
+        return _hourDate != null && _startHour <= _endHour;
+      default:
+        return false;
+    }
+  }
+
+  void _confirm() {
+    final bloc = context.read<WindSpeedBloc>();
+    if (_mode == 0) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Hapus Semua?'),
+          content:
+              const Text('Seluruh riwayat akan dihapus permanen dari Firebase. '
+                  'Tindakan ini tidak dapat dibatalkan.'),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Batal')),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              onPressed: () {
+                Navigator.pop(ctx);
+                Navigator.pop(context);
+                bloc.add(const WindSpeedDeleteAllRequested());
+              },
+              child: const Text('Ya, Hapus Semua'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+    switch (_mode) {
+      case 1:
+        bloc.add(WindSpeedDeleteByDateRequested(_byDate!));
+        break;
+      case 2:
+        bloc.add(WindSpeedDeleteByDateRangeRequested(
+            start: _rangeStart!, end: _rangeEnd!));
+        break;
+      case 3:
+        bloc.add(WindSpeedDeleteByHourRangeRequested(
+            date: _hourDate!, startHour: _startHour, endHour: _endHour));
+        break;
+    }
+    Navigator.pop(context);
   }
 }

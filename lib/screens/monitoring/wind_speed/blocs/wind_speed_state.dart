@@ -2,6 +2,8 @@ part of 'wind_speed_bloc.dart';
 
 class WindSpeedState extends Equatable {
   final bool isLoading;
+  final bool isDeleting;
+  final String? deleteError;
   final double currentSpeed;
   final String alertLevel;
   final String selectedPeriod;
@@ -16,8 +18,13 @@ class WindSpeedState extends Equatable {
   final List<MyWindSpeed> filteredHistory; // setelah difilter tanggal
   final DateTime? selectedDate; // null = tampilkan semua
 
+  /// Map { Firebase push-key → data } — dipakai untuk operasi delete
+  final Map<String, MyWindSpeed> historyMap;
+
   const WindSpeedState({
     this.isLoading = false,
+    this.isDeleting = false,
+    this.deleteError,
     this.currentSpeed = 0.0,
     this.alertLevel = 'Normal',
     this.selectedPeriod = 'Hari Ini',
@@ -27,10 +34,14 @@ class WindSpeedState extends Equatable {
     this.history = const [],
     this.filteredHistory = const [],
     this.selectedDate,
+    this.historyMap = const {},
   });
 
   WindSpeedState copyWith({
     bool? isLoading,
+    bool? isDeleting,
+    String? deleteError,
+    bool clearDeleteError = false,
     double? currentSpeed,
     String? alertLevel,
     String? selectedPeriod,
@@ -41,9 +52,12 @@ class WindSpeedState extends Equatable {
     List<MyWindSpeed>? filteredHistory,
     DateTime? selectedDate,
     bool clearSelectedDate = false,
+    Map<String, MyWindSpeed>? historyMap,
   }) {
     return WindSpeedState(
       isLoading: isLoading ?? this.isLoading,
+      isDeleting: isDeleting ?? this.isDeleting,
+      deleteError: clearDeleteError ? null : (deleteError ?? this.deleteError),
       currentSpeed: currentSpeed ?? this.currentSpeed,
       alertLevel: alertLevel ?? this.alertLevel,
       selectedPeriod: selectedPeriod ?? this.selectedPeriod,
@@ -54,12 +68,15 @@ class WindSpeedState extends Equatable {
       filteredHistory: filteredHistory ?? this.filteredHistory,
       selectedDate:
           clearSelectedDate ? null : (selectedDate ?? this.selectedDate),
+      historyMap: historyMap ?? this.historyMap,
     );
   }
 
   @override
   List<Object?> get props => [
         isLoading,
+        isDeleting,
+        deleteError,
         currentSpeed,
         alertLevel,
         selectedPeriod,
@@ -69,5 +86,6 @@ class WindSpeedState extends Equatable {
         history,
         filteredHistory,
         selectedDate,
+        historyMap,
       ];
 }

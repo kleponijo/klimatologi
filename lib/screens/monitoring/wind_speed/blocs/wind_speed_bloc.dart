@@ -10,10 +10,8 @@ import '../../../../blocs/notification_bloc/notification_bloc.dart';
 part 'wind_speed_event.dart';
 part 'wind_speed_state.dart';
 
-/// Threshold kecepatan angin (satuan m/s)
-/// Referensi: Beaufort scale & BMKG
-const double _kWindWarning = 25.0; // Waspada: 8–12.5 m/s (~29–45 km/h)
-const double _kWindDanger = 45.5; // Bahaya:  > 12.5 m/s (> 45 km/h)
+const double _kWindWarning = 25.0;
+const double _kWindDanger = 45.5;
 const _kDeviceIdKey = 'selected_device_id';
 const _kDefaultDeviceId = 'esp_lapangan';
 
@@ -31,70 +29,51 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
     on<WatchWindSpeedStarted>(_onStarted, transformer: restartable());
     on<_WindSpeedRealtimeUpdated>(_onRealtimeUpdated);
     on<WindSpeedPeriodChanged>(_onPeriodChanged);
-    on<WindSpeedDateFilterChanged>(_onDateFilterChanged); // ← baru
+    on<WindSpeedDateFilterChanged>(_onDateFilterChanged);
+    // Delete handlers
+    on<WindSpeedDeleteAllRequested>(_onDeleteAll);
+    on<WindSpeedDeleteByDateRequested>(_onDeleteByDate);
+    on<WindSpeedDeleteByDateRangeRequested>(_onDeleteByDateRange);
+    on<WindSpeedDeleteByHourRangeRequested>(_onDeleteByHourRange);
   }
 
-  // ── Baca device ID dari SharedPreferences ─────────────────
   Future<String> _getDeviceId() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_kDeviceIdKey) ?? _kDefaultDeviceId;
   }
 
   // ════════════════════════════════════════════════════════════
-  //  START
+  //  START — sekarang fetch dengan keys untuk delete support
   // ════════════════════════════════════════════════════════════
   Future<void> _onStarted(
     WatchWindSpeedStarted event,
     Emitter<WindSpeedState> emit,
   ) async {
     emit(state.copyWith(isLoading: true));
-
-    // Baca device ID aktif (dari SharedPreferences, diset di DeviceSetupBloc)
     final deviceId = await _getDeviceId();
 
-    final history = await _repository.getSensorHistory(
+    final historyMap = await _repository.getSensorHistoryWithKeys(
       'anemometer/$deviceId/history',
       (json) => MyWindSpeed.fromJson(json),
     );
 
-    final dailyGraph = TimeSeriesMapper.smooth(
-      TimeSeriesMapper.toDaily(
-        data: history,
-        getTime: (e) => e.timestamp,
-        getValue: (e) => e.speed,
-      ),
-    );
-    final weekly = TimeSeriesMapper.smooth(
-      TimeSeriesMapper.toWeekly(
-        data: history,
-        getTime: (e) => e.timestamp,
-        getValue: (e) => e.speed,
-      ),
-    );
-    final monthly = TimeSeriesMapper.smooth(
-      TimeSeriesMapper.toMonthly(
-        data: history,
-        getTime: (e) => e.timestamp,
-        getValue: (e) => e.speed,
-      ),
-    );
+    final history = _sortedList(historyMap);
+    final graphs = _buildGraphs(history);
 
-    if (history.isNotEmpty) {
-      _emitWindAlert(history.last.speed);
-    }
+    if (history.isNotEmpty) _emitWindAlert(history.last.speed);
 
     emit(state.copyWith(
+      historyMap: historyMap,
       history: history,
-      filteredHistory: history, // awal = semua data
-      dailySpeeds: dailyGraph,
-      weeklySpeeds: weekly,
-      monthlySpeeds: monthly,
+      filteredHistory: history,
+      dailySpeeds: graphs['daily']!,
+      weeklySpeeds: graphs['weekly']!,
+      monthlySpeeds: graphs['monthly']!,
       isLoading: false,
       alertLevel:
           history.isNotEmpty ? _getAlertLevel(history.last.speed) : 'Normal',
     ));
 
-    // Subscribe realtime dari path device aktif
     await _subscription?.cancel();
     _subscription = _repository
         .getSensorStream(
@@ -128,7 +107,6 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
     }
 
     _emitWindAlert(newValue);
-
     emit(state.copyWith(
       currentSpeed: newValue,
       dailySpeeds: updated,
@@ -168,7 +146,6 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
     }
 
     final updatedGraph = TimeSeriesMapper.smooth(raw);
-
     emit(state.copyWith(
       dailySpeeds:
           event.period == 'Hari Ini' ? updatedGraph : state.dailySpeeds,
@@ -176,45 +153,236 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
           event.period == 'Minggu Ini' ? updatedGraph : state.weeklySpeeds,
       monthlySpeeds:
           event.period == 'Bulan Ini' ? updatedGraph : state.monthlySpeeds,
-      isLoading: false,
     ));
   }
 
   // ════════════════════════════════════════════════════════════
-  //  DATE FILTER CHANGED  ← baru
+  //  DATE FILTER
   // ════════════════════════════════════════════════════════════
   void _onDateFilterChanged(
     WindSpeedDateFilterChanged event,
     Emitter<WindSpeedState> emit,
   ) {
     final date = event.date;
-    final allHistory = state.history;
-
     if (date == null) {
-      // Reset: tampilkan semua
       emit(state.copyWith(
-        filteredHistory: allHistory,
+        filteredHistory: state.history,
         clearSelectedDate: true,
       ));
       return;
     }
 
-    // Filter data yang tanggalnya sama dengan [date]
-    final filtered = allHistory.where((item) {
-      return item.timestamp.year == date.year &&
-          item.timestamp.month == date.month &&
-          item.timestamp.day == date.day;
-    }).toList();
+    final filtered =
+        state.history.where((e) => _isSameDate(e.timestamp, date)).toList();
 
-    emit(state.copyWith(
-      filteredHistory: filtered,
-      selectedDate: date,
-    ));
+    emit(state.copyWith(filteredHistory: filtered, selectedDate: date));
+  }
+
+  // ════════════════════════════════════════════════════════════
+  //  DELETE ALL
+  // ════════════════════════════════════════════════════════════
+  Future<void> _onDeleteAll(
+    WindSpeedDeleteAllRequested event,
+    Emitter<WindSpeedState> emit,
+  ) async {
+    emit(state.copyWith(isDeleting: true, clearDeleteError: true));
+    try {
+      final deviceId = await _getDeviceId();
+      await _repository.deleteAllHistory('anemometer/$deviceId/history');
+      final emptyGraphs = _buildGraphs(const []);
+      emit(state.copyWith(
+        isDeleting: false,
+        historyMap: const {},
+        history: const [],
+        filteredHistory: const [],
+        clearSelectedDate: true,
+        dailySpeeds: emptyGraphs['daily'],
+        weeklySpeeds: emptyGraphs['weekly'],
+        monthlySpeeds: emptyGraphs['monthly'],
+      ));
+    } catch (e) {
+      emit(state.copyWith(isDeleting: false, deleteError: e.toString()));
+    }
+  }
+
+  // ════════════════════════════════════════════════════════════
+  //  DELETE BY DATE
+  // ════════════════════════════════════════════════════════════
+  Future<void> _onDeleteByDate(
+    WindSpeedDeleteByDateRequested event,
+    Emitter<WindSpeedState> emit,
+  ) async {
+    emit(state.copyWith(isDeleting: true, clearDeleteError: true));
+    try {
+      final deviceId = await _getDeviceId();
+
+      final keys = state.historyMap.entries
+          .where((e) => _isSameDate(e.value.timestamp, event.date))
+          .map((e) => e.key)
+          .toList();
+
+      if (keys.isNotEmpty) {
+        await _repository.deleteHistoryByKeys(
+            'anemometer/$deviceId/history', keys);
+      }
+
+      _emitAfterDelete(emit, _removeKeys(state.historyMap, keys));
+    } catch (e) {
+      emit(state.copyWith(isDeleting: false, deleteError: e.toString()));
+    }
+  }
+
+  // ════════════════════════════════════════════════════════════
+  //  DELETE BY DATE RANGE
+  // ════════════════════════════════════════════════════════════
+  Future<void> _onDeleteByDateRange(
+    WindSpeedDeleteByDateRangeRequested event,
+    Emitter<WindSpeedState> emit,
+  ) async {
+    emit(state.copyWith(isDeleting: true, clearDeleteError: true));
+    try {
+      final deviceId = await _getDeviceId();
+
+      final startDay =
+          DateTime(event.start.year, event.start.month, event.start.day);
+      final endInclusive =
+          DateTime(event.end.year, event.end.month, event.end.day, 23, 59, 59);
+
+      final keys = state.historyMap.entries
+          .where((e) {
+            final t = e.value.timestamp;
+            return !t.isBefore(startDay) && !t.isAfter(endInclusive);
+          })
+          .map((e) => e.key)
+          .toList();
+
+      if (keys.isNotEmpty) {
+        await _repository.deleteHistoryByKeys(
+            'anemometer/$deviceId/history', keys);
+      }
+
+      _emitAfterDelete(emit, _removeKeys(state.historyMap, keys));
+    } catch (e) {
+      emit(state.copyWith(isDeleting: false, deleteError: e.toString()));
+    }
+  }
+
+  // ════════════════════════════════════════════════════════════
+  //  DELETE BY HOUR RANGE
+  // ════════════════════════════════════════════════════════════
+  Future<void> _onDeleteByHourRange(
+    WindSpeedDeleteByHourRangeRequested event,
+    Emitter<WindSpeedState> emit,
+  ) async {
+    emit(state.copyWith(isDeleting: true, clearDeleteError: true));
+    try {
+      final deviceId = await _getDeviceId();
+
+      final keys = state.historyMap.entries
+          .where((e) {
+            final t = e.value.timestamp;
+            return _isSameDate(t, event.date) &&
+                t.hour >= event.startHour &&
+                t.hour <= event.endHour;
+          })
+          .map((e) => e.key)
+          .toList();
+
+      if (keys.isNotEmpty) {
+        await _repository.deleteHistoryByKeys(
+            'anemometer/$deviceId/history', keys);
+      }
+
+      // Re-apply filter aktif jika ada
+      final newMap = _removeKeys(state.historyMap, keys);
+      final newHistory = _sortedList(newMap);
+      final newFiltered = state.selectedDate != null
+          ? newHistory
+              .where((e) => _isSameDate(e.timestamp, state.selectedDate!))
+              .toList()
+          : newHistory;
+      final graphs = _buildGraphs(newHistory);
+
+      emit(state.copyWith(
+        isDeleting: false,
+        historyMap: newMap,
+        history: newHistory,
+        filteredHistory: newFiltered,
+        dailySpeeds: graphs['daily'],
+        weeklySpeeds: graphs['weekly'],
+        monthlySpeeds: graphs['monthly'],
+      ));
+    } catch (e) {
+      emit(state.copyWith(isDeleting: false, deleteError: e.toString()));
+    }
   }
 
   // ════════════════════════════════════════════════════════════
   //  HELPERS
   // ════════════════════════════════════════════════════════════
+
+  /// Emit state setelah delete all/date/range (selalu reset filter)
+  void _emitAfterDelete(
+    Emitter<WindSpeedState> emit,
+    Map<String, MyWindSpeed> newMap,
+  ) {
+    final newHistory = _sortedList(newMap);
+    final graphs = _buildGraphs(newHistory);
+    emit(state.copyWith(
+      isDeleting: false,
+      historyMap: newMap,
+      history: newHistory,
+      filteredHistory: newHistory,
+      clearSelectedDate: true,
+      dailySpeeds: graphs['daily'],
+      weeklySpeeds: graphs['weekly'],
+      monthlySpeeds: graphs['monthly'],
+    ));
+  }
+
+  Map<String, List<double>> _buildGraphs(List<MyWindSpeed> history) {
+    return {
+      'daily': TimeSeriesMapper.smooth(
+        TimeSeriesMapper.toDaily(
+          data: history,
+          getTime: (e) => e.timestamp,
+          getValue: (e) => e.speed,
+        ),
+      ),
+      'weekly': TimeSeriesMapper.smooth(
+        TimeSeriesMapper.toWeekly(
+          data: history,
+          getTime: (e) => e.timestamp,
+          getValue: (e) => e.speed,
+        ),
+      ),
+      'monthly': TimeSeriesMapper.smooth(
+        TimeSeriesMapper.toMonthly(
+          data: history,
+          getTime: (e) => e.timestamp,
+          getValue: (e) => e.speed,
+        ),
+      ),
+    };
+  }
+
+  bool _isSameDate(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  Map<String, MyWindSpeed> _removeKeys(
+    Map<String, MyWindSpeed> map,
+    List<String> keys,
+  ) {
+    final newMap = Map<String, MyWindSpeed>.from(map);
+    for (final k in keys) newMap.remove(k);
+    return newMap;
+  }
+
+  List<MyWindSpeed> _sortedList(Map<String, MyWindSpeed> map) {
+    return map.values.toList()
+      ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+  }
+
   String _getAlertLevel(double speed) {
     if (speed >= _kWindDanger) return 'Bahaya';
     if (speed >= _kWindWarning) return 'Waspada';
@@ -236,15 +404,13 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
       message = '';
     }
 
-    _notificationBloc.add(SensorAlertAdded(
-      SensorAlert(
-        sensorId: 'wind_speed',
-        sensorName: 'Anemometer',
-        message: message,
-        severity: severity,
-        timestamp: DateTime.now(),
-      ),
-    ));
+    _notificationBloc.add(SensorAlertAdded(SensorAlert(
+      sensorId: 'wind_speed',
+      sensorName: 'Anemometer',
+      message: message,
+      severity: severity,
+      timestamp: DateTime.now(),
+    )));
   }
 
   @override
@@ -254,7 +420,6 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
   }
 }
 
-/// Internal event — tidak diekspos ke luar
 class _WindSpeedRealtimeUpdated extends WindSpeedEvent {
   final MyWindSpeed data;
   const _WindSpeedRealtimeUpdated(this.data);

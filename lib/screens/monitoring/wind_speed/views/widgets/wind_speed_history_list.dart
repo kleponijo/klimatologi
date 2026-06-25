@@ -12,6 +12,8 @@ class WindSpeedHistoryList extends StatelessWidget {
   final DateTime? selectedDate;
   final VoidCallback onPickDate;
   final VoidCallback onClearDate;
+  final VoidCallback onDeleteTap;
+  final bool isDeleting;
 
   const WindSpeedHistoryList({
     super.key,
@@ -19,6 +21,8 @@ class WindSpeedHistoryList extends StatelessWidget {
     required this.selectedDate,
     required this.onPickDate,
     required this.onClearDate,
+    required this.onDeleteTap,
+    this.isDeleting = false,
   });
 
   // ── Grouping per tanggal ─────────────────────────────────────
@@ -46,6 +50,8 @@ class WindSpeedHistoryList extends StatelessWidget {
           totalCount: history.length,
           onPickDate: onPickDate,
           onClearDate: onClearDate,
+          onDeleteTap: onDeleteTap, // ← baru
+          isDeleting: isDeleting,
         ),
         const SizedBox(height: 12),
 
@@ -98,12 +104,16 @@ class _HeaderBar extends StatelessWidget {
   final int totalCount;
   final VoidCallback onPickDate;
   final VoidCallback onClearDate;
+  final VoidCallback onDeleteTap;
+  final bool isDeleting;
 
   const _HeaderBar({
     required this.selectedDate,
     required this.totalCount,
     required this.onPickDate,
     required this.onClearDate,
+    required this.onDeleteTap,
+    required this.isDeleting,
   });
 
   @override
@@ -148,6 +158,25 @@ class _HeaderBar extends StatelessWidget {
             color: Colors.blue.shade700,
             onTap: onPickDate,
           ),
+        const SizedBox(width: 4),
+
+        // ── DELETE BUTTON ← baru ──────────────────────────────
+        isDeleting
+            ? const Padding(
+                padding: EdgeInsets.all(10),
+                child: SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2.5),
+                ),
+              )
+            : IconButton(
+                visualDensity: VisualDensity.compact,
+                icon: const Icon(Icons.delete_sweep_outlined,
+                    color: Colors.redAccent),
+                tooltip: 'Hapus riwayat',
+                onPressed: totalCount == 0 ? null : onDeleteTap,
+              ),
       ],
     );
   }

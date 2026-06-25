@@ -61,6 +61,43 @@ class FirebaseMonitoringRepo implements MonitoringRepository {
     }
   }
 
+  @override
+  Future<Map<String, T>> getSensorHistoryWithKeys<T>(
+    String path,
+    T Function(Map<dynamic, dynamic> json) mapper,
+  ) async {
+    try {
+      final snapshot = await _db.ref(path).get();
+      if (snapshot.exists && snapshot.value is Map) {
+        final data = snapshot.value as Map<dynamic, dynamic>;
+        return {
+          for (final entry in data.entries)
+            entry.key.toString(): mapper(
+              entry.value is Map ? entry.value as Map<dynamic, dynamic> : {},
+            ),
+        };
+      }
+      return {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  @override
+  Future<void> deleteHistoryByKeys(String path, List<String> keys) async {
+    if (keys.isEmpty) return;
+    // Firebase multi-path delete: set tiap path ke null dalam satu update
+    final Map<String, dynamic> updates = {
+      for (final key in keys) '$path/$key': null,
+    };
+    await _db.ref().update(updates);
+  }
+
+  @override
+  Future<void> deleteAllHistory(String path) async {
+    await _db.ref(path).remove();
+  }
+
   // ── Anemometer Settings ──────────────────────────────────────
   @override
   Future<Map<String, dynamic>> getAnemometerSettings() async {
