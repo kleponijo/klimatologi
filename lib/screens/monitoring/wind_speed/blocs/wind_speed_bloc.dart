@@ -49,7 +49,11 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
     WatchWindSpeedStarted event,
     Emitter<WindSpeedState> emit,
   ) async {
-    emit(state.copyWith(isLoading: true));
+    // Cancel stream lama dulu sebelum apapun
+    await _subscription?.cancel();
+    _subscription = null;
+
+    emit(state.copyWith(isLoading: true, currentSpeed: 0));
     final deviceId = await _getDeviceId();
 
     final historyMap = await _repository.getSensorHistoryWithKeys(
@@ -74,7 +78,7 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
           history.isNotEmpty ? _getAlertLevel(history.last.speed) : 'Normal',
     ));
 
-    await _subscription?.cancel();
+    // Subscribe stream baru
     _subscription = _repository
         .getSensorStream(
           'anemometer/$deviceId/realtime',
@@ -90,6 +94,15 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
     _WindSpeedRealtimeUpdated event,
     Emitter<WindSpeedState> emit,
   ) {
+    // Guard: abaikan data jika windweg 0 dan pulse 0 (ESP tidak kirim data nyata)
+    if (event.data.windwegKm == 0 && event.data.totalPulse == 0) {
+      emit(state.copyWith(
+        currentSpeed: 0,
+        alertLevel: 'Normal',
+      ));
+      return;
+    }
+
     final updated = List<double>.from(state.dailySpeeds);
     final index = DateTime.now().hour;
     double newValue = event.data.speed;

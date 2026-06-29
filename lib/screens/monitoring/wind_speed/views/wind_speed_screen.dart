@@ -747,7 +747,7 @@ class _WindSpeedScreenState extends State<WindSpeedScreen> {
           const Icon(Icons.air, color: Colors.white, size: 46),
           const SizedBox(height: 8),
           Text(
-            speed.toStringAsFixed(1),
+            speed.toStringAsFixed(2),
             style: const TextStyle(
               fontSize: 80,
               fontWeight: FontWeight.bold,
@@ -755,11 +755,11 @@ class _WindSpeedScreenState extends State<WindSpeedScreen> {
               height: 1,
             ),
           ),
-          const Text('m/s',
+          const Text('km/h',
               style: TextStyle(fontSize: 20, color: Colors.white70)),
           const SizedBox(height: 4),
           Text(
-            '${(speed * 3.6).toStringAsFixed(1)} km/h',
+            '${(speed / 3.6).toStringAsFixed(3)} m/s',
             style: const TextStyle(fontSize: 14, color: Colors.white54),
           ),
           const SizedBox(height: 14),
@@ -1056,8 +1056,8 @@ class _HistoryTile extends StatelessWidget {
   const _HistoryTile({required this.item, required this.index});
 
   String get _alertLevel {
-    if (item.speed >= 12.5) return 'Bahaya';
-    if (item.speed >= 8.0) return 'Waspada';
+    if (item.speed >= 45.0) return 'Bahaya';
+    if (item.speed >= 25.5) return 'Waspada';
     return 'Normal';
   }
 
@@ -1085,93 +1085,183 @@ class _HistoryTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final kmh = item.speed * 3.6;
     final bg = index.isEven ? Colors.grey.shade50 : Colors.white;
+    final hasTotal = item.totalWindwegKm > 0 || item.totalPulse > 0;
 
     return Container(
       color: bg,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
+      // ← child pakai Column, bukan Row langsung
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Nomor
-          SizedBox(
-            width: 28,
-            child: Text(
-              '${index + 1}',
-              style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey.shade400,
-                  fontWeight: FontWeight.w600),
-            ),
-          ),
-
-          // Tanggal + jam
-          Expanded(
-            flex: 3,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  DateFormat('dd MMM yyyy', 'id_ID').format(item.timestamp),
-                  style: const TextStyle(
-                      fontSize: 12, fontWeight: FontWeight.w600),
-                ),
-                Text(
-                  DateFormat('HH:mm:ss').format(item.timestamp),
+          // ── Baris utama ───────────────────────────────────
+          Row(
+            children: [
+              // Nomor
+              SizedBox(
+                width: 28,
+                child: Text(
+                  '${index + 1}',
                   style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.grey.shade500,
-                      fontFamily: 'monospace'),
+                    fontSize: 12,
+                    color: Colors.grey.shade400,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ],
-            ),
+              ),
+
+              // Tanggal + jam
+              Expanded(
+                flex: 3,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      DateFormat('dd MMM yyyy', 'id_ID').format(item.timestamp),
+                      style: const TextStyle(
+                          fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
+                    Text(
+                      DateFormat('HH:mm:ss').format(item.timestamp),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey.shade500,
+                        fontFamily: 'monospace',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Avg + max windweg
+              Expanded(
+                flex: 2,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      'avg ${item.windwegKm.toStringAsFixed(3)} km',
+                      style: const TextStyle(
+                          fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
+                    if (item.maxWindwegKm > 0)
+                      Text(
+                        'max ${item.maxWindwegKm.toStringAsFixed(3)} km',
+                        style: TextStyle(
+                            fontSize: 10, color: Colors.orange.shade600),
+                      ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(width: 8),
+
+              // Badge status
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _alertColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: _alertColor.withValues(alpha: 0.4)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(_alertIcon, size: 11, color: _alertColor),
+                    const SizedBox(width: 3),
+                    Text(
+                      _alertLevel,
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: _alertColor,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
 
-          // Kecepatan
-          Expanded(
-            flex: 2,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  '${item.speed.toStringAsFixed(3)} m/s',
-                  style: const TextStyle(
-                      fontSize: 13, fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  '${kmh.toStringAsFixed(2)} km/h',
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade400),
-                ),
-              ],
+          // ── Baris kedua: total + pulsa + sampel ───────────
+          if (hasTotal) ...[
+            const SizedBox(height: 6),
+            Padding(
+              padding: const EdgeInsets.only(left: 28),
+              child: Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: [
+                  _StatChip(
+                    icon: Icons.route_rounded,
+                    label: '${item.totalWindwegKm.toStringAsFixed(3)} km total',
+                    tooltip: 'Total jarak angin periode ini',
+                    color: Colors.blue.shade700,
+                  ),
+                  _StatChip(
+                    icon: Icons.bolt_rounded,
+                    label: '${item.totalPulse} pulsa',
+                    tooltip: 'Total pulsa terdeteksi',
+                    color: Colors.purple.shade600,
+                  ),
+                  if (item.sampleCount > 0)
+                    _StatChip(
+                      icon: Icons.analytics_outlined,
+                      label: '${item.sampleCount} sampel',
+                      tooltip: 'Jumlah interval average dalam periode ini',
+                      color: Colors.teal.shade600,
+                    ),
+                ],
+              ),
             ),
-          ),
-
-          const SizedBox(width: 10),
-
-          // Badge status
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-            decoration: BoxDecoration(
-              color: _alertColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: _alertColor.withValues(alpha: 0.4)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(_alertIcon, size: 11, color: _alertColor),
-                const SizedBox(width: 3),
-                Text(
-                  _alertLevel,
-                  style: TextStyle(
-                      fontSize: 10,
-                      color: _alertColor,
-                      fontWeight: FontWeight.w700),
-                ),
-              ],
-            ),
-          ),
+          ],
         ],
+      ),
+    );
+  }
+}
+
+// ── Chip kecil untuk stat di history tile ──────────────────────
+class _StatChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String tooltip;
+  final Color color;
+
+  const _StatChip({
+    required this.icon,
+    required this.label,
+    required this.tooltip,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: color.withValues(alpha: 0.25)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 11, color: color),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
