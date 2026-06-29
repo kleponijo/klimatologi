@@ -18,6 +18,14 @@ const _kRealtimeOptions = <String, int>{
   '1 jam': 3600000,
 };
 
+const _kAverageOptions = <String, int>{
+  '30 detik': 30000,
+  '1 menit': 60000,
+  '5 menit': 300000,
+  '10 menit': 600000,
+  '30 menit': 1800000,
+};
+
 // ── Opsi interval history ─────────────────────────────────────
 const _kHistoryOptions = <String, int>{
   '10 menit': 600000,
@@ -45,8 +53,6 @@ class _DeviceSetupScreenState extends State<DeviceSetupScreen>
   bool _obscurePassword = true;
 
   // Settings form controllers
-  final _kFaktorController = TextEditingController();
-  final _radiusController = TextEditingController();
   String? _customDeviceId;
 
   @override
@@ -60,20 +66,11 @@ class _DeviceSetupScreenState extends State<DeviceSetupScreen>
     _tabController.dispose();
     _ssidController.dispose();
     _passwordController.dispose();
-    _kFaktorController.dispose();
-    _radiusController.dispose();
     super.dispose();
   }
 
   // ── Sync text controllers dengan state saat settings loaded ──
-  void _syncControllers(DeviceSetupState state) {
-    if (_kFaktorController.text != state.kFaktor.toString()) {
-      _kFaktorController.text = state.kFaktor.toStringAsFixed(2);
-    }
-    if (_radiusController.text != state.radiusM.toString()) {
-      _radiusController.text = state.radiusM.toStringAsFixed(3);
-    }
-  }
+  void _syncControllers(DeviceSetupState state) {}
 
   @override
   Widget build(BuildContext context) {
@@ -144,8 +141,6 @@ class _DeviceSetupScreenState extends State<DeviceSetupScreen>
               children: [
                 _SensorSettingsTab(
                   state: state,
-                  kFaktorController: _kFaktorController,
-                  radiusController: _radiusController,
                   customDeviceId: _customDeviceId,
                   onCustomDeviceIdChanged: (v) =>
                       setState(() => _customDeviceId = v),
@@ -215,15 +210,11 @@ class _DeviceSetupScreenState extends State<DeviceSetupScreen>
 // ═══════════════════════════════════════════════════════════════
 class _SensorSettingsTab extends StatelessWidget {
   final DeviceSetupState state;
-  final TextEditingController kFaktorController;
-  final TextEditingController radiusController;
   final String? customDeviceId;
   final ValueChanged<String?> onCustomDeviceIdChanged;
 
   const _SensorSettingsTab({
     required this.state,
-    required this.kFaktorController,
-    required this.radiusController,
     required this.customDeviceId,
     required this.onCustomDeviceIdChanged,
   });
@@ -259,36 +250,6 @@ class _SensorSettingsTab extends StatelessWidget {
           ),
           const SizedBox(height: 24),
 
-          // ── Kalibrasi ────────────────────────────────────────
-          _sectionTitle('Kalibrasi'),
-          const SizedBox(height: 10),
-          _SettingsCard(children: [
-            _NumericField(
-              controller: kFaktorController,
-              label: 'K-Faktor',
-              hint: 'Contoh: 50.0',
-              suffix: '×',
-              helper: 'Konstanta kalibrasi vs AWS. Awal: 50.0',
-              onChanged: (v) {
-                final d = double.tryParse(v);
-                if (d != null && d > 0) bloc.add(KFaktorChanged(d));
-              },
-            ),
-            const Divider(height: 24),
-            _NumericField(
-              controller: radiusController,
-              label: 'Jari-jari Lengan',
-              hint: 'Contoh: 0.08',
-              suffix: 'm',
-              helper: 'Jarak pusat ke ujung cup anemometer. Default: 0.08 m',
-              onChanged: (v) {
-                final d = double.tryParse(v);
-                if (d != null && d > 0) bloc.add(RadiusChanged(d));
-              },
-            ),
-          ]),
-          const SizedBox(height: 24),
-
           // ── Jumlah Magnet ─────────────────────────────────────
           _sectionTitle('Jumlah Magnet'),
           const SizedBox(height: 4),
@@ -317,6 +278,21 @@ class _SensorSettingsTab extends StatelessWidget {
             options: _kRealtimeOptions,
             selectedMs: state.intervalRealtimeMs,
             onSelected: (ms) => bloc.add(IntervalRealtimeChanged(ms)),
+          ),
+          const SizedBox(height: 24),
+
+          _sectionTitle('Interval Rata-rata (Average)'),
+          const SizedBox(height: 4),
+          Text(
+            'Seberapa sering data rata-rata dikirim ke Firebase. '
+            'Harus lebih pendek dari interval history.',
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+          ),
+          const SizedBox(height: 10),
+          _ChipSelector(
+            options: _kAverageOptions,
+            selectedMs: state.intervalAverageMs,
+            onSelected: (ms) => bloc.add(IntervalAverageChanged(ms)),
           ),
           const SizedBox(height: 24),
 
@@ -965,66 +941,6 @@ class _ChipSelector extends StatelessWidget {
           onSelected: (_) => onSelected(e.value),
         );
       }).toList(),
-    );
-  }
-}
-
-class _NumericField extends StatelessWidget {
-  final TextEditingController controller;
-  final String label;
-  final String hint;
-  final String suffix;
-  final String helper;
-  final ValueChanged<String> onChanged;
-
-  const _NumericField({
-    required this.controller,
-    required this.label,
-    required this.hint,
-    required this.suffix,
-    required this.helper,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return TextField(
-      controller: controller,
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
-        suffixText: suffix,
-        helperText: helper,
-        helperMaxLines: 2,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        isDense: true,
-      ),
-      onChanged: onChanged,
-    );
-  }
-}
-
-class _SettingsCard extends StatelessWidget {
-  final List<Widget> children;
-  const _SettingsCard({required this.children});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 6),
-        ],
-      ),
-      child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start, children: children),
     );
   }
 }

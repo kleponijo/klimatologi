@@ -22,9 +22,8 @@ class DeviceSetupState {
   final String espIp;
 
   final String deviceId;
-  final double kFaktor;
-  final double radiusM;
   final int intervalRealtimeMs;
+  final int intervalAverageMs;
   final int intervalHistoryMs;
   final int magnetCount;
   final List<Map<String, dynamic>> logs;
@@ -38,9 +37,8 @@ class DeviceSetupState {
     this.successMessage,
     this.espIp = '192.168.4.1',
     this.deviceId = 'esp_lapangan',
-    this.kFaktor = 50.0,
-    this.radiusM = 0.08,
     this.intervalRealtimeMs = 1000,
+    this.intervalAverageMs = 60000,
     this.intervalHistoryMs = 3600000,
     this.magnetCount = 1, // ← default 1 magnet
     this.logs = const [],
@@ -58,9 +56,8 @@ class DeviceSetupState {
     String? successMessage,
     String? espIp,
     String? deviceId,
-    double? kFaktor,
-    double? radiusM,
     int? intervalRealtimeMs,
+    int? intervalAverageMs,
     int? intervalHistoryMs,
     int? magnetCount,
     List<Map<String, dynamic>>? logs,
@@ -74,9 +71,8 @@ class DeviceSetupState {
       successMessage: successMessage,
       espIp: espIp ?? this.espIp,
       deviceId: deviceId ?? this.deviceId,
-      kFaktor: kFaktor ?? this.kFaktor,
-      radiusM: radiusM ?? this.radiusM,
       intervalRealtimeMs: intervalRealtimeMs ?? this.intervalRealtimeMs,
+      intervalAverageMs: intervalAverageMs ?? this.intervalAverageMs,
       intervalHistoryMs: intervalHistoryMs ?? this.intervalHistoryMs,
       magnetCount: magnetCount ?? this.magnetCount,
       logs: logs ?? this.logs,

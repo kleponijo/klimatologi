@@ -19,19 +19,14 @@ class DeviceIdChanged extends DeviceSetupEvent {
   DeviceIdChanged(this.deviceId);
 }
 
-class KFaktorChanged extends DeviceSetupEvent {
-  final double value;
-  KFaktorChanged(this.value);
-}
-
-class RadiusChanged extends DeviceSetupEvent {
-  final double value;
-  RadiusChanged(this.value);
-}
-
 class IntervalRealtimeChanged extends DeviceSetupEvent {
   final int ms;
   IntervalRealtimeChanged(this.ms);
+}
+
+class IntervalAverageChanged extends DeviceSetupEvent {
+  final int ms;
+  IntervalAverageChanged(this.ms);
 }
 
 class IntervalHistoryChanged extends DeviceSetupEvent {
@@ -39,7 +34,6 @@ class IntervalHistoryChanged extends DeviceSetupEvent {
   IntervalHistoryChanged(this.ms);
 }
 
-/// User ubah jumlah magnet (1 atau 3)
 class MagnetCountChanged extends DeviceSetupEvent {
   final int count;
   MagnetCountChanged(this.count);

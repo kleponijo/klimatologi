@@ -17,18 +17,11 @@ abstract class MonitoringRepository {
     T Function(Map<dynamic, dynamic> json) mapper,
   );
 
-  // ── Anemometer Settings ──────────────────────────────────────
-  /// Baca semua settings dari /anemometer/settings/
-  /// Return map dengan keys:
-  ///   k_faktor (double), radius_m (double),
-  ///   interval_realtime_ms (int), interval_history_ms (int)
   Future<Map<String, dynamic>> getAnemometerSettings();
 
-  /// Tulis settings ke /anemometer/settings/ (field yang null tidak ditulis)
   Future<void> updateAnemometerSettings({
-    double? kFaktor,
-    double? radiusM,
     int? intervalRealtimeMs,
+    int? intervalAverageMs,
     int? intervalHistoryMs,
     int? magnetCount,
   });
@@ -41,15 +34,11 @@ abstract class MonitoringRepository {
   });
 
   Future<void> sendRemoteRestart(String deviceId);
-
   Future<void> deleteDeviceLogs(String deviceId, List<String> keys);
-
   Future<Map<String, T>> getSensorHistoryWithKeys<T>(
     String path,
     T Function(Map<dynamic, dynamic> json) mapper,
   );
-
   Future<void> deleteHistoryByKeys(String path, List<String> keys);
-
   Future<void> deleteAllHistory(String path);
 }

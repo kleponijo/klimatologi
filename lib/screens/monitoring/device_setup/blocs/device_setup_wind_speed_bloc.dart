@@ -26,10 +26,10 @@ class DeviceSetupBloc extends Bloc<DeviceSetupEvent, DeviceSetupState> {
     // Settings
     on<DeviceSettingsStarted>(_onSettingsStarted);
     on<DeviceIdChanged>(_onDeviceIdChanged);
-    on<KFaktorChanged>((e, emit) => emit(state.copyWith(kFaktor: e.value)));
-    on<RadiusChanged>((e, emit) => emit(state.copyWith(radiusM: e.value)));
     on<IntervalRealtimeChanged>(
         (e, emit) => emit(state.copyWith(intervalRealtimeMs: e.ms)));
+    on<IntervalAverageChanged>(
+        (e, emit) => emit(state.copyWith(intervalAverageMs: e.ms)));
     on<IntervalHistoryChanged>(
         (e, emit) => emit(state.copyWith(intervalHistoryMs: e.ms)));
     on<MagnetCountChanged>(
@@ -56,19 +56,14 @@ class DeviceSetupBloc extends Bloc<DeviceSetupEvent, DeviceSetupState> {
       // Baca device ID tersimpan lokal
       final prefs = await SharedPreferences.getInstance();
       final savedId = prefs.getString(_kDeviceIdKey) ?? state.deviceId;
-
-      // Baca settings dari Firebase
       final s = await _repository.getAnemometerSettings();
-
-      // Baca logs
       final logs = await _repository.getDeviceLogs(savedId);
 
       emit(state.copyWith(
         status: DeviceSetupStatus.settingsLoaded,
         deviceId: savedId,
-        kFaktor: s['k_faktor'] as double,
-        radiusM: s['radius_m'] as double,
         intervalRealtimeMs: s['interval_realtime_ms'] as int,
+        intervalAverageMs: s['interval_average_ms'] as int,
         intervalHistoryMs: s['interval_history_ms'] as int,
         magnetCount: (s['magnet_count'] as int?) ?? 1,
         logs: logs,
@@ -104,9 +99,8 @@ class DeviceSetupBloc extends Bloc<DeviceSetupEvent, DeviceSetupState> {
     emit(state.copyWith(status: DeviceSetupStatus.settingsSaving));
     try {
       await _repository.updateAnemometerSettings(
-        kFaktor: state.kFaktor,
-        radiusM: state.radiusM,
         intervalRealtimeMs: state.intervalRealtimeMs,
+        intervalAverageMs: state.intervalAverageMs,
         intervalHistoryMs: state.intervalHistoryMs,
         magnetCount: state.magnetCount,
       );
@@ -335,9 +329,8 @@ class DeviceSetupBloc extends Bloc<DeviceSetupEvent, DeviceSetupState> {
   ) {
     emit(DeviceSetupState(
       deviceId: state.deviceId,
-      kFaktor: state.kFaktor,
-      radiusM: state.radiusM,
       intervalRealtimeMs: state.intervalRealtimeMs,
+      intervalAverageMs: state.intervalAverageMs,
       intervalHistoryMs: state.intervalHistoryMs,
     ));
   }

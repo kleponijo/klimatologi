@@ -103,46 +103,49 @@ class FirebaseMonitoringRepo implements MonitoringRepository {
   Future<Map<String, dynamic>> getAnemometerSettings() async {
     // Default sama dengan cfg_config.h di ESP
     const defaults = <String, dynamic>{
-      'k_faktor': 50.0,
-      'radius_m': 0.08,
       'interval_realtime_ms': 1000,
+      'interval_average_ms': 60000,
       'interval_history_ms': 3600000,
+      'magnet_count': 3,
     };
     try {
       final snapshot = await _db.ref('anemometer/settings').get();
       if (snapshot.exists && snapshot.value is Map) {
         final raw = snapshot.value as Map<dynamic, dynamic>;
         return {
-          'k_faktor': (raw['k_faktor'] ?? defaults['k_faktor']).toDouble(),
-          'radius_m': (raw['radius_m'] ?? defaults['radius_m']).toDouble(),
           'interval_realtime_ms':
               (raw['interval_realtime_ms'] ?? defaults['interval_realtime_ms'])
+                  as int,
+          'interval_average_ms':
+              (raw['interval_average_ms'] ?? defaults['interval_average_ms'])
                   as int,
           'interval_history_ms':
               (raw['interval_history_ms'] ?? defaults['interval_history_ms'])
                   as int,
+          'magnet_count':
+              (raw['magnet_count'] as int? ?? defaults['magnet_count']) as int,
         };
       }
     } catch (_) {}
-
     return defaults;
   }
 
   // ── Tulis settings ke Firebase (dari app) ────────────────────
   @override
   Future<void> updateAnemometerSettings({
-    double? kFaktor,
-    double? radiusM,
     int? intervalRealtimeMs,
+    int? intervalAverageMs,
     int? intervalHistoryMs,
     int? magnetCount,
   }) async {
     final updates = <String, dynamic>{};
-    if (kFaktor != null) updates['k_faktor'] = kFaktor;
     if (intervalRealtimeMs != null)
       updates['interval_realtime_ms'] = intervalRealtimeMs;
+    if (intervalAverageMs != null)
+      updates['interval_average_ms'] = intervalAverageMs;
     if (intervalHistoryMs != null)
       updates['interval_history_ms'] = intervalHistoryMs;
+    if (magnetCount != null) updates['magnet_count'] = magnetCount;
     if (updates.isNotEmpty) {
       await _db.ref('anemometer/settings').update(updates);
     }
