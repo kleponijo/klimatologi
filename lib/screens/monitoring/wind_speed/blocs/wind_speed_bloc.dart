@@ -19,6 +19,7 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
   final MonitoringRepository _repository;
   final NotificationBloc _notificationBloc;
   StreamSubscription<MyWindSpeed>? _subscription;
+  StreamSubscription<Map<String, MyWindSpeed>>? _historySubscription;
 
   WindSpeedBloc({
     required MonitoringRepository repository,
@@ -35,6 +36,7 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
     on<WindSpeedDeleteByDateRequested>(_onDeleteByDate);
     on<WindSpeedDeleteByDateRangeRequested>(_onDeleteByDateRange);
     on<WindSpeedDeleteByHourRangeRequested>(_onDeleteByHourRange);
+    on<_WindSpeedHistoryUpdated>(_onHistoryUpdated);
   }
 
   Future<String> _getDeviceId() async {
@@ -49,42 +51,55 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
     WatchWindSpeedStarted event,
     Emitter<WindSpeedState> emit,
   ) async {
-    // Cancel stream lama dulu sebelum apapun
     await _subscription?.cancel();
+    await _historySubscription?.cancel();
     _subscription = null;
+    _historySubscription = null;
 
     emit(state.copyWith(isLoading: true, currentSpeed: 0));
     final deviceId = await _getDeviceId();
 
-    final historyMap = await _repository.getSensorHistoryWithKeys(
-      'anemometer/$deviceId/history',
-      (json) => MyWindSpeed.fromJson(json),
-    );
+    // ── History stream (realtime, otomatis update) ──
+    _historySubscription = _repository
+        .getSensorHistoryStream(
+          'anemometer/$deviceId/history',
+          (json) => MyWindSpeed.fromJson(json),
+        )
+        .listen((newMap) => add(_WindSpeedHistoryUpdated(newMap)));
 
-    final history = _sortedList(historyMap);
-    final graphs = _buildGraphs(history);
-
-    if (history.isNotEmpty) _emitWindAlert(history.last.speed);
-
-    emit(state.copyWith(
-      historyMap: historyMap,
-      history: history,
-      filteredHistory: history,
-      dailySpeeds: graphs['daily']!,
-      weeklySpeeds: graphs['weekly']!,
-      monthlySpeeds: graphs['monthly']!,
-      isLoading: false,
-      alertLevel:
-          history.isNotEmpty ? _getAlertLevel(history.last.speed) : 'Normal',
-    ));
-
-    // Subscribe stream baru
+    // ── Realtime stream ──
     _subscription = _repository
         .getSensorStream(
           'anemometer/$deviceId/realtime',
           (json) => MyWindSpeed.fromJson(json),
         )
         .listen((data) => add(_WindSpeedRealtimeUpdated(data)));
+
+    // ── Loading selesai, state awal kosong dulu ──
+    // _onHistoryUpdated akan otomatis mengisi data begitu stream pertama emit
+    emit(state.copyWith(isLoading: false));
+  }
+
+  void _onHistoryUpdated(
+    _WindSpeedHistoryUpdated event,
+    Emitter<WindSpeedState> emit,
+  ) {
+    final history = _sortedList(event.historyMap);
+    final graphs = _buildGraphs(history);
+    final filtered = state.selectedDate != null
+        ? history
+            .where((e) => _isSameDate(e.timestamp, state.selectedDate!))
+            .toList()
+        : history;
+
+    emit(state.copyWith(
+      historyMap: event.historyMap,
+      history: history,
+      filteredHistory: filtered,
+      dailySpeeds: graphs['daily'],
+      weeklySpeeds: graphs['weekly'],
+      monthlySpeeds: graphs['monthly'],
+    ));
   }
 
   // ════════════════════════════════════════════════════════════
@@ -429,6 +444,7 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
   @override
   Future<void> close() async {
     await _subscription?.cancel();
+    await _historySubscription?.cancel();
     return super.close();
   }
 }

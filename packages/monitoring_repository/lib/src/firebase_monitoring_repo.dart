@@ -200,4 +200,21 @@ class FirebaseMonitoringRepo implements MonitoringRepository {
   Future<void> sendRemoteRestart(String deviceId) async {
     await _db.ref('anemometer/$deviceId/command/restart').set(true);
   }
+
+  @override
+  Stream<Map<String, T>> getSensorHistoryStream<T>(
+    String path,
+    T Function(Map<dynamic, dynamic> json) mapper,
+  ) {
+    return _db.ref(path).onValue.map((event) {
+      if (!event.snapshot.exists || event.snapshot.value is! Map) return {};
+      final data = event.snapshot.value as Map<dynamic, dynamic>;
+      return {
+        for (final entry in data.entries)
+          entry.key.toString(): mapper(
+            entry.value is Map ? entry.value as Map<dynamic, dynamic> : {},
+          ),
+      };
+    });
+  }
 }

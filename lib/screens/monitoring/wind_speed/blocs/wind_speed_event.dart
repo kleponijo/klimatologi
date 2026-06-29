@@ -76,3 +76,10 @@ class WindSpeedDeleteByHourRangeRequested extends WindSpeedEvent {
   @override
   List<Object?> get props => [date, startHour, endHour];
 }
+
+class _WindSpeedHistoryUpdated extends WindSpeedEvent {
+  final Map<String, MyWindSpeed> historyMap;
+  const _WindSpeedHistoryUpdated(this.historyMap);
+  @override
+  List<Object?> get props => [historyMap];
+}

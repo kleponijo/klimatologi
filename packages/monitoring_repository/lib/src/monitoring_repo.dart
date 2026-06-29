@@ -41,4 +41,10 @@ abstract class MonitoringRepository {
   );
   Future<void> deleteHistoryByKeys(String path, List<String> keys);
   Future<void> deleteAllHistory(String path);
+
+  // Tambah di abstract class MonitoringRepository:
+  Stream<Map<String, T>> getSensorHistoryStream<T>(
+    String path,
+    T Function(Map<dynamic, dynamic> json) mapper,
+  );
 }
