@@ -1,3 +1,4 @@
+// device_setup_wind_speed_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -28,6 +29,8 @@ const _kAverageOptions = <String, int>{
 
 // ── Opsi interval history ─────────────────────────────────────
 const _kHistoryOptions = <String, int>{
+  '30 detik': 30000,
+  '1 menit': 60000,
   '10 menit': 600000,
   '30 menit': 1800000,
   '1 jam': 3600000,
