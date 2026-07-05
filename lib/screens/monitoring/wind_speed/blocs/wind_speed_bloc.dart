@@ -423,10 +423,10 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
 
     if (speed >= _kWindDanger) {
       severity = AlertSeverity.danger;
-      message = 'Kecepatan angin ${speed.toStringAsFixed(1)} m/s — BAHAYA';
+      message = 'Kecepatan angin ${speed.toStringAsFixed(1)} km/h — BAHAYA';
     } else if (speed >= _kWindWarning) {
       severity = AlertSeverity.warning;
-      message = 'Kecepatan angin ${speed.toStringAsFixed(1)} m/s — waspada';
+      message = 'Kecepatan angin ${speed.toStringAsFixed(1)} km/h — waspada';
     } else {
       severity = AlertSeverity.info;
       message = '';

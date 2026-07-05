@@ -23,6 +23,7 @@ const _kAverageOptions = <String, int>{
   '30 detik': 30000,
   '1 menit': 60000,
   '5 menit': 300000,
+  '6 menit': 360000,
   '10 menit': 600000,
   '30 menit': 1800000,
 };
@@ -31,6 +32,7 @@ const _kAverageOptions = <String, int>{
 const _kHistoryOptions = <String, int>{
   '30 detik': 30000,
   '1 menit': 60000,
+  '6 menit': 360000,
   '10 menit': 600000,
   '30 menit': 1800000,
   '1 jam': 3600000,

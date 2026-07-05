@@ -758,11 +758,6 @@ class _WindSpeedScreenState extends State<WindSpeedScreen> {
           const Text('km/h',
               style: TextStyle(fontSize: 20, color: Colors.white70)),
           const SizedBox(height: 4),
-          Text(
-            '${(speed / 3.6).toStringAsFixed(3)} m/s',
-            style: const TextStyle(fontSize: 14, color: Colors.white54),
-          ),
-          const SizedBox(height: 14),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 7),
             decoration: BoxDecoration(
