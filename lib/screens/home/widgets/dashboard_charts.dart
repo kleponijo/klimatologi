@@ -115,7 +115,7 @@ class _DashboardChartsState extends State<DashboardCharts> {
                   };
                   return _SensorChartCard(
                     title: 'Kecepatan Angin',
-                    unit: 'm/s',
+                    unit: 'km/j',
                     color: Colors.blue.shade600,
                     bgColor: Colors.blue.shade50,
                     icon: Icons.air,
