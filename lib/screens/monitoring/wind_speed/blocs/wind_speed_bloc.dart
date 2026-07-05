@@ -109,7 +109,6 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
     _WindSpeedRealtimeUpdated event,
     Emitter<WindSpeedState> emit,
   ) {
-    // Guard: abaikan data jika windweg 0 dan pulse 0 (ESP tidak kirim data nyata)
     if (event.data.windwegKm == 0 && event.data.totalPulse == 0) {
       emit(state.copyWith(
         currentSpeed: 0,
@@ -118,27 +117,12 @@ class WindSpeedBloc extends Bloc<WindSpeedEvent, WindSpeedState> {
       return;
     }
 
-    final updated = List<double>.from(state.dailySpeeds);
-    final index = DateTime.now().hour;
-    double newValue = event.data.speed;
+    final double speed = event.data.speed;
 
-    if (index < updated.length) {
-      final lastValue = updated[index];
-      if (lastValue != 0) {
-        if ((newValue - lastValue).abs() > 15) {
-          newValue = lastValue;
-        } else {
-          newValue = (lastValue + newValue) / 2;
-        }
-      }
-      updated[index] = newValue.clamp(0, 100);
-    }
-
-    _emitWindAlert(newValue);
+    _emitWindAlert(speed);
     emit(state.copyWith(
-      currentSpeed: newValue,
-      dailySpeeds: updated,
-      alertLevel: _getAlertLevel(newValue),
+      currentSpeed: speed,
+      alertLevel: _getAlertLevel(speed),
     ));
   }
 
