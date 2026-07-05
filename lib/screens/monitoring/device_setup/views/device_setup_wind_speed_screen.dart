@@ -16,6 +16,7 @@ const _kRealtimeOptions = <String, int>{
   '5 detik': 5000,
   '30 detik': 30000,
   '1 menit': 60000,
+  '6 menit': 360000,
   '1 jam': 3600000,
 };
 

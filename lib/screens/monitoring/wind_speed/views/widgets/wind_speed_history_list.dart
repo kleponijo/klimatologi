@@ -364,7 +364,7 @@ class _HistoryItemTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final kmh = item.speed * 3.6;
+    final kmh = item.speed;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),

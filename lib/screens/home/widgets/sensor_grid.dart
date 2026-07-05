@@ -28,7 +28,7 @@ class SensorGrid extends StatelessWidget {
                 value: state.isLoading
                     ? '—'
                     : state.currentSpeed.toStringAsFixed(1),
-                unit: 'm/s',
+                unit: 'km/h',
                 isLoading: state.isLoading,
               ),
             ),

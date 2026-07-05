@@ -194,10 +194,8 @@ class WindSpeedExcelService {
     sheet.merge(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: secRow),
         CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: secRow));
 
-    _setCell(sheet, secRow + 1, 0, 'Kecepatan (m/s)', bold: true);
-    _setCellDouble(sheet, secRow + 1, 1, currentSpeed);
     _setCell(sheet, secRow + 2, 0, 'Kecepatan (km/h)', bold: true);
-    _setCellDouble(sheet, secRow + 2, 1, currentSpeed * 3.6);
+    _setCellDouble(sheet, secRow + 2, 1, currentSpeed);
     _setCell(sheet, secRow + 3, 0, 'Status', bold: true);
     _setCell(sheet, secRow + 3, 1, alertLevel,
         bgColor: _alertBgColor(alertLevel));
@@ -282,7 +280,7 @@ class WindSpeedExcelService {
       for (var i = 0; i < sorted.length; i++) {
         final item = sorted[i];
         final rowIdx = i + 1;
-        final kmh = item.speed * 3.6;
+        final kmh = item.speed;
         final status = _getAlertLevel(item.speed);
         final bgColor = i.isEven ? _colorNormal : _colorWhite;
 
@@ -453,8 +451,8 @@ class WindSpeedExcelService {
   }
 
   static String _getAlertLevel(double speed) {
-    if (speed >= 12.5) return 'Bahaya';
-    if (speed >= 8.0) return 'Waspada';
+    if (speed >= 45.5) return 'Bahaya';
+    if (speed >= 25.0) return 'Waspada';
     return 'Normal';
   }
 }

@@ -1136,13 +1136,13 @@ class _HistoryTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      'avg ${item.windwegKm.toStringAsFixed(3)} km',
+                      '${item.speed.toStringAsFixed(3)} km/h',
                       style: const TextStyle(
                           fontSize: 12, fontWeight: FontWeight.bold),
                     ),
                     if (item.maxWindwegKm > 0)
                       Text(
-                        'max ${item.maxWindwegKm.toStringAsFixed(3)} km',
+                        'max ${item.maxWindwegKm.toStringAsFixed(3)} km/h',
                         style: TextStyle(
                             fontSize: 10, color: Colors.orange.shade600),
                       ),
