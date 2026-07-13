@@ -5,7 +5,8 @@ import 'package:firebase_database/firebase_database.dart';
 part 'evaporasi_settings_event.dart';
 part 'evaporasi_settings_state.dart';
 
-class EvaporasiSettingsBloc extends Bloc<EvaporasiSettingsEvent, EvaporasiSettingsState> {
+class EvaporasiSettingsBloc
+    extends Bloc<EvaporasiSettingsEvent, EvaporasiSettingsState> {
   final DatabaseReference _ref;
 
   static const _path = 'Monitoring/settings/evaporasi';
@@ -44,10 +45,12 @@ class EvaporasiSettingsBloc extends Bloc<EvaporasiSettingsEvent, EvaporasiSettin
           thresholdRendah: _toDouble(data['threshold_rendah'], 2.0),
           thresholdTinggi: _toDouble(data['threshold_tinggi'], 10.0),
           rumusKalibrasi: (data['rumus_kalibrasi'] as String?) ?? 'selisih_max',
-          koreksiOffset: _toDouble(data['koreksi_offset'], 0.0),          pumpStartTime: (data['pump_start_time'] as String?) ?? '06:00',
+          koreksiOffset: _toDouble(data['koreksi_offset'], 0.0),
+          pumpStartTime: (data['pump_start_time'] as String?) ?? '06:00',
           pumpEndTime: (data['pump_end_time'] as String?) ?? '18:00',
           d0: _toInt(data['d0'], 0),
-          dmaxManual: _toInt(data['dmax_manual'], 0),          intervalRealtime_ms: _toInt(data['interval_realtime_ms'], 300000),
+          dmaxManual: _toInt(data['dmax_manual'], 0),
+          intervalRealtime_ms: _toInt(data['interval_realtime_ms'], 300000),
           intervalHistory_ms: _toInt(data['interval_history_ms'], 600000),
           intervalBaca_ms: _toInt(data['interval_baca_ms'], 10000),
           status: EvaporasiSettingsStatus.loaded,
@@ -70,15 +73,20 @@ class EvaporasiSettingsBloc extends Bloc<EvaporasiSettingsEvent, EvaporasiSettin
         final rt = Map<String, dynamic>.from(rtSnap.value as Map);
         final val = _toInt(rt['dmax_saat_ini'], 0);
         final firmware = (rt['firmware_version'] as String?) ?? '--';
-        final wifi = rt['wifi_connected'] is bool ? (rt['wifi_connected'] as bool) : (rt['wifi_connected'] == 1);
-        final firebase = rt['firebase_connected'] is bool ? (rt['firebase_connected'] as bool) : (rt['firebase_connected'] == 1);
+        final wifi = rt['wifi_connected'] is bool
+            ? (rt['wifi_connected'] as bool)
+            : (rt['wifi_connected'] == 1);
+        final firebase = rt['firebase_connected'] is bool
+            ? (rt['firebase_connected'] as bool)
+            : (rt['firebase_connected'] == 1);
         final activeD0 = _toInt(rt['d0_active'], state.d0);
         final activeDmax = _toInt(rt['dmax_active'], val);
         DateTime? lastUpd;
         try {
           final lu = rt['last_update'];
           if (lu != null) {
-            final ms = (lu is num) ? lu.toInt() : int.tryParse(lu.toString()) ?? 0;
+            final ms =
+                (lu is num) ? lu.toInt() : int.tryParse(lu.toString()) ?? 0;
             if (ms > 0) lastUpd = DateTime.fromMillisecondsSinceEpoch(ms);
           }
         } catch (_) {}
@@ -86,15 +94,16 @@ class EvaporasiSettingsBloc extends Bloc<EvaporasiSettingsEvent, EvaporasiSettin
         emit(state.copyWith(
           dmax: val,
           firmwareVersion: firmware,
-          wifiConnected: wifi ?? false,
-          firebaseConnected: firebase ?? false,
+          // wifiConnected: wifi ?? false,
+          // firebaseConnected: firebase ?? false,
           activeD0: activeD0,
           activeDmax: activeDmax,
           lastUpdate: lastUpd,
         ));
       } else {
         // fallback: try single path
-        final snap = await FirebaseDatabase.instance.ref(_rtdbRealtimePath).get();
+        final snap =
+            await FirebaseDatabase.instance.ref(_rtdbRealtimePath).get();
         final val = snap.exists ? (snap.value as num?)?.toInt() ?? 0 : 0;
         emit(state.copyWith(dmax: val));
       }
@@ -106,57 +115,68 @@ class EvaporasiSettingsBloc extends Bloc<EvaporasiSettingsEvent, EvaporasiSettin
   void _onThresholdRendahChanged(
     EvaporasiThresholdRendahChanged event,
     Emitter<EvaporasiSettingsState> emit,
-  ) => emit(state.copyWith(thresholdRendah: event.value));
+  ) =>
+      emit(state.copyWith(thresholdRendah: event.value));
 
   void _onThresholdTinggiChanged(
     EvaporasiThresholdTinggiChanged event,
     Emitter<EvaporasiSettingsState> emit,
-  ) => emit(state.copyWith(thresholdTinggi: event.value));
+  ) =>
+      emit(state.copyWith(thresholdTinggi: event.value));
 
   void _onRumusChanged(
     EvaporasiRumusKalibrasiChanged event,
     Emitter<EvaporasiSettingsState> emit,
-  ) => emit(state.copyWith(rumusKalibrasi: event.rumus));
+  ) =>
+      emit(state.copyWith(rumusKalibrasi: event.rumus));
 
   void _onOffsetChanged(
     EvaporasiKoreksiOffsetChanged event,
     Emitter<EvaporasiSettingsState> emit,
-  ) => emit(state.copyWith(koreksiOffset: event.value));
+  ) =>
+      emit(state.copyWith(koreksiOffset: event.value));
 
   void _onIntervalRealtimeChanged(
     EvaporasiIntervalRealtimeChanged event,
     Emitter<EvaporasiSettingsState> emit,
-  ) => emit(state.copyWith(intervalRealtime_ms: event.value));
+  ) =>
+      emit(state.copyWith(intervalRealtime_ms: event.value));
 
   void _onIntervalHistoryChanged(
     EvaporasiIntervalHistoryChanged event,
     Emitter<EvaporasiSettingsState> emit,
-  ) => emit(state.copyWith(intervalHistory_ms: event.value));
+  ) =>
+      emit(state.copyWith(intervalHistory_ms: event.value));
 
   void _onIntervalBacaChanged(
     EvaporasiIntervalBacaChanged event,
     Emitter<EvaporasiSettingsState> emit,
-  ) => emit(state.copyWith(intervalBaca_ms: event.value));
+  ) =>
+      emit(state.copyWith(intervalBaca_ms: event.value));
 
   void _onPumpStartChanged(
     EvaporasiPumpStartChanged event,
     Emitter<EvaporasiSettingsState> emit,
-  ) => emit(state.copyWith(pumpStartTime: event.value));
+  ) =>
+      emit(state.copyWith(pumpStartTime: event.value));
 
   void _onPumpEndChanged(
     EvaporasiPumpEndChanged event,
     Emitter<EvaporasiSettingsState> emit,
-  ) => emit(state.copyWith(pumpEndTime: event.value));
+  ) =>
+      emit(state.copyWith(pumpEndTime: event.value));
 
   void _onD0Changed(
     EvaporasiD0Changed event,
     Emitter<EvaporasiSettingsState> emit,
-  ) => emit(state.copyWith(d0: event.value));
+  ) =>
+      emit(state.copyWith(d0: event.value));
 
   void _onDmaxManualChanged(
     EvaporasiDmaxManualChanged event,
     Emitter<EvaporasiSettingsState> emit,
-  ) => emit(state.copyWith(dmaxManual: event.value));
+  ) =>
+      emit(state.copyWith(dmaxManual: event.value));
 
   Future<void> _onDmaxReset(
     EvaporasiDmaxResetRequested event,
@@ -213,7 +233,8 @@ class EvaporasiSettingsBloc extends Bloc<EvaporasiSettingsEvent, EvaporasiSettin
     }
   }
 
-  double _toDouble(dynamic v, double def) => v == null ? def : (v as num).toDouble();
+  double _toDouble(dynamic v, double def) =>
+      v == null ? def : (v as num).toDouble();
 
   int _toInt(dynamic v, int def) => v == null ? def : (v as num).toInt();
 }

@@ -8,7 +8,8 @@ class EvaporasiSettingsScreen extends StatefulWidget {
   const EvaporasiSettingsScreen({super.key});
 
   @override
-  State<EvaporasiSettingsScreen> createState() => _EvaporasiSettingsScreenState();
+  State<EvaporasiSettingsScreen> createState() =>
+      _EvaporasiSettingsScreenState();
 }
 
 class _EvaporasiSettingsScreenState extends State<EvaporasiSettingsScreen> {
@@ -52,7 +53,11 @@ class _EvaporasiSettingsScreenState extends State<EvaporasiSettingsScreen> {
     }
   }
 
-  Future<void> _pickPumpTime(BuildContext context, TextEditingController controller, ValueChanged<String> onSelected, String initialValue) async {
+  Future<void> _pickPumpTime(
+      BuildContext context,
+      TextEditingController controller,
+      ValueChanged<String> onSelected,
+      String initialValue) async {
     final parts = initialValue.split(':');
     final initial = TimeOfDay(
       hour: int.tryParse(parts[0]) ?? 6,
@@ -64,7 +69,8 @@ class _EvaporasiSettingsScreenState extends State<EvaporasiSettingsScreen> {
       helpText: 'Pilih Jam Pompa',
     );
     if (picked != null) {
-      final value = '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+      final value =
+          '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
       controller.text = value;
       onSelected(value);
     }
@@ -101,7 +107,8 @@ class _EvaporasiSettingsScreenState extends State<EvaporasiSettingsScreen> {
               ]),
               backgroundColor: Colors.green.shade600,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
             ));
           }
           if (state.status == EvaporasiSettingsStatus.error &&
@@ -147,7 +154,8 @@ class _EvaporasiSettingsScreenState extends State<EvaporasiSettingsScreen> {
                         Text(
                           'Tentukan nilai (mm) untuk klasifikasi status '
                           'Rendah, Normal, dan Tinggi.',
-                          style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                          style: TextStyle(
+                              fontSize: 12, color: Colors.grey.shade500),
                         ),
                         const SizedBox(height: 12),
                         _SettingsCard(children: [
@@ -157,7 +165,8 @@ class _EvaporasiSettingsScreenState extends State<EvaporasiSettingsScreen> {
                             controller: _rendahController,
                             label: 'Batas Rendah–Normal (mm)',
                             hint: 'Contoh: 20.0',
-                            helper: 'Nilai < batas ini → Status Rendah. Default: 20.0',
+                            helper:
+                                'Nilai < batas ini → Status Rendah. Default: 20.0',
                             onChanged: (v) {
                               final d = double.tryParse(v);
                               if (d != null && d >= 0) {
@@ -170,7 +179,8 @@ class _EvaporasiSettingsScreenState extends State<EvaporasiSettingsScreen> {
                             controller: _tinggiController,
                             label: 'Batas Normal–Tinggi (mm)',
                             hint: 'Contoh: 30.0',
-                            helper: 'Nilai ≥ batas ini → Status Tinggi. Default: 30.0',
+                            helper:
+                                'Nilai ≥ batas ini → Status Tinggi. Default: 30.0',
                             onChanged: (v) {
                               final d = double.tryParse(v);
                               if (d != null && d >= 0) {
@@ -185,13 +195,15 @@ class _EvaporasiSettingsScreenState extends State<EvaporasiSettingsScreen> {
                         Text(
                           'Pilih metode penghitungan nilai evaporasi '
                           'terkalibrasi (E) dari data sensor.',
-                          style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                          style: TextStyle(
+                              fontSize: 12, color: Colors.grey.shade500),
                         ),
                         const SizedBox(height: 12),
                         _SettingsCard(children: [
                           _RumusSelector(
                             selected: state.rumusKalibrasi,
-                            onChanged: (v) => bloc.add(EvaporasiRumusKalibrasiChanged(v)),
+                            onChanged: (v) =>
+                                bloc.add(EvaporasiRumusKalibrasiChanged(v)),
                           ),
                           const Divider(height: 28),
                           _FormulaPreview(state: state),
@@ -200,7 +212,8 @@ class _EvaporasiSettingsScreenState extends State<EvaporasiSettingsScreen> {
                             controller: _offsetController,
                             label: 'Koreksi Offset (mm)',
                             hint: 'Contoh: 0.0 atau -1.5',
-                            helper: 'Nilai ditambahkan ke hasil E. Gunakan negatif untuk koreksi ke bawah.',
+                            helper:
+                                'Nilai ditambahkan ke hasil E. Gunakan negatif untuk koreksi ke bawah.',
                             allowNegative: true,
                             onChanged: (v) {
                               final d = double.tryParse(v);
@@ -216,13 +229,15 @@ class _EvaporasiSettingsScreenState extends State<EvaporasiSettingsScreen> {
                         Text(
                           'Atur seberapa sering ESP32 membaca sensor dan mengirim data. '
                           'Interval lebih pendek = data lebih real-time, baterai lebih boros.',
-                          style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                          style: TextStyle(
+                              fontSize: 12, color: Colors.grey.shade500),
                         ),
                         const SizedBox(height: 12),
                         _SettingsCard(children: [
                           _IntervalSelector(
                             label: 'Interval Baca Sensor',
-                            helper: 'Seberapa sering sensor dibaca. Min: 5 detik.',
+                            helper:
+                                'Seberapa sering sensor dibaca. Min: 5 detik.',
                             options: const {
                               5000: '5 detik',
                               10000: '10 detik (default)',
@@ -230,19 +245,22 @@ class _EvaporasiSettingsScreenState extends State<EvaporasiSettingsScreen> {
                               60000: '1 menit',
                             },
                             selected: state.intervalBaca_ms,
-                            onChanged: (v) => bloc.add(EvaporasiIntervalBacaChanged(v)),
+                            onChanged: (v) =>
+                                bloc.add(EvaporasiIntervalBacaChanged(v)),
                           ),
                           const Divider(height: 24),
                           _IntervalSelector(
                             label: 'Interval Kirim Realtime',
-                            helper: 'Frekuensi update data real-time ke Firebase.',
+                            helper:
+                                'Frekuensi update data real-time ke Firebase.',
                             options: const {
                               60000: '1 menit',
                               300000: '5 menit (default)',
                               600000: '10 menit',
                             },
                             selected: state.intervalRealtime_ms,
-                            onChanged: (v) => bloc.add(EvaporasiIntervalRealtimeChanged(v)),
+                            onChanged: (v) =>
+                                bloc.add(EvaporasiIntervalRealtimeChanged(v)),
                           ),
                           const Divider(height: 24),
                           _IntervalSelector(
@@ -255,7 +273,8 @@ class _EvaporasiSettingsScreenState extends State<EvaporasiSettingsScreen> {
                               3600000: '1 jam',
                             },
                             selected: state.intervalHistory_ms,
-                            onChanged: (v) => bloc.add(EvaporasiIntervalHistoryChanged(v)),
+                            onChanged: (v) =>
+                                bloc.add(EvaporasiIntervalHistoryChanged(v)),
                           ),
                         ]),
                         const SizedBox(height: 24),
@@ -263,7 +282,8 @@ class _EvaporasiSettingsScreenState extends State<EvaporasiSettingsScreen> {
                         const SizedBox(height: 6),
                         Text(
                           'Atur jam mulai dan selesai pompa secara langsung dari aplikasi.',
-                          style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                          style: TextStyle(
+                              fontSize: 12, color: Colors.grey.shade500),
                         ),
                         const SizedBox(height: 12),
                         _SettingsCard(children: [
@@ -274,7 +294,8 @@ class _EvaporasiSettingsScreenState extends State<EvaporasiSettingsScreen> {
                             onTap: () => _pickPumpTime(
                               context,
                               _pumpStartController,
-                              (value) => bloc.add(EvaporasiPumpStartChanged(value)),
+                              (value) =>
+                                  bloc.add(EvaporasiPumpStartChanged(value)),
                               state.pumpStartTime,
                             ),
                           ),
@@ -286,7 +307,8 @@ class _EvaporasiSettingsScreenState extends State<EvaporasiSettingsScreen> {
                             onTap: () => _pickPumpTime(
                               context,
                               _pumpEndController,
-                              (value) => bloc.add(EvaporasiPumpEndChanged(value)),
+                              (value) =>
+                                  bloc.add(EvaporasiPumpEndChanged(value)),
                               state.pumpEndTime,
                             ),
                           ),
@@ -296,7 +318,8 @@ class _EvaporasiSettingsScreenState extends State<EvaporasiSettingsScreen> {
                         const SizedBox(height: 6),
                         Text(
                           'Masukkan nilai D0 dan DMAX secara manual untuk kalibrasi sensor tanpa upload firmware.',
-                          style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                          style: TextStyle(
+                              fontSize: 12, color: Colors.grey.shade500),
                         ),
                         const SizedBox(height: 12),
                         _SettingsCard(children: [
@@ -317,7 +340,8 @@ class _EvaporasiSettingsScreenState extends State<EvaporasiSettingsScreen> {
                             controller: _dmaxManualController,
                             label: 'Nilai DMAX Manual',
                             hint: 'Contoh: 1023',
-                            helper: 'Kalibrasi nilai maksimum sensor secara manual.',
+                            helper:
+                                'Kalibrasi nilai maksimum sensor secara manual.',
                             onChanged: (v) {
                               final d = int.tryParse(v);
                               if (d != null && d >= 0) {
@@ -330,21 +354,28 @@ class _EvaporasiSettingsScreenState extends State<EvaporasiSettingsScreen> {
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton.icon(
-                            onPressed: isSaving ? null : () => bloc.add(EvaporasiSettingsSaved()),
+                            onPressed: isSaving
+                                ? null
+                                : () => bloc.add(EvaporasiSettingsSaved()),
                             icon: isSaving
                                 ? const SizedBox(
                                     width: 18,
                                     height: 18,
-                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2, color: Colors.white),
                                   )
                                 : const Icon(Icons.save_rounded),
-                            label: Text(isSaving ? 'Menyimpan...' : 'Simpan ke Firebase'),
+                            label: Text(isSaving
+                                ? 'Menyimpan...'
+                                : 'Simpan ke Firebase'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.blue.shade700,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                              textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14)),
+                              textStyle: const TextStyle(
+                                  fontSize: 15, fontWeight: FontWeight.bold),
                             ),
                           ),
                         ),
@@ -378,15 +409,23 @@ class _ThresholdPreview extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text('Preview Klasifikasi',
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black54)),
+            style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Colors.black54)),
         const SizedBox(height: 10),
         Row(
           children: [
-            _StatusChip('Rendah', '< ${rendah.toStringAsFixed(0)} mm', Colors.green),
+            _StatusChip(
+                'Rendah', '< ${rendah.toStringAsFixed(0)} mm', Colors.green),
             const SizedBox(width: 8),
-            _StatusChip('Normal', '${rendah.toStringAsFixed(0)}–${tinggi.toStringAsFixed(0)} mm', Colors.orange),
+            _StatusChip(
+                'Normal',
+                '${rendah.toStringAsFixed(0)}–${tinggi.toStringAsFixed(0)} mm',
+                Colors.orange),
             const SizedBox(width: 8),
-            _StatusChip('Tinggi', '≥ ${tinggi.toStringAsFixed(0)} mm', Colors.red),
+            _StatusChip(
+                'Tinggi', '≥ ${tinggi.toStringAsFixed(0)} mm', Colors.red),
           ],
         ),
         if (!isValid) ...[
@@ -422,9 +461,12 @@ class _StatusChip extends StatelessWidget {
         child: Column(
           children: [
             Text(label,
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color)),
+                style: TextStyle(
+                    fontSize: 11, fontWeight: FontWeight.bold, color: color)),
             const SizedBox(height: 2),
-            Text(range, style: TextStyle(fontSize: 9, color: color), textAlign: TextAlign.center),
+            Text(range,
+                style: TextStyle(fontSize: 9, color: color),
+                textAlign: TextAlign.center),
           ],
         ),
       ),
@@ -458,7 +500,10 @@ class _RumusSelector extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text('Metode Kalkulasi',
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black54)),
+            style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Colors.black54)),
         const SizedBox(height: 10),
         ...options.map((opt) {
           final isSelected = opt.value == selected;
@@ -472,13 +517,18 @@ class _RumusSelector extends StatelessWidget {
                 color: isSelected ? Colors.blue.shade50 : Colors.grey.shade50,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: isSelected ? Colors.blue.shade400 : Colors.grey.shade200,
+                  color:
+                      isSelected ? Colors.blue.shade400 : Colors.grey.shade200,
                   width: isSelected ? 1.5 : 1,
                 ),
               ),
               child: Row(
                 children: [
-                  Icon(opt.icon, color: isSelected ? Colors.blue.shade700 : Colors.grey.shade500, size: 22),
+                  Icon(opt.icon,
+                      color: isSelected
+                          ? Colors.blue.shade700
+                          : Colors.grey.shade500,
+                      size: 22),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -488,18 +538,23 @@ class _RumusSelector extends StatelessWidget {
                             style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
-                                color: isSelected ? Colors.blue.shade800 : Colors.black87)),
+                                color: isSelected
+                                    ? Colors.blue.shade800
+                                    : Colors.black87)),
                         const SizedBox(height: 2),
                         Text(opt.subtitle,
                             style: TextStyle(
                                 fontSize: 11,
                                 fontFamily: 'monospace',
-                                color: isSelected ? Colors.blue.shade600 : Colors.grey.shade500)),
+                                color: isSelected
+                                    ? Colors.blue.shade600
+                                    : Colors.grey.shade500)),
                       ],
                     ),
                   ),
                   if (isSelected)
-                    Icon(Icons.check_circle_rounded, color: Colors.blue.shade600, size: 20),
+                    Icon(Icons.check_circle_rounded,
+                        color: Colors.blue.shade600, size: 20),
                 ],
               ),
             ),
@@ -533,14 +588,21 @@ class _FormulaPreview extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(children: [
-            Icon(Icons.functions_rounded, size: 15, color: Colors.amber.shade300),
+            Icon(Icons.functions_rounded,
+                size: 15, color: Colors.amber.shade300),
             const SizedBox(width: 8),
             Text('Preview Rumus',
-                style: TextStyle(fontSize: 12, color: Colors.amber.shade300, fontWeight: FontWeight.bold)),
+                style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.amber.shade300,
+                    fontWeight: FontWeight.bold)),
           ]),
           const SizedBox(height: 10),
           Text(rumus,
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade300, fontFamily: 'monospace')),
+              style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade300,
+                  fontFamily: 'monospace')),
           const SizedBox(height: 6),
           Text('offset = $offsetStr mm',
               style: TextStyle(
@@ -570,10 +632,12 @@ class _InfoCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.info_outline_rounded, size: 18, color: Colors.blue.shade600),
+          Icon(Icons.info_outline_rounded,
+              size: 18, color: Colors.blue.shade600),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(text, style: TextStyle(fontSize: 12, color: Colors.blue.shade800)),
+            child: Text(text,
+                style: TextStyle(fontSize: 12, color: Colors.blue.shade800)),
           ),
         ],
       ),
@@ -596,7 +660,8 @@ class _SettingsCard extends StatelessWidget {
           BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6),
         ],
       ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: children),
+      child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start, children: children),
     );
   }
 }
@@ -622,7 +687,8 @@ class _NumericField extends StatelessWidget {
   Widget build(BuildContext context) {
     return TextField(
       controller: controller,
-      keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+      keyboardType:
+          const TextInputType.numberWithOptions(decimal: true, signed: true),
       inputFormatters: [
         FilteringTextInputFormatter.allow(
           allowNegative ? RegExp(r'^-?[0-9]*\.?[0-9]*') : RegExp(r'[0-9.]'),
@@ -634,7 +700,8 @@ class _NumericField extends StatelessWidget {
         helperText: helper,
         helperMaxLines: 2,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         isDense: true,
       ),
       onChanged: onChanged,
@@ -667,7 +734,8 @@ class _TimePickerField extends StatelessWidget {
         helperMaxLines: 2,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
         suffixIcon: const Icon(Icons.schedule_rounded),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         isDense: true,
       ),
       onTap: onTap,
@@ -698,7 +766,8 @@ class _IntervalSelector extends StatelessWidget {
         Text(label,
             style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
         const SizedBox(height: 4),
-        Text(helper, style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+        Text(helper,
+            style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
         const SizedBox(height: 10),
         Wrap(
           spacing: 8,
@@ -709,12 +778,16 @@ class _IntervalSelector extends StatelessWidget {
               onTap: () => onChanged(e.key),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 180),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
-                  color: isSelected ? Colors.blue.shade700 : Colors.grey.shade100,
+                  color:
+                      isSelected ? Colors.blue.shade700 : Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: isSelected ? Colors.blue.shade700 : Colors.grey.shade300,
+                    color: isSelected
+                        ? Colors.blue.shade700
+                        : Colors.grey.shade300,
                   ),
                 ),
                 child: Text(
@@ -734,65 +807,65 @@ class _IntervalSelector extends StatelessWidget {
   }
 }
 
-class _RealtimeInfo extends StatelessWidget {
-  final EvaporasiSettingsState state;
-  const _RealtimeInfo({required this.state});
+// class _RealtimeInfo extends StatelessWidget {
+//   final EvaporasiSettingsState state;
+//   const _RealtimeInfo({required this.state});
 
-  String _fmtDate(DateTime? d) {
-    if (d == null) return '--';
-    final l = d.toLocal();
-    return '${l.day.toString().padLeft(2, '0')}/${l.month.toString().padLeft(2, '0')}/${l.year} ${l.hour.toString().padLeft(2, '0')}:${l.minute.toString().padLeft(2, '0')}:${l.second.toString().padLeft(2, '0')}';
-  }
+//   String _fmtDate(DateTime? d) {
+//     if (d == null) return '--';
+//     final l = d.toLocal();
+//     return '${l.day.toString().padLeft(2, '0')}/${l.month.toString().padLeft(2, '0')}/${l.year} ${l.hour.toString().padLeft(2, '0')}:${l.minute.toString().padLeft(2, '0')}:${l.second.toString().padLeft(2, '0')}';
+//   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Icon(Icons.devices_rounded, size: 15, color: Colors.blue.shade700),
-          const SizedBox(width: 8),
-          Text('Informasi Perangkat', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.blue.shade700)),
-        ]),
-        const SizedBox(height: 10),
-        Wrap(spacing: 12, runSpacing: 8, children: [
-          _InfoTile(label: 'Firmware', value: state.firmwareVersion),
-          _InfoTile(label: 'WiFi', value: state.wifiConnected ? 'Terhubung' : 'Tidak'),
-          _InfoTile(label: 'Firebase', value: state.firebaseConnected ? 'Terhubung' : 'Tidak'),
-          _InfoTile(label: 'D0 aktif', value: state.activeD0 == 0 ? '--' : state.activeD0.toString()),
-          _InfoTile(label: 'DMAX aktif', value: state.activeDmax == 0 ? '--' : state.activeDmax.toString()),
-          _InfoTile(label: 'Terakhir', value: _fmtDate(state.lastUpdate)),
-        ])
-      ]),
-    );
-  }
-}
+//   @override
+//   Widget build(BuildContext context) {
+//     return Container(
+//       width: double.infinity,
+//       padding: const EdgeInsets.all(12),
+//       decoration: BoxDecoration(
+//         color: Colors.grey.shade50,
+//         borderRadius: BorderRadius.circular(10),
+//         border: Border.all(color: Colors.grey.shade200),
+//       ),
+//       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+//         Row(children: [
+//           Icon(Icons.devices_rounded, size: 15, color: Colors.blue.shade700),
+//           const SizedBox(width: 8),
+//           Text('Informasi Perangkat', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.blue.shade700)),
+//         ]),
+//         const SizedBox(height: 10),
+//         Wrap(spacing: 12, runSpacing: 8, children: [
+//           _InfoTile(label: 'Firmware', value: state.firmwareVersion),
+//           _InfoTile(label: 'WiFi', value: state.wifiConnected ? 'Terhubung' : 'Tidak'),
+//           _InfoTile(label: 'Firebase', value: state.firebaseConnected ? 'Terhubung' : 'Tidak'),
+//           _InfoTile(label: 'D0 aktif', value: state.activeD0 == 0 ? '--' : state.activeD0.toString()),
+//           _InfoTile(label: 'DMAX aktif', value: state.activeDmax == 0 ? '--' : state.activeDmax.toString()),
+//           _InfoTile(label: 'Terakhir', value: _fmtDate(state.lastUpdate)),
+//         ])
+//       ]),
+//     );
+//   }
+// }
 
-class _InfoTile extends StatelessWidget {
-  final String label;
-  final String value;
-  const _InfoTile({required this.label, required this.value});
+// class _InfoTile extends StatelessWidget {
+//   final String label;
+//   final String value;
+//   const _InfoTile({required this.label, required this.value});
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade100),
-      ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(label, style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
-        const SizedBox(height: 6),
-        Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-      ]),
-    );
-  }
-}
+//   @override
+//   Widget build(BuildContext context) {
+//     return Container(
+//       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+//       decoration: BoxDecoration(
+//         color: Colors.white,
+//         borderRadius: BorderRadius.circular(8),
+//         border: Border.all(color: Colors.grey.shade100),
+//       ),
+//       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+//         Text(label, style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+//         const SizedBox(height: 6),
+//         Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+//       ]),
+//     );
+//   }
+// }
