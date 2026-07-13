@@ -6,6 +6,8 @@ import '../../monitoring/wind_speed/views/wind_speed_screen.dart';
 import '../../monitoring/wind_speed/blocs/wind_speed_bloc.dart';
 import '../../monitoring/atmospheric_conditions/blocs/atmospheric_conditions_bloc.dart';
 import '../../monitoring/atmospheric_conditions/views/atmospheric_screen.dart';
+import '../../monitoring/evaporasi/blocs/evaporasi_bloc.dart';
+import '../../monitoring/evaporasi/views/evaporasi_screen.dart';
 import '../../../blocs/notification_bloc/notification_bloc.dart';
 
 class MainDrawer extends StatelessWidget {
@@ -84,6 +86,26 @@ class MainDrawer extends StatelessWidget {
                       repository: context.read<MonitoringRepository>(),
                     )..add(WatchAtmosphericConditionsStarted()),
                     child: AtmosphericScreen(),
+                  ),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading:
+                Icon(Icons.water_drop, color: Colors.teal.shade600, size: 20),
+            title: const Text("Evaporasi"),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => BlocProvider<EvaporasiBloc>(
+                    create: (context) => EvaporasiBloc(
+                      repository: context.read<MonitoringRepository>(),
+                      notificationBloc: context.read<NotificationBloc>(),
+                    )..add(WatchEvaporasiStarted()),
+                    child: const EvaporasiScreen(),
                   ),
                 ),
               );

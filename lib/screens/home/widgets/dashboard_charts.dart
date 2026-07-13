@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../monitoring/wind_speed/blocs/wind_speed_bloc.dart';
 import '../../monitoring/atmospheric_conditions/blocs/atmospheric_conditions_bloc.dart';
+import '../../monitoring/evaporasi/blocs/evaporasi_bloc.dart';
 
 /// Period selector khusus untuk dashboard
 class DashboardPeriodSelector extends StatelessWidget {
@@ -121,6 +122,24 @@ class _DashboardChartsState extends State<DashboardCharts> {
                     icon: Icons.air,
                     currentValue: state.currentSpeed,
                     data: data,
+                    period: _period,
+                    isLoading: state.isLoading,
+                  );
+                },
+              ),
+              const SizedBox(width: 12),
+
+              // 2. Evaporasi
+              BlocBuilder<EvaporasiBloc, EvaporasiState>(
+                builder: (context, state) {
+                  return _SensorChartCard(
+                    title: 'Evaporasi',
+                    unit: 'mm',
+                    color: Colors.teal.shade600,
+                    bgColor: Colors.teal.shade50,
+                    icon: Icons.water_drop,
+                    currentValue: state.currentValue,
+                    data: state.chartValues,
                     period: _period,
                     isLoading: state.isLoading,
                   );

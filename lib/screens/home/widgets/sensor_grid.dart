@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../monitoring/wind_speed/blocs/wind_speed_bloc.dart';
 import '../../monitoring/atmospheric_conditions/blocs/atmospheric_conditions_bloc.dart';
+import '../../monitoring/evaporasi/blocs/evaporasi_bloc.dart';
 
 class SensorGrid extends StatelessWidget {
   const SensorGrid({super.key});
@@ -44,6 +45,22 @@ class SensorGrid extends StatelessWidget {
                 value:
                     state.isLoading ? '—' : state.pressure.toStringAsFixed(1),
                 unit: 'hPa',
+                isLoading: state.isLoading,
+              ),
+            ),
+
+            // --- EVAPORASI ---
+            BlocBuilder<EvaporasiBloc, EvaporasiState>(
+              builder: (context, state) => SensorCard(
+                width: cardWidth,
+                icon: Icons.water_drop,
+                iconColor: Colors.teal.shade600,
+                iconBgColor: Colors.teal.shade50,
+                label: 'Evaporasi',
+                value: state.isLoading
+                    ? '—'
+                    : state.currentValue.toStringAsFixed(1),
+                unit: 'mm',
                 isLoading: state.isLoading,
               ),
             ),

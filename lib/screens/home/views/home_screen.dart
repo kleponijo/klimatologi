@@ -5,6 +5,7 @@ import '../../../blocs/authentication_bloc/authentication_bloc.dart';
 import '../../../blocs/notification_bloc/notification_bloc.dart';
 import '../../monitoring/wind_speed/blocs/wind_speed_bloc.dart';
 import '../../monitoring/atmospheric_conditions/blocs/atmospheric_conditions_bloc.dart';
+import '../../monitoring/evaporasi/blocs/evaporasi_bloc.dart';
 import '../../auth/views/welcome_screen.dart';
 import '../widgets/notification_panel.dart';
 import '../widgets/sensor_grid.dart';
@@ -68,6 +69,12 @@ class _HomeScreenState extends State<HomeScreen>
           create: (context) => AtmosphericConditionsBloc(
             repository: context.read<MonitoringRepository>(),
           )..add(WatchAtmosphericConditionsStarted()),
+        ),
+        BlocProvider<EvaporasiBloc>(
+          create: (context) => EvaporasiBloc(
+            repository: context.read<MonitoringRepository>(),
+            notificationBloc: context.read<NotificationBloc>(),
+          )..add(WatchEvaporasiStarted()),
         ),
       ],
       child: BlocListener<AuthenticationBloc, AuthenticationState>(
